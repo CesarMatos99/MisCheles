@@ -1,0 +1,8 @@
+{
+  "name": "MisCheles - Presupuesto y Cobro Mensual",
+  "description": "Aplicación móvil y web para administrar presupuesto mensual, cobros, gastos, fondo de ahorro, autenticación biométrica y reportes en PDF y Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
