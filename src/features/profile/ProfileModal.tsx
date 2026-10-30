@@ -11,6 +11,7 @@ import {
   Mail,
   Wallet,
   Check,
+  Smartphone,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { storageService } from '../../services/storage';
@@ -23,6 +24,7 @@ interface ProfileModalProps {
   onProfileUpdated: (updated: UserProfile) => void;
   accentColor: string;
   onAccentColorChange: (color: string) => void;
+  onOpenInstallModal: () => void;
 }
 
 const ACCENT_COLORS = [
@@ -41,6 +43,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onProfileUpdated,
   accentColor,
   onAccentColorChange,
+  onOpenInstallModal,
 }) => {
   const [name, setName] = useState<string>(profile.name);
   const [email, setEmail] = useState<string>(profile.email);
@@ -232,6 +235,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               })}
             </div>
           </section>
+
+          <button type="button" onClick={onOpenInstallModal} className="flex min-h-12 w-full items-center gap-3 border-y border-slate-200 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:border-slate-800 dark:text-slate-100">
+            <Smartphone className="h-5 w-5 text-primary" aria-hidden="true" />
+            <span>Instalar MisCheles en este dispositivo</span>
+          </button>
 
           {/* Security & Biometrics Section */}
           <div className="space-y-3 border-y border-slate-200 py-4 dark:border-slate-800">

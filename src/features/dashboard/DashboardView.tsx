@@ -1,11 +1,13 @@
 import React from 'react';
-import { ArrowDownLeft, ArrowUpRight, ArrowRight, Wallet, Sparkles } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRight, Wallet, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { FinancialSummary, MonthConfig, Transaction, UserProfile, SavingsMovementType } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
+import { PeriodSelector } from '../../components/layout/PeriodSelector';
 
 interface DashboardViewProps {
   year: number;
   month: number;
+  onMonthChange: (year: number, month: number) => void;
   monthConfig: MonthConfig | null;
   summary: FinancialSummary;
   transactions: Transaction[];
@@ -23,7 +25,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
-  year, month, monthConfig, summary, transactions, profile, onOpenMonthSetup,
+  year, month, onMonthChange, monthConfig, summary, transactions, profile, onOpenMonthSetup,
   onEditTransaction, onViewAllTransactions,
 }) => {
   const monthName = MONTH_NAMES_ES[month - 1];
@@ -35,9 +37,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-8 animate-in fade-in duration-200">
-      <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
-        <p className="text-sm text-slate-500 dark:text-slate-400">{monthName} {year}</p>
-        <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Así va tu dinero</h1>
+      <header className="flex flex-col gap-3 border-b border-slate-200 pb-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="type-screen-title text-slate-900 dark:text-white">Así va tu dinero</h1>
+        <div className="flex shrink-0 items-center gap-1">
+          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
+          <button type="button" onClick={onOpenMonthSetup} aria-label="Configurar presupuesto del mes" title="Configurar presupuesto" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
+            <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
       </header>
       {(!monthConfig || !monthConfig.isConfigured) && (
         <button onClick={onOpenMonthSetup} className="flex w-full items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-left text-sm text-primary dark:border-primary/30 dark:bg-primary-soft dark:text-primary">

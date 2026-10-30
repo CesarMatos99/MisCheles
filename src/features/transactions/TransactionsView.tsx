@@ -13,11 +13,12 @@ import {
   Plus,
 } from 'lucide-react';
 import { Transaction, UserProfile } from '../../types';
-import { MONTH_NAMES_ES } from '../../constants/categories';
+import { PeriodSelector } from '../../components/layout/PeriodSelector';
 
 interface TransactionsViewProps {
   year: number;
   month: number;
+  onMonthChange: (year: number, month: number) => void;
   transactions: Transaction[];
   profile: UserProfile;
   onEditTransaction: (tx: Transaction) => void;
@@ -28,6 +29,7 @@ interface TransactionsViewProps {
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
   year,
   month,
+  onMonthChange,
   transactions,
   profile,
   onEditTransaction,
@@ -37,8 +39,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'savings'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-
-  const monthName = MONTH_NAMES_ES[month - 1];
 
   const isSavingsTx = (t: Transaction) =>
     t.category === 'Aporte al Ahorro' ||
@@ -83,9 +83,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-4 animate-in fade-in duration-200">
-      <header className="flex items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
-        <div><p className="text-sm text-slate-500">{monthName} {year}</p><h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Movimientos</h1></div>
-        <button onClick={onOpenExportModal} className="text-sm font-semibold text-primary hover:underline"><Download className="mr-1 inline h-4 w-4" />Exportar</button>
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <h1 className="type-screen-title text-slate-900 dark:text-white">Movimientos</h1>
+        <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start">
+          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
+          <button onClick={onOpenExportModal} aria-label="Exportar movimientos" className="flex h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft"><Download className="h-4 w-4" /><span>Exportar</span></button>
+        </div>
       </header>
 
       {/* Seamless Continuous Container divided by clean lines */}

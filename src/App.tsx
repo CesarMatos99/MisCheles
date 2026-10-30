@@ -179,15 +179,10 @@ export default function App() {
 
       {/* Main Header */}
       <Header
-        year={year}
-        month={month}
-        onMonthChange={handleMonthChange}
         isDarkMode={isDarkMode}
         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
         onLockApp={handleLockApp}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
         profile={profile}
       />
 
@@ -237,6 +232,7 @@ export default function App() {
           <DashboardView
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             monthConfig={monthConfig}
             summary={summary}
             transactions={transactions}
@@ -258,6 +254,7 @@ export default function App() {
           <TransactionsView
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             transactions={transactions}
             profile={profile}
             onEditTransaction={handleEditTransaction}
@@ -273,6 +270,7 @@ export default function App() {
             monthKey={currentMonthKey}
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             onOpenSavingsModal={handleOpenSavingsModal}
             onRefresh={refreshMonthData}
           />
@@ -313,12 +311,7 @@ export default function App() {
       {/* Mobile Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
-        onChangeTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'profile') {
-            setIsProfileModalOpen(true);
-          }
-        }}
+        onChangeTab={setActiveTab}
       />
 
       <FloatingActions
@@ -385,6 +378,7 @@ export default function App() {
         profile={profile}
         accentColor={accentColor}
         onAccentColorChange={setAccentColor}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
         onProfileUpdated={(updated) => {
           setProfile(updated);
           refreshMonthData();

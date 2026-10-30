@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { FinancialSummary, SavingsGoal, SavingsMovementType, UserProfile } from '../../types';
 import { storageService } from '../../services/storage';
+import { PeriodSelector } from '../../components/layout/PeriodSelector';
 
 interface SavingsViewProps {
   summary: FinancialSummary;
@@ -20,6 +21,7 @@ interface SavingsViewProps {
   monthKey: string;
   year: number;
   month: number;
+  onMonthChange: (year: number, month: number) => void;
   onOpenSavingsModal: (mode: SavingsMovementType) => void;
   onRefresh: () => void;
 }
@@ -28,6 +30,9 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   summary,
   profile,
   monthKey,
+  year,
+  month,
+  onMonthChange,
   onOpenSavingsModal,
   onRefresh,
 }) => {
@@ -82,13 +87,16 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
     <div className="mx-auto max-w-5xl animate-in fade-in duration-200">
       {/* Vault Hero - Fondo de Ahorro */}
       <section className="border-b border-slate-200 py-5 dark:border-slate-800 sm:py-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h1 className="type-screen-title text-slate-900 dark:text-white">Ahorro</h1>
+          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
+        </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 text-primary text-xs font-semibold">
               <PiggyBank className="w-3.5 h-3.5" />
               <span>Fondo de ahorro</span>
             </div>
-            <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Ahorro</h1>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Saldo total acumulado</p>
             <h2 className="type-display type-money font-extrabold tracking-tight text-slate-900 dark:text-white">
               {profile.currency} {summary.totalSavingsVault.toLocaleString()}
