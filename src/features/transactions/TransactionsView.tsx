@@ -12,19 +12,14 @@ import {
   Minus,
   Plus,
 } from 'lucide-react';
-import { Transaction, UserProfile, FinancialSummary } from '../types';
-import { MONTH_NAMES_ES } from '../constants/categories';
-import { UnifiedStatsBar } from './UnifiedStatsBar';
+import { Transaction, UserProfile } from '../../types';
+import { MONTH_NAMES_ES } from '../../constants/categories';
 
 interface TransactionsViewProps {
   year: number;
   month: number;
-  summary: FinancialSummary;
   transactions: Transaction[];
   profile: UserProfile;
-  onOpenTransactionModal: (type: 'expense' | 'income') => void;
-  onOpenTransferModal: () => void;
-  onOpenMonthSetup?: () => void;
   onEditTransaction: (tx: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
   onOpenExportModal: () => void;
@@ -33,12 +28,8 @@ interface TransactionsViewProps {
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
   year,
   month,
-  summary,
   transactions,
   profile,
-  onOpenTransactionModal,
-  onOpenTransferModal,
-  onOpenMonthSetup,
   onEditTransaction,
   onDeleteTransaction,
   onOpenExportModal,
@@ -91,23 +82,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const monthCategories = Array.from(new Set(transactions.map((t) => t.category)));
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Top 3-in-1 Stats Div + Compact Gasto, Ingreso, Transferir, Configurar Buttons */}
-      <UnifiedStatsBar
-        summary={summary}
-        profile={profile}
-        monthName={monthName}
-        showActions={true}
-        onOpenTransactionModal={onOpenTransactionModal}
-        onOpenTransferModal={onOpenTransferModal}
-        onOpenMonthSetup={onOpenMonthSetup}
-        onOpenExportModal={onOpenExportModal}
-      />
+    <div className="mx-auto max-w-5xl space-y-5 pb-4 animate-in fade-in duration-200">
+      <header className="flex items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <div><p className="text-sm text-slate-500">{monthName} {year}</p><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Movimientos</h1></div>
+        <button onClick={onOpenExportModal} className="text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"><Download className="mr-1 inline h-4 w-4" />Exportar</button>
+      </header>
 
       {/* Seamless Continuous Container divided by clean lines */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+      <div className="space-y-4">
         {/* Row 1: Search and Filters */}
-        <div className="p-4 sm:p-5 space-y-3">
+        <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -193,7 +177,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* Row 2: Sub-Summary separated by thin line */}
-        <div className="px-4 sm:px-5 py-2.5 bg-slate-50/50 dark:bg-slate-800/20 text-xs flex flex-wrap items-center justify-between text-slate-500">
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-200 py-3 text-xs text-slate-500 dark:border-slate-800">
           <div className="flex flex-wrap gap-4">
             {typeFilter !== 'income' && typeFilter !== 'savings' && (
               <span>
@@ -238,7 +222,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 return (
                   <div
                     key={tx.id}
-                    className="py-3 px-4 sm:px-5 flex items-center justify-between gap-3 group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition cursor-pointer"
+                    className="py-3 flex items-center justify-between gap-3 group border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 transition cursor-pointer"
                   >
                     <div
                       className="flex items-center gap-3 min-w-0 flex-1"

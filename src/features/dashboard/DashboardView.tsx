@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, ArrowRight, Wallet, Sparkles } from 'lucide-react';
-import { FinancialSummary, MonthConfig, Transaction, UserProfile, SavingsMovementType } from '../types';
-import { MONTH_NAMES_ES } from '../constants/categories';
+import { FinancialSummary, MonthConfig, Transaction, UserProfile, SavingsMovementType } from '../../types';
+import { MONTH_NAMES_ES } from '../../constants/categories';
 
 interface DashboardViewProps {
   year: number;
@@ -34,7 +34,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const money = (value: number) => `${profile.currency} ${value.toLocaleString('es-DO')}`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 pb-4 animate-in fade-in duration-200">
+    <div className="mx-auto max-w-5xl space-y-5 pb-8 animate-in fade-in duration-200">
+      <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
+        <p className="text-sm text-slate-500 dark:text-slate-400">{monthName} {year}</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Así va tu dinero</h1>
+      </header>
       {(!monthConfig || !monthConfig.isConfigured) && (
         <button onClick={onOpenMonthSetup} className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
           <Sparkles className="h-5 w-5 shrink-0" />
@@ -43,21 +47,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       )}
 
-      <section className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm sm:p-7">
-        <p className="text-sm font-medium text-slate-300">Disponible en {monthName}</p>
-        <p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">{money(summary.availableBalance)}</p>
-        <div className="mt-6 flex items-center justify-between gap-4">
+      <section className="border-b border-slate-200 py-5 dark:border-slate-800">
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Disponible</p>
+        <p className="mt-1 text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl">{money(summary.availableBalance)}</p>
+        <div className="mt-5 flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="mb-2 flex justify-between text-xs text-slate-300">
+            <div className="mb-2 flex justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Presupuesto utilizado</span><span>{percentUsed}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/15">
-              <div className={`h-full rounded-full ${percentUsed >= 90 ? 'bg-rose-400' : 'bg-emerald-400'}`} style={{ width: `${percentUsed}%` }} />
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div className={`h-full rounded-full ${percentUsed >= 90 ? 'bg-rose-500' : 'bg-emerald-600'}`} style={{ width: `${percentUsed}%` }} />
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-slate-300">Presupuesto</p>
-            <p className="font-semibold">{money(summary.totalIncome)}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Presupuesto</p>
+            <p className="font-semibold text-slate-900 dark:text-white">{money(summary.totalIncome)}</p>
           </div>
         </div>
       </section>

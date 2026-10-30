@@ -10,8 +10,8 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-import { UserProfile, FinancialSummary, SavingsGoal } from '../types';
-import { storageService } from '../services/storage';
+import { UserProfile, FinancialSummary, SavingsGoal } from '../../types';
+import { storageService } from '../../services/storage';
 
 interface TransferModalProps {
   isOpen: boolean;

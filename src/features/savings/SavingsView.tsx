@@ -11,8 +11,8 @@ import {
   SlidersHorizontal,
   Wallet,
 } from 'lucide-react';
-import { FinancialSummary, SavingsGoal, SavingsMovementType, UserProfile } from '../types';
-import { storageService } from '../services/storage';
+import { FinancialSummary, SavingsGoal, SavingsMovementType, UserProfile } from '../../types';
+import { storageService } from '../../services/storage';
 
 interface SavingsViewProps {
   summary: FinancialSummary;
@@ -81,7 +81,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Vault Hero - Fondo de Ahorro */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 text-white p-5 sm:p-6 shadow-md">
+      <div className="relative overflow-hidden bg-emerald-700 text-white px-5 py-6 sm:px-7">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-emerald-200 text-xs font-semibold">
@@ -145,9 +145,9 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
       </div>
 
       {/* Seamless Continuous View for Goals and Vault History divided by lines */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">
         {/* Metas de Ahorro Section */}
-        <div className="p-4 sm:p-5 space-y-3">
+        <div className="py-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -222,13 +222,13 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
               No tienes metas de ahorro activas. Crea una para organizar tus ahorros por objetivos.
             </p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {goals.map((goal) => {
                 const pct = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
                 return (
                   <div
                     key={goal.id}
-                    className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-2 relative group hover:border-emerald-500/40 transition"
+                    className="py-4 space-y-2 relative group transition"
                   >
                     <div className="flex justify-between items-start">
                       <div>

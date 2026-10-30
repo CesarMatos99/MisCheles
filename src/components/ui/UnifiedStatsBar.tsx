@@ -9,7 +9,7 @@ import {
   Sliders,
   Download,
 } from 'lucide-react';
-import { FinancialSummary, UserProfile } from '../types';
+import { FinancialSummary, UserProfile } from '../../types';
 
 interface UnifiedStatsBarProps {
   summary: FinancialSummary;

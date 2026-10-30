@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, CheckCircle2, DollarSign, Calendar, Tag, CreditCard, FileText } from 'lucide-react';
-import { Transaction, TransactionType, UserProfile } from '../types';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../constants/categories';
-import { storageService } from '../services/storage';
+import { Transaction, TransactionType, UserProfile } from '../../types';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../../constants/categories';
+import { storageService } from '../../services/storage';
 
 interface TransactionModalProps {
   isOpen: boolean;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Fingerprint, Lock, ShieldCheck, Delete, ArrowRight, User } from 'lucide-react';
-import { UserProfile } from '../types';
-import { biometricService } from '../services/biometricService';
+import { UserProfile } from '../../types';
+import { biometricService } from '../../services/biometricService';
 
 interface BiometricLockScreenProps {
   profile: UserProfile;

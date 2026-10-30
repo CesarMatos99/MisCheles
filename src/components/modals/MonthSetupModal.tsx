@@ -11,9 +11,9 @@ import {
   ArrowRightLeft,
   Sparkles,
 } from 'lucide-react';
-import { MonthConfig, UserProfile, SavingsGoal } from '../types';
-import { MONTH_NAMES_ES } from '../constants/categories';
-import { storageService, getPrevMonthKey } from '../services/storage';
+import { MonthConfig, UserProfile, SavingsGoal } from '../../types';
+import { MONTH_NAMES_ES } from '../../constants/categories';
+import { storageService, getPrevMonthKey } from '../../services/storage';
 
 interface MonthSetupModalProps {
   isOpen: boolean;

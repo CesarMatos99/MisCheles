@@ -2,11 +2,31 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --app-accent: #059669;
+  --app-background: #f8fafc;
+  --app-foreground: #0f172a;
+  color-scheme: light;
+}
+
+:root.dark {
+  --app-background: #090f1b;
+  --app-foreground: #f1f5f9;
+  color-scheme: dark;
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    background: var(--app-background);
+    color: var(--app-foreground);
+    overscroll-behavior-y: none;
   }
+
+  button, input, select, textarea { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--app-accent); outline-offset: 3px; }
 }
 
 /* Custom scrollbars for sleek mobile and desktop view */
@@ -35,3 +55,7 @@
 .dark .dark\:text-emerald-400 { color: var(--app-accent, #059669) !important; }
 .border-emerald-500 { border-color: var(--app-accent, #059669) !important; }
 .ring-emerald-500 { --tw-ring-color: var(--app-accent, #059669) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

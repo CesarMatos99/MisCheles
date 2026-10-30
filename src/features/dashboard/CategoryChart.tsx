@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PieChart as PieIcon, BarChart3, Tag, DollarSign, Filter, ChevronRight } from 'lucide-react';
-import { Transaction, UserProfile, FinancialSummary } from '../types';
-import { EXPENSE_CATEGORIES } from '../constants/categories';
+import { Transaction, UserProfile, FinancialSummary } from '../../types';
+import { EXPENSE_CATEGORIES } from '../../constants/categories';
 
 interface CategoryChartProps {
   transactions: Transaction[];

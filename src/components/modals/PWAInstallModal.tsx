@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Smartphone, Download, Share, PlusSquare, CheckCircle, ShieldCheck } from 'lucide-react';
-import { usePWAInstall } from '../hooks/usePWAInstall';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 interface PWAInstallModalProps {
   isOpen: boolean;

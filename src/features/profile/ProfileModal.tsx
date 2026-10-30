@@ -12,9 +12,9 @@ import {
   Wallet,
   Check,
 } from 'lucide-react';
-import { UserProfile } from '../types';
-import { storageService } from '../services/storage';
-import { CURRENCY_OPTIONS } from '../constants/categories';
+import { UserProfile } from '../../types';
+import { storageService } from '../../services/storage';
+import { CURRENCY_OPTIONS } from '../../constants/categories';
 
 interface ProfileModalProps {
   isOpen: boolean;

@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# MisCheles
 
-# Run and deploy your AI Studio app
+Aplicación para organizar ingresos, gastos, presupuesto mensual y ahorro. La interfaz se comparte entre web y Android; la capa de almacenamiento y las integraciones nativas se conectarán por plataforma.
 
-This contains everything you need to run your app locally.
+## Desarrollo
 
-View your app in AI Studio: https://ai.studio/apps/9ee9138e-afa1-451e-8103-8f717108a2dd
+Este repositorio usa Bun, Vite, React y TypeScript. Con Docker Desktop activo:
 
-## Run Locally
+```powershell
+docker compose up --build -d
+```
 
-**Prerequisites:**  Node.js
+La web estará en `http://localhost:5174`. Los cambios en `src/` se reflejan en el navegador. Para ver los registros usa `docker compose logs -f web`; para detener el servicio usa `docker compose down`.
 
+## Estructura
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```text
+src/
+  components/       # Elementos compartidos, navegación, diálogos y controles
+  features/         # Pantallas agrupadas por dominio funcional
+  constants/        # Categorías y opciones de catálogo
+  hooks/            # Estado y comportamiento reutilizable
+  services/         # Persistencia y exportación
+  types/            # Contratos de datos
+  App.tsx           # Composición de la aplicación y estado de navegación
+```
+
+Las decisiones de producto, contabilidad y seguridad están en `docs/PRODUCTO-Y-ARQUITECTURA.md`.
+
+## Estado actual
+
+El prototipo todavía usa `localStorage`, incluye datos demostrativos y no implementa autenticación, respaldo en la nube, base SQLite nativa ni importación bancaria. La interfaz actual es una propuesta de rediseño en curso; aún requiere revisión visual y compilación antes de reemplazar la versión principal.

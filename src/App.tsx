@@ -20,21 +20,21 @@ import {
   SavingsMovementType,
 } from './types';
 import { storageService, getMonthKey } from './services/storage';
-import { Header } from './components/Header';
-import { DashboardView } from './components/DashboardView';
-import { TransactionsView } from './components/TransactionsView';
-import { SavingsView } from './components/SavingsView';
-import { ProfileModal } from './components/ProfileModal';
-import { MonthSetupModal } from './components/MonthSetupModal';
-import { TransactionModal } from './components/TransactionModal';
-import { TransferModal } from './components/TransferModal';
-import { SavingsModal } from './components/SavingsModal';
-import { ExportModal } from './components/ExportModal';
-import { PWAInstallModal } from './components/PWAInstallModal';
-import { BiometricLockScreen } from './components/BiometricLockScreen';
-import { BottomNav, ActiveTab } from './components/BottomNav';
-import { OfflineIndicator } from './components/OfflineIndicator';
-import { FloatingActions } from './components/FloatingActions';
+import { Header } from './components/layout/Header';
+import { BottomNav, ActiveTab } from './components/layout/BottomNav';
+import { FloatingActions } from './components/layout/FloatingActions';
+import { OfflineIndicator } from './components/layout/OfflineIndicator';
+import { DashboardView } from './features/dashboard/DashboardView';
+import { TransactionsView } from './features/transactions/TransactionsView';
+import { TransactionModal } from './features/transactions/TransactionModal';
+import { SavingsView } from './features/savings/SavingsView';
+import { SavingsModal } from './features/savings/SavingsModal';
+import { ProfileModal } from './features/profile/ProfileModal';
+import { MonthSetupModal } from './components/modals/MonthSetupModal';
+import { TransferModal } from './components/modals/TransferModal';
+import { ExportModal } from './components/modals/ExportModal';
+import { PWAInstallModal } from './components/modals/PWAInstallModal';
+import { BiometricLockScreen } from './components/modals/BiometricLockScreen';
 
 export default function App() {
   // Current Date default
@@ -256,12 +256,8 @@ export default function App() {
           <TransactionsView
             year={year}
             month={month}
-            summary={summary}
             transactions={transactions}
             profile={profile}
-            onOpenTransactionModal={handleOpenTransactionModal}
-            onOpenTransferModal={() => setIsTransferModalOpen(true)}
-            onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onOpenExportModal={() => setIsExportModalOpen(true)}

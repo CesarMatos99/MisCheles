@@ -10,9 +10,9 @@ import {
   SlidersHorizontal,
   Target,
 } from 'lucide-react';
-import { SavingsMovementType, UserProfile, FinancialSummary, SavingsGoal } from '../types';
-import { storageService } from '../services/storage';
-import { EXPENSE_CATEGORIES } from '../constants/categories';
+import { SavingsMovementType, UserProfile, FinancialSummary, SavingsGoal } from '../../types';
+import { storageService } from '../../services/storage';
+import { EXPENSE_CATEGORIES } from '../../constants/categories';
 
 interface SavingsModalProps {
   isOpen: boolean;

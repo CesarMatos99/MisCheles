@@ -12,8 +12,8 @@ import {
   Sliders,
   Sparkles,
 } from 'lucide-react';
-import { MONTH_NAMES_ES } from '../constants/categories';
-import { UserProfile } from '../types';
+import { MONTH_NAMES_ES } from '../../constants/categories';
+import { UserProfile } from '../../types';
 
 interface HeaderProps {
   year: number;

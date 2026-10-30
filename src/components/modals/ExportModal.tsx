@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, FileSpreadsheet, FileText, Download, CheckCircle2, Calendar } from 'lucide-react';
-import { FinancialSummary, Transaction, UserProfile, SavingsMovement } from '../types';
-import { MONTH_NAMES_ES } from '../constants/categories';
-import { exportService } from '../services/exportService';
+import { FinancialSummary, Transaction, UserProfile, SavingsMovement } from '../../types';
+import { MONTH_NAMES_ES } from '../../constants/categories';
+import { exportService } from '../../services/exportService';
 
 interface ExportModalProps {
   isOpen: boolean;

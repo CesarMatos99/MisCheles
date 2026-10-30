@@ -10,8 +10,8 @@ import {
   ArrowUpRight,
   ShieldCheck,
 } from 'lucide-react';
-import { FinancialSummary, Transaction, UserProfile } from '../types';
-import { MONTH_NAMES_ES, EXPENSE_CATEGORIES } from '../constants/categories';
+import { FinancialSummary, Transaction, UserProfile } from '../../types';
+import { MONTH_NAMES_ES, EXPENSE_CATEGORIES } from '../../constants/categories';
 import { CategoryChart } from './CategoryChart';
 
 interface AnalyticsViewProps {
