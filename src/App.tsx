@@ -274,7 +274,9 @@ export default function App() {
             onOpenSavingsModal={handleOpenSavingsModal}
             onRefresh={refreshMonthData}
           />
-            {activeTab === 'profile' && (
+        )}
+
+        {activeTab === 'profile' && (
           <div className="mx-auto w-full max-w-3xl animate-in fade-in duration-200">
             <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
               <p className="text-sm text-slate-500 dark:text-slate-400">Cuenta y preferencias</p>
