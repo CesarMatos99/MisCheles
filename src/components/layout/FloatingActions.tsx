@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowDownLeft, ArrowRightLeft, Plus } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Plus, X } from 'lucide-react';
 
 interface FloatingActionsProps {
   onExpense: () => void;
@@ -7,16 +7,65 @@ interface FloatingActionsProps {
   onTransfer: () => void;
 }
 
-export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onIncome, onTransfer }) => (
-  <div className="fixed bottom-24 right-4 z-40 flex flex-col gap-3 sm:bottom-6 sm:right-6" aria-label="Acciones rápidas">
-    <button type="button" onClick={onTransfer} aria-label="Registrar transferencia" title="Transferencia" className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
-      <ArrowRightLeft className="h-5 w-5" aria-hidden="true" />
-    </button>
-    <button type="button" onClick={onIncome} aria-label="Agregar ingreso" title="Agregar ingreso" className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl active:scale-95">
-      <ArrowDownLeft className="h-5 w-5" aria-hidden="true" />
-    </button>
-    <button type="button" onClick={onExpense} aria-label="Agregar gasto" title="Agregar gasto" className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-2xl active:scale-95">
-      <Plus className="h-6 w-6" aria-hidden="true" />
-    </button>
-  </div>
-);
+export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onIncome, onTransfer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isOpen]);
+
+  const actions = [
+    { label: 'Registrar gasto', icon: ArrowUpRight, onClick: onExpense },
+    { label: 'Registrar ingreso', icon: ArrowDownLeft, onClick: onIncome },
+    { label: 'Registrar transferencia', icon: ArrowRightLeft, onClick: onTransfer },
+  ];
+
+  return (
+    <div ref={rootRef} className="fixed z-40 fab-position">
+      {isOpen && (
+        <div
+          id="movement-actions-menu"
+          role="group"
+          aria-label="Selecciona el tipo de movimiento"
+          className="absolute bottom-full mb-3 right-0 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+        >
+          {actions.map(({ label, icon: Icon, onClick }, index) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => { setIsOpen(false); onClick(); }}
+              className={'flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800' + (index < actions.length - 1 ? ' border-b border-slate-100 dark:border-slate-800' : '')}
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        aria-label={isOpen ? 'Cerrar opciones de movimiento' : 'Registrar movimiento'}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-controls="movement-actions-menu"
+        onClick={() => setIsOpen((open) => !open)}
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+      >
+        {isOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Plus className="h-6 w-6" aria-hidden="true" />}
+      </button>
+    </div>
+  );
+};

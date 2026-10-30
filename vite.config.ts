@@ -11,13 +11,13 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+        includeAssets: ['favicon.png', 'app-icon.png', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
           name: 'MisCheles - Presupuesto y Cobro',
           short_name: 'MisCheles',
           description: 'Administrador de presupuesto mensual, ahorros y gastos personales.',
-          theme_color: '#059669',
+          theme_color: '#012677',
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
@@ -34,12 +34,6 @@ export default defineConfig(() => {
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
-            },
-            {
-              src: '/pwa-maskable-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
             },
           ],
         },

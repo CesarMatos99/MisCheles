@@ -132,19 +132,19 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between shrink-0">
+        <div className="p-5 bg-primary text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Cobro / Configurar Mes</h2>
-              <p className="text-xs text-emerald-100">{monthName} {year}</p>
+              <h2 className="type-dialog-title font-bold">Cobro / Configurar Mes</h2>
+              <p className="text-xs text-white/75">{monthName} {year}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -169,10 +169,10 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                 value={initialIncome}
                 onChange={(e) => setInitialIncome(e.target.value)}
                 placeholder="Ej. 65000"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Tu cobro mensual, salario o fondo asignado para arrancar {monthName}.
             </p>
           </div>
@@ -181,7 +181,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
           <div
             className={`p-4 rounded-2xl border transition-all ${
               previousBalance > 0
-                ? 'bg-slate-50 dark:bg-slate-800/50 border-emerald-500/30 dark:border-emerald-500/20'
+                ? 'bg-slate-50 dark:bg-slate-800/50 border-primary/30 dark:border-primary/20'
                 : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700/50'
             }`}
           >
@@ -189,7 +189,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
               <div
                 className={`p-2 rounded-xl mt-0.5 ${
                   previousBalance > 0
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    ? 'bg-primary-soft text-primary'
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                 }`}
               >
@@ -222,7 +222,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   onClick={() => setRolloverAction('rollover_to_month')}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
                     rolloverAction === 'rollover_to_month'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-slate-900 dark:text-white ring-1 ring-emerald-500'
+                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-slate-900 dark:text-white ring-1 ring-primary'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                   }`}
                 >
@@ -231,14 +231,14 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                     name="rolloverAction"
                     checked={rolloverAction === 'rollover_to_month'}
                     onChange={() => setRolloverAction('rollover_to_month')}
-                    className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-0.5 text-primary focus:ring-primary"
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-bold text-xs">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
                       <span>Sumar al mes siguiente ({monthName})</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Se añade al presupuesto disponible de {monthName} (+{profile.currency}{previousBalance.toLocaleString()}).
                     </p>
                   </div>
@@ -249,7 +249,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   onClick={() => setRolloverAction('transfer_to_savings_general')}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
                     rolloverAction === 'transfer_to_savings_general'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-slate-900 dark:text-white ring-1 ring-emerald-500'
+                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-slate-900 dark:text-white ring-1 ring-primary'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                   }`}
                 >
@@ -258,14 +258,14 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                     name="rolloverAction"
                     checked={rolloverAction === 'transfer_to_savings_general'}
                     onChange={() => setRolloverAction('transfer_to_savings_general')}
-                    className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-0.5 text-primary focus:ring-primary"
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-bold text-xs">
                       <PiggyBank className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                       <span>Transferir a Ahorro General</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       Deposita el sobrante directamente en tu alcancía/ahorro sin asignarlo a ninguna meta.
                     </p>
                   </div>
@@ -276,7 +276,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   onClick={() => setRolloverAction('transfer_to_goal')}
                   className={`flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition ${
                     rolloverAction === 'transfer_to_goal'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-slate-900 dark:text-white ring-1 ring-emerald-500'
+                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-slate-900 dark:text-white ring-1 ring-primary'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                   }`}
                 >
@@ -286,14 +286,14 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                       name="rolloverAction"
                       checked={rolloverAction === 'transfer_to_goal'}
                       onChange={() => setRolloverAction('transfer_to_goal')}
-                      className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                      className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 font-bold text-xs">
-                        <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <Target className="w-3.5 h-3.5 text-blue-600 dark:text-primary" />
                         <span>Transferir a una Meta Específica</span>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         Abona a la meta seleccionada y también se contabiliza en tu ahorro total.
                       </p>
                     </div>
@@ -301,18 +301,18 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
 
                   {rolloverAction === 'transfer_to_goal' && (
                     <div className="pl-6 pt-1 space-y-1" onClick={(e) => e.stopPropagation()}>
-                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
                         Selecciona la meta de ahorro:
                       </label>
                       {goals.length === 0 ? (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
                           No tienes metas creadas. Puedes crearlas en el módulo de Ahorro.
                         </p>
                       ) : (
                         <select
                           value={selectedGoalId}
                           onChange={(e) => setSelectedGoalId(e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                           {goals.map((g) => (
                             <option key={g.id} value={g.id}>
@@ -343,7 +343,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   />
                   <div className="min-w-0">
                     <span className="font-semibold text-xs">No transferir</span>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-400">
                       Dejar el remanente en el mes anterior sin transferir a ningún lado.
                     </p>
                   </div>
@@ -360,15 +360,15 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                 {profile.currency} {totalStartingBudget.toLocaleString()}
               </span>
               {carryoverAmount > 0 ? (
-                <p className="text-[10px] text-slate-400">
+                <p className="text-xs text-slate-400">
                   ({profile.currency}{numInitial.toLocaleString()} + {profile.currency}{carryoverAmount.toLocaleString()} de {prevMonthName})
                 </p>
               ) : rolloverAction === 'transfer_to_savings_general' && previousBalance > 0 ? (
-                <p className="text-[10px] text-teal-400">
+                <p className="text-xs text-teal-400">
                   +{profile.currency}{previousBalance.toLocaleString()} transferidos a Ahorro General
                 </p>
               ) : rolloverAction === 'transfer_to_goal' && previousBalance > 0 ? (
-                <p className="text-[10px] text-blue-400">
+                <p className="text-xs text-primary">
                   +{profile.currency}{previousBalance.toLocaleString()} transferidos a Meta: {currentGoal?.title}
                 </p>
               ) : null}
@@ -385,7 +385,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej. Priorizar ahorro y evitar compras impulsivas"
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -394,13 +394,13 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-xs font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Guardar Presupuesto</span>

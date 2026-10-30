@@ -45,14 +45,14 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
           {/* Col 1: Balance Disponible */}
           <div className="pr-3 flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                 Balance Disponible
               </span>
               <h3 className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {profile.currency} {summary.availableBalance.toLocaleString()}
               </h3>
             </div>
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 truncate">
+            <p className="text-xs text-primary font-medium mt-0.5 truncate">
               Disponible {monthName}
             </p>
           </div>
@@ -60,16 +60,16 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
           {/* Col 2: Total Fondo Mes */}
           <div className="px-3 flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                 Total Fondo Mes
               </span>
               <h3 className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {profile.currency} {summary.totalIncome.toLocaleString()}
               </h3>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
               {summary.carryover > 0 ? (
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                <span className="text-primary font-semibold">
                   +{profile.currency}{summary.carryover.toLocaleString()} sobrante
                 </span>
               ) : (
@@ -81,7 +81,7 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
           {/* Col 3: Gastos del Mes */}
           <div className="pl-3 flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
                 Gastos del Mes
               </span>
               <h3 className="text-lg sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
@@ -97,7 +97,7 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
                   style={{ width: `${budgetUsagePercent}%` }}
                 />
               </div>
-              <span className="text-[10px] text-slate-400 shrink-0 font-medium">
+              <span className="text-xs text-slate-400 shrink-0 font-medium">
                 {budgetUsagePercent.toFixed(0)}%
               </span>
             </div>
@@ -119,7 +119,7 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
 
           <button
             onClick={() => onOpenTransactionModal('income')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-primary hover:bg-primary-hover active:scale-95 text-white text-xs font-bold shadow-sm transition shrink-0"
             title="Registrar Ingreso"
           >
             <Plus className="w-3.5 h-3.5" />

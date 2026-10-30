@@ -86,7 +86,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
             onClick={() => setChartType('donut')}
             className={`p-1.5 rounded-lg transition ${
               chartType === 'donut'
-                ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400'
+                ? 'bg-white dark:bg-slate-700 shadow-sm text-primary'
                 : 'text-slate-400 hover:text-slate-600'
             }`}
             title="Gráfico Circular"
@@ -97,7 +97,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
             onClick={() => setChartType('bars')}
             className={`p-1.5 rounded-lg transition ${
               chartType === 'bars'
-                ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400'
+                ? 'bg-white dark:bg-slate-700 shadow-sm text-primary'
                 : 'text-slate-400 hover:text-slate-600'
             }`}
             title="Gráfico de Barras"
@@ -151,14 +151,14 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                 </svg>
                 {/* Center label */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">
+                  <span className="text-xs uppercase font-bold text-slate-400">
                     {selectedCategory ? 'Selección' : 'Categorías'}
                   </span>
                   <span className="text-sm font-extrabold text-slate-900 dark:text-white max-w-[100px] truncate px-1">
                     {selectedCategory || `${categoryList.length} Rubros`}
                   </span>
                   {selectedCategory && (
-                    <span className="text-[11px] font-bold text-rose-500">
+                    <span className="text-xs font-bold text-rose-500">
                       {categoryList.find((c) => c.name === selectedCategory)?.percent.toFixed(1)}%
                     </span>
                   )}
@@ -175,7 +175,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                       onClick={() => onSelectCategory(isSelected ? null : cat.name)}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition ${
                         isSelected
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800'
+                          ? 'bg-primary-soft dark:bg-primary-soft border border-primary/30'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent'
                       }`}
                     >
@@ -192,7 +192,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                         <span className="font-bold text-slate-900 dark:text-white">
                           {profile.currency} {cat.total.toLocaleString()}
                         </span>
-                        <span className="text-[10px] text-slate-400 ml-1.5">
+                        <span className="text-xs text-slate-400 ml-1.5">
                           ({cat.percent.toFixed(0)}%)
                         </span>
                       </div>
@@ -212,7 +212,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                     onClick={() => onSelectCategory(isSelected ? null : cat.name)}
                     className={`p-2.5 rounded-2xl cursor-pointer transition ${
                       isSelected
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800'
+                        ? 'bg-primary-soft dark:bg-primary-soft border border-primary/30'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
@@ -222,7 +222,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
                       </span>
                       <span className="font-bold text-slate-900 dark:text-white">
                         {profile.currency} {cat.total.toLocaleString()}{' '}
-                        <span className="text-[10px] text-slate-400 font-normal">
+                        <span className="text-xs text-slate-400 font-normal">
                           ({cat.percent.toFixed(1)}%)
                         </span>
                       </span>

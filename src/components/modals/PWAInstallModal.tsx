@@ -23,19 +23,19 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">
+        <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               <Smartphone className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Instalar en tu Celular (APK / PWA)</h2>
-              <p className="text-xs text-emerald-100">MisCheles App Móvil</p>
+              <h2 className="type-dialog-title font-bold">Instalar en tu Celular (APK / PWA)</h2>
+              <p className="text-xs text-white/75">MisCheles App Móvil</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -43,7 +43,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300">
+          <div className="flex items-center gap-3 p-3 bg-primary-soft dark:bg-primary-soft rounded-2xl border border-primary/20 text-xs text-primary dark:text-primary">
             <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-600" />
             <span>
               Esta aplicación está optimizada para funcionar como una <strong>APK nativa</strong> en Android y celular: pantalla completa, autenticación biométrica y funcionamiento sin internet.
@@ -58,7 +58,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
               </p>
               <button
                 onClick={handleInstallClick}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-sm shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 <span>Instalar Aplicación en Celular</span>

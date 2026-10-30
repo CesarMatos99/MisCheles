@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  LayoutDashboard,
-  Receipt,
-  PiggyBank,
-  PieChart,
-  User,
-  Plus,
-  Minus,
-  Sparkles,
-  Sliders,
-  Download,
-  Smartphone,
-} from 'lucide-react';
+import { Receipt, PiggyBank, PieChart, Download } from 'lucide-react';
 import {
   FinancialSummary,
   MonthConfig,
@@ -29,7 +17,7 @@ import { TransactionsView } from './features/transactions/TransactionsView';
 import { TransactionModal } from './features/transactions/TransactionModal';
 import { SavingsView } from './features/savings/SavingsView';
 import { SavingsModal } from './features/savings/SavingsModal';
-import { ProfileModal } from './features/profile/ProfileModal';
+import { ProfileView } from './features/profile/ProfileView';
 import { MonthSetupModal } from './components/modals/MonthSetupModal';
 import { TransferModal } from './components/modals/TransferModal';
 import { ExportModal } from './components/modals/ExportModal';
@@ -56,7 +44,7 @@ export default function App() {
     }
   });
   const [accentColor, setAccentColor] = useState<string>(() => {
-    try { return localStorage.getItem('mischeles_accent_v1') || '#059669'; } catch { return '#059669'; }
+    try { return localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1') || '#012677'; } catch { return '#012677'; }
   });
 
   // App Lock State
@@ -89,9 +77,9 @@ export default function App() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState<boolean>(false);
   const [savingsModalMode, setSavingsModalMode] = useState<SavingsMovementType>('deposit_from_month');
+  const [savingsModalGoalId, setSavingsModalGoalId] = useState<string | undefined>();
 
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState<boolean>(false);
 
   // Synchronize Dark Theme class on html root
@@ -106,8 +94,9 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--app-primary', accentColor);
     document.documentElement.style.setProperty('--app-accent', accentColor);
-    try { localStorage.setItem('mischeles_accent_v1', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
+    try { localStorage.setItem('mischeles_accent_v2', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
   }, [accentColor]);
 
   // Refresh current month data
@@ -160,8 +149,9 @@ export default function App() {
     }
   };
 
-  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month') => {
+  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month', goalId?: string) => {
     setSavingsModalMode(mode);
+    setSavingsModalGoalId(goalId);
     setIsSavingsModalOpen(true);
   };
 
@@ -171,21 +161,16 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
+    <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
 
       {/* Main Header */}
       <Header
-        year={year}
-        month={month}
-        onMonthChange={handleMonthChange}
         isDarkMode={isDarkMode}
         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
         onLockApp={handleLockApp}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
+        onOpenProfile={() => setActiveTab('profile')}
         profile={profile}
       />
 
@@ -206,7 +191,7 @@ export default function App() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition ${
                     isActive
-                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                      ? 'border-primary text-primary'
                       : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -235,6 +220,7 @@ export default function App() {
           <DashboardView
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             monthConfig={monthConfig}
             summary={summary}
             transactions={transactions}
@@ -256,6 +242,7 @@ export default function App() {
           <TransactionsView
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             transactions={transactions}
             profile={profile}
             onEditTransaction={handleEditTransaction}
@@ -271,74 +258,42 @@ export default function App() {
             monthKey={currentMonthKey}
             year={year}
             month={month}
+            onMonthChange={handleMonthChange}
             onOpenSavingsModal={handleOpenSavingsModal}
             onRefresh={refreshMonthData}
           />
         )}
 
         {activeTab === 'profile' && (
-          <div className="max-w-md mx-auto">
-            {/* Direct access to profile in mobile tab */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xl font-bold overflow-hidden shadow">
-                  {profile.photoUrl ? (
-                    <img src={profile.photoUrl} alt={profile.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{profile.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">{profile.name}</h3>
-                  <p className="text-xs text-slate-400">{profile.email || 'Sin correo registrado'}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
-                    Moneda: {profile.currency}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <button
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition"
-                >
-                  Editar Perfil, Foto y Seguridad Biométrica
-                </button>
-                <button
-                  onClick={() => setIsInstallModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs transition flex items-center justify-center gap-2"
-                >
-                  <Smartphone className="w-4 h-4 text-emerald-500" />
-                  <span>Instalar Aplicación Móvil (APK)</span>
-                </button>
-                <button
-                  onClick={handleLockApp}
-                  className="w-full py-3 px-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-xs transition"
-                >
-                  Bloquear Ahora con Huella / PIN
-                </button>
-              </div>
-            </div>
-          </div>
+          <ProfileView
+            profile={profile}
+            isDarkMode={isDarkMode}
+            accentColor={accentColor}
+            onThemeChange={setIsDarkMode}
+            onAccentColorChange={setAccentColor}
+            onProfileUpdated={(updated) => {
+              setProfile(updated);
+              refreshMonthData();
+            }}
+            onOpenInstall={() => setIsInstallModalOpen(true)}
+            onLockApp={handleLockApp}
+          />
         )}
       </main>
 
       {/* Mobile Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
-        onChangeTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'profile') {
-            setIsProfileModalOpen(true);
-          }
-        }}
+        onChangeTab={setActiveTab}
       />
 
-      <FloatingActions
-        onExpense={() => handleOpenTransactionModal('expense')}
-        onIncome={() => handleOpenTransactionModal('income')}
-        onTransfer={() => setIsTransferModalOpen(true)}
-      />
+      {(activeTab === 'dashboard' || activeTab === 'transactions') && (
+        <FloatingActions
+          onExpense={() => handleOpenTransactionModal('expense')}
+          onIncome={() => handleOpenTransactionModal('income')}
+          onTransfer={() => setIsTransferModalOpen(true)}
+        />
+      )}
 
       {/* Modals */}
       <MonthSetupModal
@@ -378,6 +333,7 @@ export default function App() {
         profile={profile}
         summary={summary}
         initialMode={savingsModalMode}
+        initialGoalId={savingsModalGoalId}
         onSaved={() => refreshMonthData()}
       />
 
@@ -390,18 +346,6 @@ export default function App() {
         transactions={transactions}
         savingsMovements={storageService.getSavingsMovements().filter((m) => m.monthKey === currentMonthKey)}
         profile={profile}
-      />
-
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        profile={profile}
-        accentColor={accentColor}
-        onAccentColorChange={setAccentColor}
-        onProfileUpdated={(updated) => {
-          setProfile(updated);
-          refreshMonthData();
-        }}
       />
 
       <PWAInstallModal

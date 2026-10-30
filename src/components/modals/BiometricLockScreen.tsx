@@ -80,11 +80,11 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
       <div className="w-full max-w-sm flex flex-col items-center">
         {/* App Logo & User Identity */}
         <div className="relative mb-4">
-          <div className="w-20 h-20 rounded-full border-2 border-emerald-500/60 p-1 shadow-2xl shadow-emerald-500/30 flex items-center justify-center bg-slate-900 overflow-hidden">
+          <div className="w-20 h-20 rounded-full border-2 border-primary/60 p-1 shadow-2xl shadow-primary/50 flex items-center justify-center bg-slate-900 overflow-hidden">
             {profile.photoUrl ? (
               <img src={profile.photoUrl} alt={profile.name} className="w-full h-full object-cover rounded-full" />
             ) : (
-              <div className="w-full h-full rounded-full bg-gradient-to-tr from-emerald-600 to-teal-800 flex items-center justify-center text-white text-2xl font-bold">
+              <div className="w-full h-full rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold">
                 {profile.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -106,7 +106,7 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
                 key={index}
                 className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
                   isFilled
-                    ? 'bg-emerald-400 border-emerald-400 scale-110 shadow-md shadow-emerald-500/50'
+                    ? 'bg-primary border-primary scale-110 shadow-md shadow-primary/50'
                     : 'border-slate-600 bg-slate-800/60'
                 }`}
               />
@@ -126,7 +126,7 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
             <button
               key={digit}
               onClick={() => handleKeyPress(digit)}
-              className="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 active:bg-emerald-600 active:scale-95 text-xl font-semibold text-slate-100 shadow-sm border border-slate-700/50 transition-all flex items-center justify-center"
+              className="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 active:bg-primary active:scale-95 text-xl font-semibold text-slate-100 shadow-sm border border-slate-700/50 transition-all flex items-center justify-center"
             >
               {digit}
             </button>
@@ -139,7 +139,7 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
           </button>
           <button
             onClick={() => handleKeyPress('0')}
-            className="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 active:bg-emerald-600 active:scale-95 text-xl font-semibold text-slate-100 shadow-sm border border-slate-700/50 transition-all flex items-center justify-center"
+            className="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 active:bg-primary active:scale-95 text-xl font-semibold text-slate-100 shadow-sm border border-slate-700/50 transition-all flex items-center justify-center"
           >
             0
           </button>
@@ -157,12 +157,12 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
             <button
               onClick={triggerSimulatedBiometric}
               disabled={isVerifyingBio}
-              className="group flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 active:scale-95 transition-all text-sm font-medium"
+              className="group flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-primary-soft hover:bg-primary-soft border border-primary/40 text-primary active:scale-95 transition-all text-sm font-medium"
             >
-              <Fingerprint className={`w-5 h-5 ${isVerifyingBio ? 'animate-pulse text-emerald-300' : 'group-hover:scale-110 transition-transform'}`} />
+              <Fingerprint className={`w-5 h-5 ${isVerifyingBio ? 'animate-pulse text-primary' : 'group-hover:scale-110 transition-transform'}`} />
               <span>{isVerifyingBio ? 'Leyendo huella/FaceID...' : 'Desbloquear con Huella'}</span>
             </button>
-            <span className="text-[11px] text-slate-500">PIN por defecto: 1234 (configurable en Perfil)</span>
+            <span className="text-xs text-slate-500">PIN por defecto: 1234 (configurable en Perfil)</span>
           </div>
         )}
       </div>

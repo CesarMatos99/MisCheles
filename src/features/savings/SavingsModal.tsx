@@ -24,6 +24,7 @@ interface SavingsModalProps {
   summary: FinancialSummary;
   onSaved: () => void;
   initialMode?: SavingsMovementType;
+  initialGoalId?: string;
 }
 
 export const SavingsModal: React.FC<SavingsModalProps> = ({
@@ -34,6 +35,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   summary,
   onSaved,
   initialMode = 'deposit_from_month',
+  initialGoalId,
 }) => {
   const [mode, setMode] = useState<SavingsMovementType>(initialMode);
   const [amount, setAmount] = useState<string>('');
@@ -51,16 +53,18 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
       setMode(initialMode);
       setAmount('');
       setDescription('');
-      setDestinationType('general');
+      setDestinationType(initialGoalId ? 'goal' : 'general');
       setErrorMsg('');
       setDate(new Date().toISOString().split('T')[0]);
       const gList = storageService.getSavingsGoals();
       setGoals(gList);
       if (gList.length > 0) {
-        setSelectedGoalId(gList[0].id);
+        setSelectedGoalId(initialGoalId || gList[0].id);
+      } else {
+        setSelectedGoalId('');
       }
     }
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, initialGoalId]);
 
   if (!isOpen) return null;
 
@@ -93,8 +97,22 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
       return;
     }
 
-    if (mode === 'deposit_from_month' && destinationType === 'goal' && (!selectedGoalId || !currentGoal)) {
-      setErrorMsg('Por favor selecciona una meta de ahorro de destino.');
+    if (mode !== 'deposit_from_month' && destinationType === 'general') {
+      const assignedToGoals = goals.reduce((sum, goal) => sum + (Number(goal.currentAmount) || 0), 0);
+      const generalAvailable = Math.max(0, summary.totalSavingsVault - assignedToGoals);
+      if (numAmount > generalAvailable) {
+        setErrorMsg('El ahorro general disponible es ' + profile.currency + ' ' + generalAvailable.toLocaleString() + '. Los fondos asignados a metas deben retirarse desde su meta.');
+        return;
+      }
+    }
+
+    if (destinationType === 'goal' && (!selectedGoalId || !currentGoal)) {
+      setErrorMsg('Por favor selecciona una meta de ahorro.');
+      return;
+    }
+
+    if (mode !== 'deposit_from_month' && destinationType === 'goal' && currentGoal && numAmount > currentGoal.currentAmount) {
+      setErrorMsg(`El retiro supera el saldo de esta meta (${profile.currency} ${currentGoal.currentAmount.toLocaleString()}).`);
       return;
     }
 
@@ -104,17 +122,17 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           ? `Aporte a meta: ${currentGoal?.title || 'Meta'}`
           : 'Aporte a Ahorro General'
         : mode === 'withdraw_to_month'
-        ? 'Transferencia al mes corriente'
-        : 'Gasto directo desde ahorros';
+        ? destinationType === 'goal' ? `Retiro de meta: ${currentGoal?.title || 'Meta'}` : 'Transferencia al mes corriente'
+        : destinationType === 'goal' ? `Pago desde meta: ${currentGoal?.title || 'Meta'}` : 'Gasto directo desde ahorros';
 
     storageService.addSavingsMovement({
       monthKey,
       type: mode,
       amount: numAmount,
       description: description.trim() || defaultDesc,
-      destinationType: mode === 'deposit_from_month' ? destinationType : undefined,
-      goalId: mode === 'deposit_from_month' && destinationType === 'goal' ? selectedGoalId : undefined,
-      goalTitle: mode === 'deposit_from_month' && destinationType === 'goal' ? currentGoal?.title : undefined,
+      destinationType,
+      goalId: destinationType === 'goal' ? selectedGoalId : undefined,
+      goalTitle: destinationType === 'goal' ? currentGoal?.title : undefined,
       category: mode === 'direct_expense' ? category : undefined,
       date,
     });
@@ -129,32 +147,32 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">
+        <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               <SlidersHorizontal className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Gestionar Acciones de Ahorro</h2>
-              <p className="text-xs text-emerald-100">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
+              <h2 className="type-dialog-title font-bold">Gestionar Acciones de Ahorro</h2>
+              <p className="text-xs text-white/75">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="p-2 bg-slate-100 dark:bg-slate-800/80 m-4 rounded-2xl flex gap-1">
+        <div className="mx-5 mt-4 flex border-b border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => { setMode('deposit_from_month'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'deposit_from_month'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -164,9 +182,9 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           <button
             type="button"
             onClick={() => { setMode('withdraw_to_month'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'withdraw_to_month'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -176,9 +194,9 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           <button
             type="button"
             onClick={() => { setMode('direct_expense'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'direct_expense'
-                ? 'bg-rose-600 text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -190,61 +208,68 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-4">
           {/* Quick Context Card */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-xs flex justify-between items-center">
+          <div className="flex items-center justify-between gap-3 border-y border-slate-200 py-3 text-sm dark:border-slate-800">
             {mode === 'deposit_from_month' ? (
               <>
                 <span className="text-slate-500 dark:text-slate-400">Disponible en mes actual:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-primary">
                   {profile.currency} {summary.availableBalance.toLocaleString()}
                 </span>
               </>
             ) : (
               <>
-                <span className="text-slate-500 dark:text-slate-400">Saldo actual en alcancía:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {profile.currency} {summary.totalSavingsVault.toLocaleString()}
-                </span>
+                {destinationType === 'goal' && currentGoal ? (
+                <>
+                  <span className="text-slate-500 dark:text-slate-400">Saldo de la meta:</span>
+                  <span className="font-bold text-primary">{profile.currency} {currentGoal.currentAmount.toLocaleString()}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-500 dark:text-slate-400">Saldo actual en alcancía:</span>
+                  <span className="font-bold text-primary">{profile.currency} {summary.totalSavingsVault.toLocaleString()}</span>
+                </>
+              )}
               </>
             )}
           </div>
 
-          {/* Destination Selector for deposit_from_month: General vs Meta */}
-          {mode === 'deposit_from_month' && (
-            <div className="space-y-2">
+          {/* Select the goal that receives this contribution or funds this withdrawal. */}
+          <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Destino del Ahorro
+                {mode === 'deposit_from_month' ? 'Destino del ahorro' : 'Origen de los fondos'}
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setDestinationType('general')}
-                  className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
+                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 ${
                     destinationType === 'general'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
-                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'text-primary'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-primary'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <PiggyBank className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <PiggyBank className="w-3.5 h-3.5 text-primary" />
                     <span>Ahorro General</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Sin asignar a meta</span>
+                  <span className="text-xs text-slate-500">Sin asignar a meta</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setDestinationType('goal')}
-                  className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
+                  disabled={goals.length === 0}
+                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 disabled:cursor-not-allowed disabled:opacity-50 ${
                     destinationType === 'goal'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
-                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'text-primary'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-primary'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <Target className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Target className="w-3.5 h-3.5 text-primary" />
                     <span>Meta de Ahorro</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Suma a meta y total</span>
+                  <span className="text-xs text-slate-500">{mode === 'deposit_from_month' ? 'Suma al saldo de la meta' : 'Se descuenta del saldo de la meta'}</span>
                 </button>
               </div>
 
@@ -253,7 +278,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   <select
                     value={selectedGoalId}
                     onChange={(e) => setSelectedGoalId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {goals.map((g) => (
                       <option key={g.id} value={g.id}>
@@ -263,8 +288,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   </select>
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           {/* Amount */}
           <div>
@@ -283,7 +307,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl type-money text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -297,7 +321,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.id} value={c.name}>
@@ -326,7 +350,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   ? 'Ej. Usar ahorro para cubrir imprevisto del mes'
                   : 'Ej. Pago de reparación de auto o compra urgente'
               }
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -339,7 +363,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -355,13 +379,13 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Confirmar</span>

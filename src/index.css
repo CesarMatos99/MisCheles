@@ -3,59 +3,117 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --app-accent: #059669;
-  --app-background: #f8fafc;
-  --app-foreground: #0f172a;
   color-scheme: light;
+  --app-primary: #012677;
+  --app-primary-hover: color-mix(in srgb, var(--app-primary) 82%, black);
+  --app-primary-soft: color-mix(in srgb, var(--app-primary) 9%, white);
+  --app-primary-ink: #061b49;
+  --app-background: #f8f9fc;
+  --app-surface: #ffffff;
+  --app-foreground: #172033;
+  --app-muted: #687386;
+  --app-line: #e3e7ee;
+  --app-positive: #17845d;
+  --app-positive-soft: #e9f7f0;
+  --app-negative: #c2414b;
+  --app-negative-soft: #fff0f0;
+  --app-warning: #b76a12;
+  --app-warning-soft: #fff5e7;
+  --font-ui: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-number: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --type-display: 2rem;
+  --type-screen-title: 1.5rem;
+  --type-section-title: 1rem;
+  --type-body: .875rem;
+  --type-secondary: .8125rem;
+  --type-caption: .75rem;
 }
 
 :root.dark {
-  --app-background: #090f1b;
-  --app-foreground: #f1f5f9;
   color-scheme: dark;
+  --app-background: #0d1422;
+  --app-surface: #111b2b;
+  --app-foreground: #eef2f8;
+  --app-muted: #9aa7bb;
+  --app-line: #253247;
+  --app-primary-soft: color-mix(in srgb, var(--app-primary) 20%, #0d1422);
+  --app-primary-ink: #e4ebfa;
+  --app-positive: #51c394;
+  --app-positive-soft: #12372d;
+  --app-negative: #f17a83;
+  --app-negative-soft: #411f27;
+  --app-warning: #f1b761;
+  --app-warning-soft: #3b2d1d;
 }
 
 @layer base {
+  html { background: var(--app-background); }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    min-width: 320px;
+    font-family: var(--font-ui);
+    font-size: var(--type-body);
+    line-height: 1.45;
     -webkit-tap-highlight-color: transparent;
     background: var(--app-background);
     color: var(--app-foreground);
     overscroll-behavior-y: none;
+    font-feature-settings: "tnum" 1;
   }
-
   button, input, select, textarea { font: inherit; }
   button { -webkit-tap-highlight-color: transparent; }
-  :focus-visible { outline: 2px solid var(--app-accent); outline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--app-primary); outline-offset: 3px; }
+  ::selection { background: var(--app-primary); color: white; }
 }
 
-/* Custom scrollbars for sleek mobile and desktop view */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Type roles: display, screen title, section title, body, supporting text, caption. */
+.type-display { font-size: var(--type-display); line-height: 1.15; letter-spacing: -.04em; font-weight: 700; }
+.type-screen-title { font-size: var(--type-screen-title); line-height: 1.25; letter-spacing: -.025em; font-weight: 700; }
+.type-dialog-title { font-size: 1.125rem; line-height: 1.35; font-weight: 700; }
+.type-section-title { font-size: var(--type-section-title); line-height: 1.5; font-weight: 650; }
+.type-body { font-size: var(--type-body); line-height: 1.5; }
+.type-secondary { font-size: var(--type-secondary); line-height: 1.45; color: var(--app-muted); }
+.type-caption { font-size: var(--type-caption); line-height: 1.4; color: var(--app-muted); }
+.type-money { font-family: var(--font-number); font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+
+/* Shared button roles. Use labels for actions; reserve icon-only controls for familiar icons. */
+.btn-primary { min-height: 44px; padding: 0 16px; border-radius: 12px; background: var(--app-primary); color: white; font-weight: 650; transition: background-color .15s, transform .15s; }
+.btn-primary:hover { background: var(--app-primary-hover); }
+.btn-secondary { min-height: 44px; padding: 0 16px; border: 1px solid var(--app-line); border-radius: 12px; background: transparent; color: var(--app-foreground); font-weight: 600; }
+.btn-quiet { min-height: 40px; padding: 0 10px; border-radius: 10px; color: var(--app-muted); font-weight: 600; }
+.btn-icon { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 999px; }
+.safe-area-bottom { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+.fab-position { right: 1rem; bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
+@media (min-width: 640px) { .fab-position { right: 1.5rem; bottom: 1.5rem; } }
+
+/* Brand color follows the user's selected accent; green/red stay semantic for money states. */
+.bg-app-background { background-color: var(--app-background) !important; }
+.text-app-foreground { color: var(--app-foreground) !important; }
+.bg-primary { background-color: var(--app-primary) !important; }
+.bg-primary-soft { background-color: var(--app-primary-soft) !important; }
+.hover\:bg-primary-soft:hover { background-color: var(--app-primary-soft) !important; }
+.dark .dark\:bg-primary-soft { background-color: var(--app-primary-soft) !important; }
+.hover\:bg-primary-hover:hover { background-color: var(--app-primary-hover) !important; }
+.text-primary { color: var(--app-primary) !important; }
+.dark .dark\:text-primary { color: color-mix(in srgb, var(--app-primary) 65%, white) !important; }
+.border-primary { border-color: var(--app-primary) !important; }
+.border-primary\/20 { border-color: color-mix(in srgb, var(--app-primary) 20%, transparent) !important; }
+.border-primary\/30 { border-color: color-mix(in srgb, var(--app-primary) 30%, transparent) !important; }
+.border-primary\/40 { border-color: color-mix(in srgb, var(--app-primary) 40%, transparent) !important; }
+.border-primary\/60 { border-color: color-mix(in srgb, var(--app-primary) 60%, transparent) !important; }
+.focus\:ring-primary:focus { --tw-ring-color: var(--app-primary) !important; }
+.ring-primary { --tw-ring-color: var(--app-primary) !important; }
+.shadow-primary\/50 { --tw-shadow-color: color-mix(in srgb, var(--app-primary) 50%, transparent) !important; }
+.dark .text-primary { color: color-mix(in srgb, var(--app-primary) 65%, white) !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .4); border-radius: 9999px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, .5); }
+
+@media (max-width: 640px) {
+  :root { --type-display: 1.75rem; --type-screen-title: 1.375rem; }
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
-  border-radius: 9999px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.5);
-}
-
-/* The selected accent is shared by both color schemes. */
-.bg-emerald-600 { background-color: var(--app-accent, #059669) !important; }
-.hover\:bg-emerald-700:hover { background-color: var(--app-accent, #059669) !important; filter: brightness(.9); }
-.text-emerald-600 { color: var(--app-accent, #059669) !important; }
-.dark .dark\:text-emerald-400 { color: var(--app-accent, #059669) !important; }
-.border-emerald-500 { border-color: var(--app-accent, #059669) !important; }
-.ring-emerald-500 { --tw-ring-color: var(--app-accent, #059669) !important; }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }

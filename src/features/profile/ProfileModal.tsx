@@ -11,6 +11,7 @@ import {
   Mail,
   Wallet,
   Check,
+  Smartphone,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { storageService } from '../../services/storage';
@@ -23,15 +24,16 @@ interface ProfileModalProps {
   onProfileUpdated: (updated: UserProfile) => void;
   accentColor: string;
   onAccentColorChange: (color: string) => void;
+  onOpenInstallModal: () => void;
 }
 
 const ACCENT_COLORS = [
-  { name: 'Esmeralda', value: '#059669' },
+  { name: 'Azul marino', value: '#012677' },
   { name: 'Azul', value: '#2563eb' },
-  { name: 'Violeta', value: '#7c3aed' },
-  { name: 'Rosa', value: '#db2777' },
-  { name: 'Naranja', value: '#ea580c' },
-  { name: 'Turquesa', value: '#0f766e' },
+  { name: 'Verde azulado', value: '#0f766e' },
+  { name: 'Violeta', value: '#6d28d9' },
+  { name: 'Coral', value: '#b54737' },
+  { name: 'Ámbar', value: '#8a4b08' },
 ];
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -41,6 +43,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onProfileUpdated,
   accentColor,
   onAccentColorChange,
+  onOpenInstallModal,
 }) => {
   const [name, setName] = useState<string>(profile.name);
   const [email, setEmail] = useState<string>(profile.email);
@@ -95,19 +98,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between shrink-0">
+        <div className="p-5 bg-primary text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Perfil y Seguridad</h2>
-              <p className="text-xs text-emerald-100">Personalización y Bloqueo Biométrico</p>
+              <h2 className="type-dialog-title font-bold">Perfil y Seguridad</h2>
+              <p className="text-xs text-white/75">Personalización y Bloqueo Biométrico</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -118,11 +121,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           {/* Avatar Photo Section */}
           <div className="flex flex-col items-center justify-center gap-3">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-full border-4 border-emerald-500/30 overflow-hidden shadow-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full border-4 border-primary/30 overflow-hidden shadow-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                 {photoUrl ? (
                   <img src={photoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                  <span className="text-3xl font-extrabold text-primary">
                     {name ? name.charAt(0).toUpperCase() : 'U'}
                   </span>
                 )}
@@ -130,7 +133,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-emerald-600 text-white shadow hover:bg-emerald-700 transition active:scale-95"
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-white shadow hover:bg-primary-hover transition active:scale-95"
                 title="Subir foto desde el celular o computadora"
               >
                 <Camera className="w-4 h-4" />
@@ -143,7 +146,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 className="hidden"
               />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Toca la cámara para subir tu foto de perfil
             </p>
           </div>
@@ -159,7 +162,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej. César Matos"
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -172,7 +175,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="cesarmatos99@gmail.com"
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -185,7 +188,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {CURRENCY_OPTIONS.map((c) => (
                   <option key={c.value} value={c.value}>
@@ -204,7 +207,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 min="0"
                 value={monthlyTargetIncome}
                 onChange={(e) => setMonthlyTargetIncome(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -233,8 +236,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           </section>
 
+          <button type="button" onClick={onOpenInstallModal} className="flex min-h-12 w-full items-center gap-3 border-y border-slate-200 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:border-slate-800 dark:text-slate-100">
+            <Smartphone className="h-5 w-5 text-primary" aria-hidden="true" />
+            <span>Instalar MisCheles en este dispositivo</span>
+          </button>
+
           {/* Security & Biometrics Section */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
+          <div className="space-y-3 border-y border-slate-200 py-4 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
               <Shield className="w-4 h-4 text-emerald-500" />
               <span>Seguridad y Autenticación</span>
@@ -243,12 +251,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {/* Biometrics Toggle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Fingerprint className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <Fingerprint className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                     Desbloqueo Biométrico
                   </p>
-                  <p className="text-[10px] text-slate-500">Usa huella dactilar o Face ID al abrir la app</p>
+                  <p className="text-xs text-slate-500">Usa huella dactilar o Face ID al abrir la app</p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -258,7 +266,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   onChange={(e) => setBiometricsEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -270,7 +278,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                     PIN de Respaldo (4 dígitos)
                   </p>
-                  <p className="text-[10px] text-slate-500">Código numérico para acceder a la app</p>
+                  <p className="text-xs text-slate-500">Código numérico para acceder a la app</p>
                 </div>
               </div>
               <input
@@ -295,13 +303,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Guardar Perfil</span>

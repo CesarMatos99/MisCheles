@@ -1,11 +1,13 @@
 import React from 'react';
-import { ArrowDownLeft, ArrowUpRight, ArrowRight, Wallet, Sparkles } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRight, Wallet, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { FinancialSummary, MonthConfig, Transaction, UserProfile, SavingsMovementType } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
+import { PeriodSelector } from '../../components/layout/PeriodSelector';
 
 interface DashboardViewProps {
   year: number;
   month: number;
+  onMonthChange: (year: number, month: number) => void;
   monthConfig: MonthConfig | null;
   summary: FinancialSummary;
   transactions: Transaction[];
@@ -23,7 +25,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
-  year, month, monthConfig, summary, transactions, profile, onOpenMonthSetup,
+  year, month, onMonthChange, monthConfig, summary, transactions, profile, onOpenMonthSetup,
   onEditTransaction, onViewAllTransactions,
 }) => {
   const monthName = MONTH_NAMES_ES[month - 1];
@@ -35,12 +37,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-8 animate-in fade-in duration-200">
-      <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
-        <p className="text-sm text-slate-500 dark:text-slate-400">{monthName} {year}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Así va tu dinero</h1>
+      <header className="flex flex-col gap-3 border-b border-slate-200 pb-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="type-screen-title text-slate-900 dark:text-white">Así va tu dinero</h1>
+        <div className="flex shrink-0 items-center gap-1">
+          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
+          <button type="button" onClick={onOpenMonthSetup} aria-label="Configurar presupuesto del mes" title="Configurar presupuesto" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
+            <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
       </header>
       {(!monthConfig || !monthConfig.isConfigured) && (
-        <button onClick={onOpenMonthSetup} className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+        <button onClick={onOpenMonthSetup} className="flex w-full items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-left text-sm text-primary dark:border-primary/30 dark:bg-primary-soft dark:text-primary">
           <Sparkles className="h-5 w-5 shrink-0" />
           <span className="flex-1">Configura tu presupuesto de {monthName}</span>
           <ArrowRight className="h-4 w-4" />
@@ -49,14 +56,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       <section className="border-b border-slate-200 py-5 dark:border-slate-800">
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Disponible</p>
-        <p className="mt-1 text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl">{money(summary.availableBalance)}</p>
+        <p className="mt-1 type-display type-money text-slate-900 dark:text-white sm:text-5xl">{money(summary.availableBalance)}</p>
         <div className="mt-5 flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Presupuesto utilizado</span><span>{percentUsed}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-              <div className={`h-full rounded-full ${percentUsed >= 90 ? 'bg-rose-500' : 'bg-emerald-600'}`} style={{ width: `${percentUsed}%` }} />
+              <div className={`h-full rounded-full ${percentUsed >= 90 ? 'bg-rose-500' : 'bg-primary'}`} style={{ width: `${percentUsed}%` }} />
             </div>
           </div>
           <div className="text-right">
@@ -75,7 +82,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <section className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-200 py-4 dark:border-slate-800">
           <div><h2 className="font-bold text-slate-900 dark:text-white">Movimientos recientes</h2><p className="mt-0.5 text-xs text-slate-500">{monthName} {year}</p></div>
-          <button onClick={onViewAllTransactions} className="flex items-center gap-1 text-sm font-semibold text-emerald-700 dark:text-emerald-400">Ver todos <ArrowRight className="h-4 w-4" /></button>
+          <button onClick={onViewAllTransactions} className="flex items-center gap-1 text-sm font-semibold text-primary dark:text-primary">Ver todos <ArrowRight className="h-4 w-4" /></button>
         </div>
         {recentTransactions.length === 0 ? (
           <div className="px-5 py-10 text-center"><div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800"><Wallet className="h-5 w-5 text-slate-500" /></div><p className="mt-3 font-medium text-slate-800 dark:text-slate-200">Aún no hay movimientos</p><p className="mt-1 text-sm text-slate-500">Agrega un gasto o ingreso para comenzar.</p></div>
@@ -85,7 +92,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button key={tx.id} onClick={() => onEditTransaction(tx)} className="flex w-full items-center gap-3 border-b border-slate-100 py-3.5 text-left transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tx.type === 'expense' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'}`}>{tx.type === 'expense' ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{tx.description}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{tx.category} · {tx.date}</span></span>
-                <span className={`shrink-0 text-sm font-bold ${tx.type === 'expense' ? 'text-slate-900 dark:text-white' : 'text-emerald-700 dark:text-emerald-400'}`}>{tx.type === 'expense' ? '−' : '+'}{money(tx.amount)}</span>
+                <span className={`shrink-0 text-sm font-bold ${tx.type === 'expense' ? 'text-slate-900 dark:text-white' : 'text-primary dark:text-primary'}`}>{tx.type === 'expense' ? '−' : '+'}{money(tx.amount)}</span>
               </button>
             ))}
           </div>
