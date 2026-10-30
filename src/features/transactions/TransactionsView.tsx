@@ -117,9 +117,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shrink-0">
               <button
                 onClick={() => setTypeFilter('all')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                className={`min-h-11 px-3 text-xs font-bold rounded-xl transition ${
                   typeFilter === 'all'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -129,7 +129,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 onClick={() => setTypeFilter('expense')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition ${
                   typeFilter === 'expense'
-                    ? 'bg-rose-600 text-white shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -149,7 +149,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 onClick={() => setTypeFilter('savings')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition flex items-center gap-1 ${
                   typeFilter === 'savings'
-                    ? 'bg-teal-600 text-white shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >

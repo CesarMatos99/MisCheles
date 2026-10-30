@@ -79,20 +79,21 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   const totalFreeSavings = Math.max(0, summary.totalSavingsVault - totalAssignedToGoals);
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
+    <div className="mx-auto max-w-5xl animate-in fade-in duration-200">
       {/* Vault Hero - Fondo de Ahorro */}
-      <div className="relative overflow-hidden bg-primary text-white px-5 py-6 sm:px-7">
+      <section className="border-b border-slate-200 py-5 dark:border-slate-800 sm:py-6">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-emerald-200 text-xs font-semibold">
+            <div className="inline-flex items-center gap-1.5 text-primary text-xs font-semibold">
               <PiggyBank className="w-3.5 h-3.5" />
-              <span>Fondo de Ahorro / Bóveda</span>
+              <span>Fondo de ahorro</span>
             </div>
-            <p className="text-xs text-emerald-100 font-medium">Saldo Total Acumulado</p>
-            <h1 className="type-display type-money font-extrabold tracking-tight">
+            <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Ahorro</h1>
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Saldo total acumulado</p>
+            <h2 className="type-display type-money font-extrabold tracking-tight text-slate-900 dark:text-white">
               {profile.currency} {summary.totalSavingsVault.toLocaleString()}
-            </h1>
-            <p className="text-xs text-emerald-200/90 max-w-xl">
+            </h2>
+            <p className="max-w-xl text-sm text-slate-500 dark:text-slate-400">
               Fondo acumulado para tus metas, imprevistos o emergencias.
             </p>
           </div>
@@ -102,49 +103,49 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
             {/* Opción de transferir de ahorro a dinero del mes (registro) */}
             <button
               onClick={() => onOpenSavingsModal('withdraw_to_month')}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 active:scale-95 text-primary font-bold text-xs rounded-2xl shadow-md transition"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-hover active:scale-[0.98]"
               title="Transferir fondos del ahorro al dinero del mes (Registro)"
             >
-              <ArrowUpRight className="w-4 h-4 text-slate-950" />
-              <span>Transferir a Dinero del Mes (Registro)</span>
+              <ArrowUpRight className="h-4 w-4" />
+              <span>Pasar al mes</span>
             </button>
 
             {/* Gestionar button */}
             <button
               onClick={() => onOpenSavingsModal('deposit_from_month')}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold text-xs rounded-2xl border border-white/20 transition"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               title="Gestionar acciones de ahorro"
             >
-              <SlidersHorizontal className="w-4 h-4 text-emerald-300" />
+              <SlidersHorizontal className="h-4 w-4" />
               <span>Gestionar</span>
             </button>
           </div>
         </div>
 
         {/* Breakdown sub-stats divided cleanly by lines */}
-        <div className="relative z-10 grid grid-cols-3 divide-x divide-white/15 mt-5 pt-4 border-t border-white/15 text-left">
+        <div className="grid grid-cols-3 divide-x divide-slate-200 pt-4 text-left dark:divide-slate-800">
           <div className="pr-3">
-            <span className="text-xs text-emerald-200 block font-medium">Asignado a Metas</span>
-            <span className="text-sm sm:text-base font-bold text-white">
+            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Asignado a Metas</span>
+            <span className="text-xs font-semibold text-slate-900 dark:text-white sm:text-sm">
               {profile.currency} {totalAssignedToGoals.toLocaleString()}
             </span>
           </div>
           <div className="px-3">
-            <span className="text-xs text-emerald-200 block font-medium">Ahorro General Libre</span>
-            <span className="text-sm sm:text-base font-bold text-white">
+            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Ahorro General Libre</span>
+            <span className="text-xs font-semibold text-slate-900 dark:text-white sm:text-sm">
               {profile.currency} {totalFreeSavings.toLocaleString()}
             </span>
           </div>
           <div className="pl-3">
-            <span className="text-xs text-emerald-200 block font-medium">Aportes este mes</span>
-            <span className="text-sm sm:text-base font-bold text-emerald-300">
+            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Aportes este mes</span>
+            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 sm:text-sm">
               +{profile.currency} {summary.savingsTransfersTo.toLocaleString()}
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Seamless Continuous View for Goals and Vault History divided by lines */}
+      {/* Goals and savings history share one continuous list surface. */
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
         {/* Metas de Ahorro Section */}
         <div className="py-5 space-y-4">
@@ -168,7 +169,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
           {isAddingGoal && (
             <form
               onSubmit={handleCreateGoal}
-              className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in"
+              className="space-y-3 border-y border-slate-200 py-4 animate-in fade-in dark:border-slate-800"
             >
               <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                 Crear Nueva Meta
@@ -280,7 +281,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         </div>
 
         {/* Historial de Movimientos de la Bóveda */}
-        <div className="p-4 sm:p-5">
+        <div className="py-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-slate-900 dark:text-white text-sm">
               Historial de Movimientos de Ahorro
@@ -305,10 +306,10 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
 
                 if (mov.type === 'withdraw_to_month') {
                   icon = <ArrowUpRight className="w-4 h-4" />;
-                  badgeColor = 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400';
+                  badgeColor = 'bg-primary-soft dark:bg-primary-soft text-primary';
                   typeText = 'Transferencia hacia el mes';
                   amountSign = '-';
-                  amountColor = 'text-blue-600 dark:text-blue-400';
+                  amountColor = 'text-primary';
                 } else if (mov.type === 'direct_expense') {
                   icon = <ShoppingBag className="w-4 h-4" />;
                   badgeColor = 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400';

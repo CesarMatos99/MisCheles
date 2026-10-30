@@ -136,25 +136,25 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Gestionar Acciones de Ahorro</h2>
-              <p className="text-xs text-emerald-100">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
+              <p className="text-xs text-white/75">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="p-2 bg-slate-100 dark:bg-slate-800/80 m-4 rounded-2xl flex gap-1">
+        <div className="mx-5 mt-4 flex border-b border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => { setMode('deposit_from_month'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'deposit_from_month'
-                ? 'bg-primary text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -164,9 +164,9 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           <button
             type="button"
             onClick={() => { setMode('withdraw_to_month'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'withdraw_to_month'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -176,9 +176,9 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           <button
             type="button"
             onClick={() => { setMode('direct_expense'); setErrorMsg(''); }}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 border-transparent px-2 text-xs font-semibold transition-colors ${
               mode === 'direct_expense'
-                ? 'bg-rose-600 text-white shadow-sm'
+                ? 'border-b-2 border-primary text-primary'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -190,7 +190,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-4">
           {/* Quick Context Card */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-xs flex justify-between items-center">
+          <div className="flex items-center justify-between gap-3 border-y border-slate-200 py-3 text-sm dark:border-slate-800">
             {mode === 'deposit_from_month' ? (
               <>
                 <span className="text-slate-500 dark:text-slate-400">Disponible en mes actual:</span>
@@ -214,14 +214,14 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Destino del Ahorro
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setDestinationType('general')}
-                  className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
+                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 ${
                     destinationType === 'general'
-                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
-                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'text-primary'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-primary'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
@@ -234,10 +234,10 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setDestinationType('goal')}
-                  className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
+                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 ${
                     destinationType === 'goal'
-                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
-                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'text-primary'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-primary'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
@@ -283,7 +283,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl type-money text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -355,13 +355,13 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Confirmar</span>

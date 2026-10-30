@@ -5,6 +5,7 @@ import {
   PiggyBank,
   PieChart,
   User,
+  Lock,
   Plus,
   Minus,
   Sparkles,
@@ -275,51 +276,36 @@ export default function App() {
             onOpenSavingsModal={handleOpenSavingsModal}
             onRefresh={refreshMonthData}
           />
-        )}
-
-        {activeTab === 'profile' && (
-          <div className="max-w-md mx-auto">
-            {/* Direct access to profile in mobile tab */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold overflow-hidden shadow">
-                  {profile.photoUrl ? (
-                    <img src={profile.photoUrl} alt={profile.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{profile.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">{profile.name}</h3>
-                  <p className="text-xs text-slate-400">{profile.email || 'Sin correo registrado'}</p>
-                  <p className="text-xs text-primary font-semibold mt-1">
-                    Moneda: {profile.currency}
-                  </p>
-                </div>
+            {activeTab === 'profile' && (
+          <div className="mx-auto w-full max-w-3xl animate-in fade-in duration-200">
+            <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Cuenta y preferencias</p>
+              <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Perfil</h1>
+            </header>
+            <section className="flex items-center gap-4 border-b border-slate-200 py-6 dark:border-slate-800">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
+                {profile.photoUrl ? <img src={profile.photoUrl} alt={profile.name} className="h-full w-full object-cover" /> : profile.name.charAt(0).toUpperCase()}
               </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <button
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition"
-                >
-                  Editar Perfil, Foto y Seguridad Biométrica
-                </button>
-                <button
-                  onClick={() => setIsInstallModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs transition flex items-center justify-center gap-2"
-                >
-                  <Smartphone className="w-4 h-4 text-emerald-500" />
-                  <span>Instalar Aplicación Móvil (APK)</span>
-                </button>
-                <button
-                  onClick={handleLockApp}
-                  className="w-full py-3 px-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-bold text-xs transition"
-                >
-                  Bloquear Ahora con Huella / PIN
-                </button>
+              <div className="min-w-0">
+                <h2 className="type-section-title truncate text-slate-900 dark:text-white">{profile.name}</h2>
+                <p className="type-secondary truncate">{profile.email || 'Sin correo registrado'}</p>
+                <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
               </div>
-            </div>
+            </section>
+            <section className="divide-y divide-slate-200 dark:divide-slate-800" aria-label="Opciones de perfil">
+              <button onClick={() => setIsProfileModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">
+                <User className="h-5 w-5 text-primary" aria-hidden="true" />
+                <span>Perfil, apariencia y seguridad</span>
+              </button>
+              <button onClick={() => setIsInstallModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">
+                <Smartphone className="h-5 w-5 text-primary" aria-hidden="true" />
+                <span>Instalar aplicación</span>
+              </button>
+              <button onClick={handleLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-rose-600 dark:text-slate-100">
+                <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+                <span>Bloquear aplicación</span>
+              </button>
+            </section>
           </div>
         )}
       </main>

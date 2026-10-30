@@ -30,12 +30,12 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Instalar en tu Celular (APK / PWA)</h2>
-              <p className="text-xs text-emerald-100">MisCheles App Móvil</p>
+              <p className="text-xs text-white/75">MisCheles App Móvil</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -58,7 +58,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
               </p>
               <button
                 onClick={handleInstallClick}
-                className="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-white font-bold text-sm shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 <span>Instalar Aplicación en Celular</span>

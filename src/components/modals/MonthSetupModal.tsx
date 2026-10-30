@@ -139,12 +139,12 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Cobro / Configurar Mes</h2>
-              <p className="text-xs text-emerald-100">{monthName} {year}</p>
+              <p className="text-xs text-white/75">{monthName} {year}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -189,7 +189,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
               <div
                 className={`p-2 rounded-xl mt-0.5 ${
                   previousBalance > 0
-                    ? 'bg-emerald-500/20 text-primary'
+                    ? 'bg-primary-soft text-primary'
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                 }`}
               >
@@ -231,7 +231,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                     name="rolloverAction"
                     checked={rolloverAction === 'rollover_to_month'}
                     onChange={() => setRolloverAction('rollover_to_month')}
-                    className="mt-0.5 text-emerald-600 focus:ring-primary"
+                    className="mt-0.5 text-primary focus:ring-primary"
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-bold text-xs">
@@ -258,7 +258,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                     name="rolloverAction"
                     checked={rolloverAction === 'transfer_to_savings_general'}
                     onChange={() => setRolloverAction('transfer_to_savings_general')}
-                    className="mt-0.5 text-emerald-600 focus:ring-primary"
+                    className="mt-0.5 text-primary focus:ring-primary"
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-bold text-xs">
@@ -286,11 +286,11 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                       name="rolloverAction"
                       checked={rolloverAction === 'transfer_to_goal'}
                       onChange={() => setRolloverAction('transfer_to_goal')}
-                      className="mt-0.5 text-emerald-600 focus:ring-primary"
+                      className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 font-bold text-xs">
-                        <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <Target className="w-3.5 h-3.5 text-blue-600 dark:text-primary" />
                         <span>Transferir a una Meta Específica</span>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -368,7 +368,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   +{profile.currency}{previousBalance.toLocaleString()} transferidos a Ahorro General
                 </p>
               ) : rolloverAction === 'transfer_to_goal' && previousBalance > 0 ? (
-                <p className="text-xs text-blue-400">
+                <p className="text-xs text-primary">
                   +{profile.currency}{previousBalance.toLocaleString()} transferidos a Meta: {currentGoal?.title}
                 </p>
               ) : null}
@@ -394,13 +394,13 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-xs font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Guardar Presupuesto</span>

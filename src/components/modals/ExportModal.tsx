@@ -74,12 +74,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Exportar Reporte Financiero</h2>
-              <p className="text-xs text-emerald-100">{monthName} {year}</p>
+              <p className="text-xs text-white/75">{monthName} {year}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -163,7 +163,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cerrar
             </button>
@@ -171,7 +171,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               type="button"
               onClick={handleExport}
               disabled={isExporting}
-              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
               <span>{isExporting ? 'Generando...' : `Descargar ${format.toUpperCase()}`}</span>

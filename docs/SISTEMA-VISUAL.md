@@ -32,7 +32,7 @@ El tema oscuro cambia superficies, texto, líneas y tonos semánticos. Mantiene 
 - **Primario:** acción principal única por contexto; fondo marca, texto blanco, altura mínima 44 px y radio 12 px.
 - **Secundario:** borde sutil y fondo transparente; acción alternativa.
 - **Quieto:** enlace o acción terciaria sin caja.
-- **Icono:** mínimo 44 × 44 px y con etiqueta accesible. Las acciones flotantes siguen siendo circulares y solo con icono visible.
+- **Icono:** mínimo 44 × 44 px y con etiqueta accesible. La acción flotante principal es un solo botón circular de 56 × 56 px; al tocarlo, abre una lista uniforme para elegir gasto, ingreso o transferencia.
 - **Destructivo:** rojo únicamente cuando elimina o invalida información; nunca para gastos ordinarios.
 - Estados hover, foco visible, presionado e inhabilitado deben poder distinguirse sin depender solo del color.
 

@@ -102,12 +102,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Perfil y Seguridad</h2>
-              <p className="text-xs text-emerald-100">Personalización y Bloqueo Biométrico</p>
+              <p className="text-xs text-white/75">Personalización y Bloqueo Biométrico</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
@@ -234,7 +234,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </section>
 
           {/* Security & Biometrics Section */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
+          <div className="space-y-3 border-y border-slate-200 py-4 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
               <Shield className="w-4 h-4 text-emerald-500" />
               <span>Seguridad y Autenticación</span>
@@ -258,7 +258,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   onChange={(e) => setBiometricsEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -295,13 +295,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-primary/50 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Guardar Perfil</span>

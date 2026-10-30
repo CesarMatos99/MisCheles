@@ -80,7 +80,7 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
       <div className="w-full max-w-sm flex flex-col items-center">
         {/* App Logo & User Identity */}
         <div className="relative mb-4">
-          <div className="w-20 h-20 rounded-full border-2 border-primary/60 p-1 shadow-2xl shadow-emerald-500/30 flex items-center justify-center bg-slate-900 overflow-hidden">
+          <div className="w-20 h-20 rounded-full border-2 border-primary/60 p-1 shadow-2xl shadow-primary/50 flex items-center justify-center bg-slate-900 overflow-hidden">
             {profile.photoUrl ? (
               <img src={profile.photoUrl} alt={profile.name} className="w-full h-full object-cover rounded-full" />
             ) : (
@@ -106,7 +106,7 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
                 key={index}
                 className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
                   isFilled
-                    ? 'bg-primary border-primary scale-110 shadow-md shadow-blue-900/30'
+                    ? 'bg-primary border-primary scale-110 shadow-md shadow-primary/50'
                     : 'border-slate-600 bg-slate-800/60'
                 }`}
               />
