@@ -24,6 +24,7 @@ interface SavingsModalProps {
   summary: FinancialSummary;
   onSaved: () => void;
   initialMode?: SavingsMovementType;
+  initialGoalId?: string;
 }
 
 export const SavingsModal: React.FC<SavingsModalProps> = ({
@@ -34,6 +35,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   summary,
   onSaved,
   initialMode = 'deposit_from_month',
+  initialGoalId,
 }) => {
   const [mode, setMode] = useState<SavingsMovementType>(initialMode);
   const [amount, setAmount] = useState<string>('');
@@ -51,16 +53,18 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
       setMode(initialMode);
       setAmount('');
       setDescription('');
-      setDestinationType('general');
+      setDestinationType(initialGoalId ? 'goal' : 'general');
       setErrorMsg('');
       setDate(new Date().toISOString().split('T')[0]);
       const gList = storageService.getSavingsGoals();
       setGoals(gList);
       if (gList.length > 0) {
-        setSelectedGoalId(gList[0].id);
+        setSelectedGoalId(initialGoalId || gList[0].id);
+      } else {
+        setSelectedGoalId('');
       }
     }
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, initialGoalId]);
 
   if (!isOpen) return null;
 
@@ -93,8 +97,22 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
       return;
     }
 
-    if (mode === 'deposit_from_month' && destinationType === 'goal' && (!selectedGoalId || !currentGoal)) {
-      setErrorMsg('Por favor selecciona una meta de ahorro de destino.');
+    if (mode !== 'deposit_from_month' && destinationType === 'general') {
+      const assignedToGoals = goals.reduce((sum, goal) => sum + (Number(goal.currentAmount) || 0), 0);
+      const generalAvailable = Math.max(0, summary.totalSavingsVault - assignedToGoals);
+      if (numAmount > generalAvailable) {
+        setErrorMsg('El ahorro general disponible es ' + profile.currency + ' ' + generalAvailable.toLocaleString() + '. Los fondos asignados a metas deben retirarse desde su meta.');
+        return;
+      }
+    }
+
+    if (destinationType === 'goal' && (!selectedGoalId || !currentGoal)) {
+      setErrorMsg('Por favor selecciona una meta de ahorro.');
+      return;
+    }
+
+    if (mode !== 'deposit_from_month' && destinationType === 'goal' && currentGoal && numAmount > currentGoal.currentAmount) {
+      setErrorMsg(`El retiro supera el saldo de esta meta (${profile.currency} ${currentGoal.currentAmount.toLocaleString()}).`);
       return;
     }
 
@@ -104,17 +122,17 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           ? `Aporte a meta: ${currentGoal?.title || 'Meta'}`
           : 'Aporte a Ahorro General'
         : mode === 'withdraw_to_month'
-        ? 'Transferencia al mes corriente'
-        : 'Gasto directo desde ahorros';
+        ? destinationType === 'goal' ? `Retiro de meta: ${currentGoal?.title || 'Meta'}` : 'Transferencia al mes corriente'
+        : destinationType === 'goal' ? `Pago desde meta: ${currentGoal?.title || 'Meta'}` : 'Gasto directo desde ahorros';
 
     storageService.addSavingsMovement({
       monthKey,
       type: mode,
       amount: numAmount,
       description: description.trim() || defaultDesc,
-      destinationType: mode === 'deposit_from_month' ? destinationType : undefined,
-      goalId: mode === 'deposit_from_month' && destinationType === 'goal' ? selectedGoalId : undefined,
-      goalTitle: mode === 'deposit_from_month' && destinationType === 'goal' ? currentGoal?.title : undefined,
+      destinationType,
+      goalId: destinationType === 'goal' ? selectedGoalId : undefined,
+      goalTitle: destinationType === 'goal' ? currentGoal?.title : undefined,
       category: mode === 'direct_expense' ? category : undefined,
       date,
     });
@@ -200,19 +218,25 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               </>
             ) : (
               <>
-                <span className="text-slate-500 dark:text-slate-400">Saldo actual en alcancía:</span>
-                <span className="font-bold text-primary">
-                  {profile.currency} {summary.totalSavingsVault.toLocaleString()}
-                </span>
+                {destinationType === 'goal' && currentGoal ? (
+                <>
+                  <span className="text-slate-500 dark:text-slate-400">Saldo de la meta:</span>
+                  <span className="font-bold text-primary">{profile.currency} {currentGoal.currentAmount.toLocaleString()}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-500 dark:text-slate-400">Saldo actual en alcancía:</span>
+                  <span className="font-bold text-primary">{profile.currency} {summary.totalSavingsVault.toLocaleString()}</span>
+                </>
+              )}
               </>
             )}
           </div>
 
-          {/* Destination Selector for deposit_from_month: General vs Meta */}
-          {mode === 'deposit_from_month' && (
-            <div className="space-y-2">
+          {/* Select the goal that receives this contribution or funds this withdrawal. */}
+          <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Destino del Ahorro
+                {mode === 'deposit_from_month' ? 'Destino del ahorro' : 'Origen de los fondos'}
               </label>
               <div className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 <button
@@ -234,7 +258,8 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setDestinationType('goal')}
-                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 ${
+                  disabled={goals.length === 0}
+                  className={`w-full py-3 text-left transition-colors flex flex-col gap-1 disabled:cursor-not-allowed disabled:opacity-50 ${
                     destinationType === 'goal'
                       ? 'text-primary'
                       : 'text-slate-700 dark:text-slate-300 hover:text-primary'
@@ -244,7 +269,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                     <Target className="w-3.5 h-3.5 text-primary" />
                     <span>Meta de Ahorro</span>
                   </div>
-                  <span className="text-xs text-slate-500">Suma a meta y total</span>
+                  <span className="text-xs text-slate-500">{mode === 'deposit_from_month' ? 'Suma al saldo de la meta' : 'Se descuenta del saldo de la meta'}</span>
                 </button>
               </div>
 
@@ -263,8 +288,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   </select>
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           {/* Amount */}
           <div>

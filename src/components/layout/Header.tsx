@@ -1,5 +1,5 @@
 import React from 'react';
-import { LockKeyhole, Moon, Sun, UserRound, Wallet } from 'lucide-react';
+import { LockKeyhole, Moon, Sun, UserRound } from 'lucide-react';
 import { UserProfile } from '../../types';
 
 interface HeaderProps {
@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onLoc
     <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white" aria-hidden="true">
-          <Wallet className="h-5 w-5" />
+          <img src="/app-icon.png" alt="" className="h-full w-full object-contain" />
         </span>
         <span className="truncate text-lg font-bold tracking-tight text-slate-900 dark:text-white">MisCheles</span>
       </div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   PiggyBank,
+  ArrowLeft,
   ArrowDownRight,
   ArrowUpRight,
   ShoppingBag,
@@ -11,9 +12,11 @@ import {
   SlidersHorizontal,
   Wallet,
 } from 'lucide-react';
-import { FinancialSummary, SavingsGoal, SavingsMovementType, UserProfile } from '../../types';
+import { FinancialSummary, SavingsGoal, SavingsMovement, SavingsMovementType, UserProfile } from '../../types';
 import { storageService } from '../../services/storage';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
+
+type GoalDeleteResolution = 'general' | 'month' | 'fictional';
 
 interface SavingsViewProps {
   summary: FinancialSummary;
@@ -22,7 +25,7 @@ interface SavingsViewProps {
   year: number;
   month: number;
   onMonthChange: (year: number, month: number) => void;
-  onOpenSavingsModal: (mode: SavingsMovementType) => void;
+  onOpenSavingsModal: (mode: SavingsMovementType, goalId?: string) => void;
   onRefresh: () => void;
 }
 
@@ -41,8 +44,19 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   const [newGoalTitle, setNewGoalTitle] = useState<string>('');
   const [newGoalTarget, setNewGoalTarget] = useState<string>('');
   const [newGoalDate, setNewGoalDate] = useState<string>('');
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [goalPendingDeletion, setGoalPendingDeletion] = useState<SavingsGoal | null>(null);
+  const [goalDeleteResolution, setGoalDeleteResolution] = useState<GoalDeleteResolution>('general');
 
   const movements = storageService.getSavingsMovements();
+  const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) || null;
+  const selectedGoalMovements = selectedGoal
+    ? movements.filter((movement) => movement.goalId === selectedGoal.id).sort((a, b) => b.date.localeCompare(a.date))
+    : [];
+
+  useEffect(() => {
+    setGoals(storageService.getSavingsGoals());
+  }, [summary.totalSavingsVault]);
 
   const handleCreateGoal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,14 +82,25 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   };
 
   const handleDeleteGoal = (id: string) => {
-    const updated = goals.filter((g) => g.id !== id);
-    setGoals(updated);
-    storageService.saveSavingsGoals(updated);
+    const goal = goals.find((item) => item.id === id);
+    if (!goal) return;
+    setGoalDeleteResolution('general');
+    setGoalPendingDeletion(goal);
+  };
+
+  const handleConfirmGoalDeletion = () => {
+    if (!goalPendingDeletion) return;
+    storageService.deleteSavingsGoal(goalPendingDeletion.id, goalDeleteResolution, monthKey);
+    setGoals(storageService.getSavingsGoals());
+    setSelectedGoalId(null);
+    setGoalPendingDeletion(null);
+    onRefresh();
   };
 
   const handleDeleteMovement = (id: string) => {
     if (confirm('¿Deseas eliminar este registro de movimiento de ahorro?')) {
       storageService.deleteSavingsMovement(id);
+      setGoals(storageService.getSavingsGoals());
       onRefresh();
     }
   };
@@ -153,9 +178,10 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         </div>
       </section>
 
-      {/* Goals and savings history share one continuous list surface. */
+      {/* Goals and savings history share one continuous list surface. */}
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
         {/* Metas de Ahorro Section */}
+        {!selectedGoal && (
         <div className="py-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -231,146 +257,90 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
               No tienes metas de ahorro activas. Crea una para organizar tus ahorros por objetivos.
             </p>
           ) : (
-            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+            <div className="grid gap-3 sm:grid-cols-2">
               {goals.map((goal) => {
                 const pct = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
                 return (
-                  <div
-                    key={goal.id}
-                    className="py-4 space-y-2 relative group transition"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                          {goal.title}
-                        </h4>
-                        {goal.targetDate && (
-                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Calendar className="w-3 h-3" />
-                            Límite: {goal.targetDate}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteGoal(goal.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition"
-                        title="Eliminar Meta"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-primary">
-                          {profile.currency} {goal.currentAmount.toLocaleString()}
-                        </span>
-                        <span className="text-slate-400">
-                          Meta: {profile.currency} {goal.targetAmount.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-primary">
-                          {pct.toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Historial de Movimientos de la Bóveda */}
-        <div className="py-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-              Historial de Movimientos de Ahorro
-            </h3>
-            <span className="text-xs text-slate-400">
-              {movements.length} registro(s)
-            </span>
-          </div>
-
-          {movements.length === 0 ? (
-            <div className="py-6 text-center text-slate-400 text-xs">
-              Aún no has realizado movimientos en el fondo de ahorro.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {movements.map((mov) => {
-                let icon = <ArrowDownRight className="w-4 h-4" />;
-                let badgeColor = 'bg-emerald-100 dark:bg-emerald-950/60 text-primary';
-                let typeText = 'Aporte desde el mes';
-                let amountSign = '+';
-                let amountColor = 'text-primary';
-
-                if (mov.type === 'withdraw_to_month') {
-                  icon = <ArrowUpRight className="w-4 h-4" />;
-                  badgeColor = 'bg-primary-soft dark:bg-primary-soft text-primary';
-                  typeText = 'Transferencia hacia el mes';
-                  amountSign = '-';
-                  amountColor = 'text-primary';
-                } else if (mov.type === 'direct_expense') {
-                  icon = <ShoppingBag className="w-4 h-4" />;
-                  badgeColor = 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400';
-                  typeText = 'Pago directo de ahorro';
-                  amountSign = '-';
-                  amountColor = 'text-rose-600 dark:text-rose-400';
-                }
-
-                return (
-                  <div key={mov.id} className="py-2.5 flex items-center justify-between gap-3 group">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`p-2 rounded-xl shrink-0 ${badgeColor}`}>
-                        {icon}
-                      </div>
+                  <button key={goal.id} type="button" onClick={() => setSelectedGoalId(goal.id)} aria-pressed={selectedGoalId === goal.id}
+                    className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-primary/40 hover:bg-primary-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-800 dark:hover:bg-primary/10">
+                    <div className="mb-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
-                          {mov.description}
-                        </p>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                          <span className="font-medium">{typeText}</span>
-                          <span>•</span>
-                          <span>{mov.date}</span>
-                          {mov.category && (
-                            <>
-                              <span>•</span>
-                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs">
-                                {mov.category}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                        <h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">{goal.title}</h4>
+                        {goal.targetDate && <p className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><Calendar className="h-3 w-3" />Fecha objetivo: {goal.targetDate}</p>}
                       </div>
+                      <span className="shrink-0 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary">{pct.toFixed(0)}%</span>
                     </div>
-
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <span className={`text-xs sm:text-sm font-extrabold ${amountColor}`}>
-                        {amountSign}{profile.currency} {mov.amount.toLocaleString()}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteMovement(mov.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition"
-                        title="Eliminar movimiento"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
                     </div>
-                  </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-slate-900 dark:text-white">{profile.currency} {goal.currentAmount.toLocaleString()}</span>
+                      <span className="text-slate-500 dark:text-slate-400">de {profile.currency} {goal.targetAmount.toLocaleString()}</span>
+                    </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
+        )}
+        {selectedGoal && (
+            <section className="space-y-4 border-t border-slate-200 pt-5 dark:border-slate-800" aria-labelledby="goal-detail-title">
+              <button type="button" onClick={() => setSelectedGoalId(null)} className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary"><ArrowLeft className="h-4 w-4" />Volver a todas las metas</button>
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3"><div><h3 id="goal-detail-title" className="text-lg font-bold text-slate-900 dark:text-white">{selectedGoal.title}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Saldo asignado a esta meta</p></div>{selectedGoal.targetDate && <span className="text-right text-xs text-slate-500 dark:text-slate-400">Objetivo<br />{selectedGoal.targetDate}</span>}</div>
+                <div className="flex items-end justify-between gap-3"><p className="type-money text-2xl font-extrabold text-primary">{profile.currency} {selectedGoal.currentAmount.toLocaleString()}</p><p className="pb-1 text-xs text-slate-500 dark:text-slate-400">Meta: {profile.currency} {selectedGoal.targetAmount.toLocaleString()}</p></div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${Math.min(100, (selectedGoal.currentAmount / selectedGoal.targetAmount) * 100)}%` }} /></div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month', selectedGoal.id)} className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-hover">Registrar aporte</button>
+                  <button type="button" onClick={() => onOpenSavingsModal('withdraw_to_month', selectedGoal.id)} className="min-h-10 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Retirar de la meta</button>
+                  <button type="button" onClick={() => handleDeleteGoal(selectedGoal.id)} className="ml-auto flex min-h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30" aria-label="Eliminar meta"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
+                <div className="mb-2 flex items-center justify-between gap-3"><h4 className="text-sm font-bold text-slate-900 dark:text-white">Historial de esta meta</h4><span className="text-xs text-slate-500 dark:text-slate-400">{selectedGoalMovements.length} movimiento(s)</span></div>
+                {selectedGoalMovements.length === 0 ? <p className="py-4 text-sm text-slate-500 dark:text-slate-400">Aún no hay aportes o retiros vinculados a esta meta.</p> : (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {selectedGoalMovements.map((movement: SavingsMovement) => {
+                      const isDeposit = movement.type === 'deposit_from_month';
+                      const label = isDeposit ? 'Aporte' : movement.type === 'withdraw_to_month' ? 'Retiro al mes' : 'Pago desde la meta';
+                      return <div key={movement.id} className="flex items-center justify-between gap-3 py-3">
+                        <div className="flex min-w-0 items-start gap-3"><div className={`mt-0.5 rounded-full p-2 ${isDeposit ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'}`}>{isDeposit ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}</div>
+                          <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{movement.description}</p><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{label} · {movement.date}{movement.category ? ` · ${movement.category}` : ''}</p></div>
+                        </div><span className={`shrink-0 text-sm font-bold ${isDeposit ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{isDeposit ? '+' : '−'}{profile.currency} {movement.amount.toLocaleString()}</span>
+                      </div>;
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+
       </div>
+      {goalPendingDeletion && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-goal-title" className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <h2 id="delete-goal-title" className="text-lg font-bold text-slate-900 dark:text-white">Eliminar «{goalPendingDeletion.title}»</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Esta meta tiene <strong>{profile.currency} {goalPendingDeletion.currentAmount.toLocaleString()}</strong>. Elige qué hacer con ese saldo antes de eliminarla.</p>
+            <div className="mt-4 space-y-2" role="radiogroup" aria-label="Destino del saldo de la meta">
+              <button type="button" role="radio" aria-checked={goalDeleteResolution === 'general'} onClick={() => setGoalDeleteResolution('general')} className={goalDeleteResolution === 'general' ? 'w-full rounded-xl border border-primary bg-primary-soft/50 p-3 text-left' : 'w-full rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-white">Mover a Ahorro General</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">Conserva el dinero y el historial; el saldo queda sin asignar a una meta.</span>
+              </button>
+              <button type="button" role="radio" aria-checked={goalDeleteResolution === 'month'} onClick={() => setGoalDeleteResolution('month')} className={goalDeleteResolution === 'month' ? 'w-full rounded-xl border border-primary bg-primary-soft/50 p-3 text-left' : 'w-full rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-white">Pasar al presupuesto de este mes</span><span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">El saldo se agrega al dinero disponible del mes y deja de contar como ahorro.</span>
+              </button>
+              <button type="button" role="radio" aria-checked={goalDeleteResolution === 'fictional'} onClick={() => setGoalDeleteResolution('fictional')} className={goalDeleteResolution === 'fictional' ? 'w-full rounded-xl border border-rose-300 bg-rose-50 p-3 text-left dark:border-rose-900 dark:bg-rose-950/30' : 'w-full rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-white">El saldo era ficticio</span><span className="mt-1 block text-xs text-rose-700 dark:text-rose-300">Solo elige esto si nunca ahorraste ese dinero. Se eliminarán el saldo y los movimientos asociados.</span>
+              </button>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setGoalPendingDeletion(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" onClick={handleConfirmGoalDeletion} className={goalDeleteResolution === 'fictional' ? 'min-h-11 rounded-xl bg-rose-600 px-4 text-sm font-bold text-white hover:bg-rose-700' : 'min-h-11 rounded-xl bg-primary px-4 text-sm font-bold text-white hover:bg-primary-hover'}>Confirmar y eliminar</button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

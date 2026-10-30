@@ -8,9 +8,9 @@ import {
 } from '../types';
 
 const STORAGE_KEYS = {
-  TRANSACTIONS: 'mischeles_transactions_v2',
-  SAVINGS_MOVEMENTS: 'mischeles_savings_movements_v2',
-  SAVINGS_GOALS: 'mischeles_savings_goals_v2',
+  TRANSACTIONS: 'mischeles_transactions_v3',
+  SAVINGS_MOVEMENTS: 'mischeles_savings_movements_v3',
+  SAVINGS_GOALS: 'mischeles_savings_goals_v3',
   MONTH_CONFIGS: 'mischeles_month_configs_v2',
   USER_PROFILE: 'mischeles_user_profile_v2',
   APP_THEME: 'mischeles_theme_v2',
@@ -135,7 +135,7 @@ const getInitialSeedData = () => {
       id: 'tx-aug-savings-1',
       monthKey: augKey,
       type: 'expense',
-      amount: 10000,
+      amount: 15500,
       category: 'Aporte al Ahorro',
       description: 'Aporte de ahorro de Agosto',
       date: '2026-08-25',
@@ -214,13 +214,25 @@ const getInitialSeedData = () => {
       id: 'tx-sep-savings-1',
       monthKey: sepKey,
       type: 'expense',
-      amount: 8000,
+      amount: 10500,
       category: 'Aporte al Ahorro',
       description: 'Transferencia mensual a la alcancía',
       date: '2026-09-05',
       paymentMethod: 'Transferencia a Ahorro',
       relatedSavingsMovementId: 'sm-sep-1',
       createdAt: Date.now() - 21 * 86400000,
+    },
+    {
+      id: 'tx-sep-savings-2',
+      monthKey: sepKey,
+      type: 'expense',
+      amount: 12000,
+      category: 'Aporte al Ahorro',
+      description: 'Aporte para Vacaciones de Fin de Año',
+      date: '2026-09-25',
+      paymentMethod: 'Transferencia a Ahorro',
+      relatedSavingsMovementId: 'sm-sep-3',
+      createdAt: Date.now() - 2 * 86400000,
     },
   ];
 
@@ -229,8 +241,11 @@ const getInitialSeedData = () => {
       id: 'sm-aug-1',
       monthKey: augKey,
       type: 'deposit_from_month',
-      amount: 10000,
+      amount: 15500,
       description: 'Aporte de ahorro de Agosto',
+      goalId: 'goal-1',
+      goalTitle: 'Fondo de Emergencia',
+      destinationType: 'goal',
       date: '2026-08-25',
       createdAt: Date.now() - 25 * 86400000,
     },
@@ -238,8 +253,11 @@ const getInitialSeedData = () => {
       id: 'sm-sep-1',
       monthKey: sepKey,
       type: 'deposit_from_month',
-      amount: 8000,
-      description: 'Transferencia mensual a la alcancía',
+      amount: 10500,
+      description: 'Aporte a Mantenimiento del Vehículo',
+      goalId: 'goal-2',
+      goalTitle: 'Mantenimiento del Vehículo',
+      destinationType: 'goal',
       date: '2026-09-05',
       createdAt: Date.now() - 21 * 86400000,
     },
@@ -248,10 +266,25 @@ const getInitialSeedData = () => {
       monthKey: sepKey,
       type: 'direct_expense',
       amount: 2500,
-      description: 'Compra de repuesto vehículo (Fondo Emergencia)',
+      description: 'Compra de repuesto vehículo (Mantenimiento del Vehículo)',
+      goalId: 'goal-2',
+      goalTitle: 'Mantenimiento del Vehículo',
+      destinationType: 'goal',
       category: 'Transporte y Combustible',
       date: '2026-09-18',
       createdAt: Date.now() - 8 * 86400000,
+    },
+    {
+      id: 'sm-sep-3',
+      monthKey: sepKey,
+      type: 'deposit_from_month',
+      amount: 12000,
+      description: 'Aporte para Vacaciones de Fin de Año',
+      goalId: 'goal-3',
+      goalTitle: 'Vacaciones de Fin de Año',
+      destinationType: 'goal',
+      date: '2026-09-25',
+      createdAt: Date.now() - 2 * 86400000,
     },
   ];
 
@@ -392,12 +425,13 @@ export const storageService = {
     list.unshift(newSm);
     localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(list));
 
-    // When money is transferred to a specific savings goal, update the goal amount
-    if (newSm.goalId && newSm.type === 'deposit_from_month') {
+    // Keep a goal balance in sync with every movement assigned to that goal.
+    if (newSm.goalId) {
       const goals = this.getSavingsGoals();
       const goalIndex = goals.findIndex((g) => g.id === newSm.goalId);
       if (goalIndex !== -1) {
-        goals[goalIndex].currentAmount = Math.max(0, (goals[goalIndex].currentAmount || 0) + newSm.amount);
+        const direction = newSm.type === 'deposit_from_month' ? 1 : -1;
+        goals[goalIndex].currentAmount = Math.max(0, (goals[goalIndex].currentAmount || 0) + direction * newSm.amount);
         this.saveSavingsGoals(goals);
       }
     }
@@ -423,11 +457,12 @@ export const storageService = {
   deleteSavingsMovement(id: string): void {
     const list = this.getSavingsMovements();
     const target = list.find((m) => m.id === id);
-    if (target && target.goalId && target.type === 'deposit_from_month') {
+    if (target?.goalId) {
       const goals = this.getSavingsGoals();
       const goalIndex = goals.findIndex((g) => g.id === target.goalId);
       if (goalIndex !== -1) {
-        goals[goalIndex].currentAmount = Math.max(0, (goals[goalIndex].currentAmount || 0) - target.amount);
+        const direction = target.type === 'deposit_from_month' ? -1 : 1;
+        goals[goalIndex].currentAmount = Math.max(0, (goals[goalIndex].currentAmount || 0) + direction * target.amount);
         this.saveSavingsGoals(goals);
       }
     }
@@ -438,6 +473,52 @@ export const storageService = {
     // Also remove any linked transaction in transactions list
     const txList = this.getTransactions().filter((t) => t.relatedSavingsMovementId !== id);
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txList));
+  },
+
+  deleteSavingsGoal(
+    id: string,
+    resolution: 'general' | 'month' | 'fictional',
+    monthKey: string,
+  ): void {
+    const goals = this.getSavingsGoals();
+    const goal = goals.find((item) => item.id === id);
+    if (!goal) return;
+
+    const movements = this.getSavingsMovements();
+    const linkedMovements = movements.filter((movement) => movement.goalId === id);
+
+    if (resolution === 'fictional') {
+      const deletedMovementIds = new Set(linkedMovements.map((movement) => movement.id));
+      this.saveSavingsMovements(movements.filter((movement) => movement.goalId !== id));
+      const transactions = this.getTransactions().filter(
+        (transaction) => !transaction.relatedSavingsMovementId || !deletedMovementIds.has(transaction.relatedSavingsMovementId),
+      );
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    } else {
+      const reassignedMovements = movements.map((movement) =>
+        movement.goalId === id
+          ? { ...movement, goalId: undefined, destinationType: 'general' as const }
+          : movement,
+      );
+      this.saveSavingsMovements(reassignedMovements);
+
+      if (resolution === 'month' && goal.currentAmount > 0) {
+        this.addSavingsMovement({
+          monthKey,
+          type: 'withdraw_to_month',
+          amount: goal.currentAmount,
+          description: 'Saldo transferido al mes al cerrar la meta: ' + goal.title,
+          destinationType: 'general',
+          date: new Date().toISOString().slice(0, 10),
+        });
+      }
+    }
+
+    this.saveSavingsGoals(goals.filter((item) => item.id !== id));
+  },
+
+  saveSavingsMovements(movements: SavingsMovement[]): void {
+    localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(movements));
   },
 
   // Savings goals
@@ -457,18 +538,13 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(goals));
   },
 
-  // Total savings vault calculation across all time
+  // The vault is the sum of goal balances plus unassigned general savings.
   getTotalSavingsVault(): number {
-    const movements = this.getSavingsMovements();
-    let total = 0;
-    for (const m of movements) {
-      if (m.type === 'deposit_from_month') {
-        total += m.amount;
-      } else if (m.type === 'withdraw_to_month' || m.type === 'direct_expense') {
-        total -= m.amount;
-      }
-    }
-    return Math.max(0, total);
+    const goalsTotal = this.getSavingsGoals().reduce((sum, goal) => sum + Math.max(0, Number(goal.currentAmount) || 0), 0);
+    const generalBalance = this.getSavingsMovements()
+      .filter((movement) => !movement.goalId)
+      .reduce((balance, movement) => balance + (movement.type === 'deposit_from_month' ? movement.amount : -movement.amount), 0);
+    return Math.max(0, goalsTotal + generalBalance);
   },
 
   // Calculate financial summary for a specific month

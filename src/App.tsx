@@ -1,18 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  LayoutDashboard,
-  Receipt,
-  PiggyBank,
-  PieChart,
-  User,
-  Lock,
-  Plus,
-  Minus,
-  Sparkles,
-  Sliders,
-  Download,
-  Smartphone,
-} from 'lucide-react';
+import { Receipt, PiggyBank, PieChart, Download } from 'lucide-react';
 import {
   FinancialSummary,
   MonthConfig,
@@ -30,7 +17,7 @@ import { TransactionsView } from './features/transactions/TransactionsView';
 import { TransactionModal } from './features/transactions/TransactionModal';
 import { SavingsView } from './features/savings/SavingsView';
 import { SavingsModal } from './features/savings/SavingsModal';
-import { ProfileModal } from './features/profile/ProfileModal';
+import { ProfileView } from './features/profile/ProfileView';
 import { MonthSetupModal } from './components/modals/MonthSetupModal';
 import { TransferModal } from './components/modals/TransferModal';
 import { ExportModal } from './components/modals/ExportModal';
@@ -90,9 +77,9 @@ export default function App() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState<boolean>(false);
   const [savingsModalMode, setSavingsModalMode] = useState<SavingsMovementType>('deposit_from_month');
+  const [savingsModalGoalId, setSavingsModalGoalId] = useState<string | undefined>();
 
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState<boolean>(false);
 
   // Synchronize Dark Theme class on html root
@@ -162,8 +149,9 @@ export default function App() {
     }
   };
 
-  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month') => {
+  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month', goalId?: string) => {
     setSavingsModalMode(mode);
+    setSavingsModalGoalId(goalId);
     setIsSavingsModalOpen(true);
   };
 
@@ -182,7 +170,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
         onLockApp={handleLockApp}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenProfile={() => setActiveTab('profile')}
         profile={profile}
       />
 
@@ -277,36 +265,19 @@ export default function App() {
         )}
 
         {activeTab === 'profile' && (
-          <div className="mx-auto w-full max-w-3xl animate-in fade-in duration-200">
-            <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
-              <p className="text-sm text-slate-500 dark:text-slate-400">Cuenta y preferencias</p>
-              <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">Perfil</h1>
-            </header>
-            <section className="flex items-center gap-4 border-b border-slate-200 py-6 dark:border-slate-800">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
-                {profile.photoUrl ? <img src={profile.photoUrl} alt={profile.name} className="h-full w-full object-cover" /> : profile.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <h2 className="type-section-title truncate text-slate-900 dark:text-white">{profile.name}</h2>
-                <p className="type-secondary truncate">{profile.email || 'Sin correo registrado'}</p>
-                <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
-              </div>
-            </section>
-            <section className="divide-y divide-slate-200 dark:divide-slate-800" aria-label="Opciones de perfil">
-              <button onClick={() => setIsProfileModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">
-                <User className="h-5 w-5 text-primary" aria-hidden="true" />
-                <span>Perfil, apariencia y seguridad</span>
-              </button>
-              <button onClick={() => setIsInstallModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">
-                <Smartphone className="h-5 w-5 text-primary" aria-hidden="true" />
-                <span>Instalar aplicación</span>
-              </button>
-              <button onClick={handleLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-rose-600 dark:text-slate-100">
-                <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" aria-hidden="true" />
-                <span>Bloquear aplicación</span>
-              </button>
-            </section>
-          </div>
+          <ProfileView
+            profile={profile}
+            isDarkMode={isDarkMode}
+            accentColor={accentColor}
+            onThemeChange={setIsDarkMode}
+            onAccentColorChange={setAccentColor}
+            onProfileUpdated={(updated) => {
+              setProfile(updated);
+              refreshMonthData();
+            }}
+            onOpenInstall={() => setIsInstallModalOpen(true)}
+            onLockApp={handleLockApp}
+          />
         )}
       </main>
 
@@ -316,11 +287,13 @@ export default function App() {
         onChangeTab={setActiveTab}
       />
 
-      <FloatingActions
-        onExpense={() => handleOpenTransactionModal('expense')}
-        onIncome={() => handleOpenTransactionModal('income')}
-        onTransfer={() => setIsTransferModalOpen(true)}
-      />
+      {(activeTab === 'dashboard' || activeTab === 'transactions') && (
+        <FloatingActions
+          onExpense={() => handleOpenTransactionModal('expense')}
+          onIncome={() => handleOpenTransactionModal('income')}
+          onTransfer={() => setIsTransferModalOpen(true)}
+        />
+      )}
 
       {/* Modals */}
       <MonthSetupModal
@@ -360,6 +333,7 @@ export default function App() {
         profile={profile}
         summary={summary}
         initialMode={savingsModalMode}
+        initialGoalId={savingsModalGoalId}
         onSaved={() => refreshMonthData()}
       />
 
@@ -372,19 +346,6 @@ export default function App() {
         transactions={transactions}
         savingsMovements={storageService.getSavingsMovements().filter((m) => m.monthKey === currentMonthKey)}
         profile={profile}
-      />
-
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        profile={profile}
-        accentColor={accentColor}
-        onAccentColorChange={setAccentColor}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
-        onProfileUpdated={(updated) => {
-          setProfile(updated);
-          refreshMonthData();
-        }}
       />
 
       <PWAInstallModal
