@@ -109,14 +109,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
         <div className={`p-5 text-white flex items-center justify-between ${
-          type === 'expense' ? 'bg-gradient-to-r from-rose-600 to-red-700' : 'bg-gradient-to-r from-emerald-600 to-teal-700'
+          type === 'expense' ? 'bg-gradient-to-r from-rose-600 to-red-700' : 'bg-primary'
         }`}>
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               {type === 'expense' ? <Minus className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold">
+              <h2 className="type-dialog-title font-bold">
                 {transactionToEdit ? 'Editar Movimiento' : type === 'expense' ? 'Registrar Gasto' : 'Registrar Ingreso Extra'}
               </h2>
               <p className="text-xs opacity-90">Control Financiero Mensual</p>
@@ -158,7 +158,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
                 type === 'income'
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-primary text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -191,7 +191,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 className={`w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border rounded-2xl text-xl font-extrabold focus:outline-none focus:ring-2 ${
                   type === 'expense'
                     ? 'text-rose-600 dark:text-rose-400 border-slate-200 dark:border-slate-700 focus:ring-rose-500'
-                    : 'text-emerald-600 dark:text-emerald-400 border-slate-200 dark:border-slate-700 focus:ring-emerald-500'
+                    : 'text-primary border-slate-200 dark:border-slate-700 focus:ring-primary'
                 }`}
               />
             </div>
@@ -209,7 +209,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 setUsesCustomCategory(next === '__custom__');
                 setCategory(next);
               }}
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {currentCategories.map((c) => (
                 <option key={c.id} value={c.name}>
@@ -227,7 +227,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
                 placeholder={type === 'expense' ? 'Ej. Regalo' : 'Ej. Reembolso'}
-                className="mt-2 w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-800 dark:bg-slate-800 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary dark:border-emerald-800 dark:bg-slate-800 dark:text-white"
               />
             )}
           </div>
@@ -242,7 +242,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ej. Supermercado quincena, Alquiler, Combustible"
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -257,7 +257,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -268,7 +268,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-2.5 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {PAYMENT_METHODS.map((method) => (
                   <option key={method} value={method}>
@@ -293,7 +293,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white shadow-lg active:scale-95 transition flex items-center justify-center gap-2 ${
                 type === 'expense'
                   ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
-                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+                  : 'bg-primary hover:bg-primary-hover shadow-emerald-600/30'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />

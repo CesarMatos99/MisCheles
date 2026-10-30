@@ -25,8 +25,8 @@ src/
   App.tsx           # Composición de la aplicación y estado de navegación
 ```
 
-Las decisiones de producto, contabilidad y seguridad están en `docs/PRODUCTO-Y-ARQUITECTURA.md`.
+Las decisiones de producto y seguridad están en `docs/PRODUCTO-Y-ARQUITECTURA.md`; los tamaños, fuentes, botones y paleta están en `docs/SISTEMA-VISUAL.md`.
 
 ## Estado actual
 
-El prototipo todavía usa `localStorage`, incluye datos demostrativos y no implementa autenticación, respaldo en la nube, base SQLite nativa ni importación bancaria. La interfaz actual es una propuesta de rediseño en curso; aún requiere revisión visual y compilación antes de reemplazar la versión principal.
+El prototipo todavía usa `localStorage`, incluye datos demostrativos y no implementa autenticación, respaldo en la nube, base SQLite nativa ni importación bancaria. La interfaz aplica una propuesta minimalista y continua, con tema claro/oscuro y color de acento configurable. Revisa `docs/SISTEMA-VISUAL.md` antes de añadir componentes para conservar los mismos criterios.

@@ -58,7 +58,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
         <button
           onClick={onOpenExportModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition active:scale-95 shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition active:scale-95 shrink-0"
         >
           <Download className="w-4 h-4" />
           <span>Exportar PDF / Excel</span>
@@ -74,17 +74,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
             {profile.currency} {Math.round(avgDailyExpense).toLocaleString()}
           </h3>
-          <p className="text-[11px] text-slate-500 mt-1">Estimado sobre período de 30 días</p>
+          <p className="text-xs text-slate-500 mt-1">Estimado sobre período de 30 días</p>
         </div>
 
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Tasa de Ahorro del Mes
           </span>
-          <h3 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+          <h3 className="text-2xl font-extrabold text-primary">
             {savingsRate.toFixed(1)}%
           </h3>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             {profile.currency} {summary.savingsTransfersTo.toLocaleString()} enviados al módulo de ahorro
           </p>
         </div>
@@ -96,7 +96,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <h3 className={`text-2xl font-extrabold ${summary.availableBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             {profile.currency} {summary.availableBalance.toLocaleString()}
           </h3>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             {summary.availableBalance >= 0 ? 'Superávit que se sumará al siguiente mes' : 'Déficit en este mes'}
           </p>
         </div>

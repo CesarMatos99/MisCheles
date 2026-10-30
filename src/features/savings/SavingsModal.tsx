@@ -129,13 +129,13 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">
+        <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-2xl backdrop-blur-sm">
               <SlidersHorizontal className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Gestionar Acciones de Ahorro</h2>
+              <h2 className="type-dialog-title font-bold">Gestionar Acciones de Ahorro</h2>
               <p className="text-xs text-emerald-100">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             onClick={() => { setMode('deposit_from_month'); setErrorMsg(''); }}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               mode === 'deposit_from_month'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-primary text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -194,14 +194,14 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             {mode === 'deposit_from_month' ? (
               <>
                 <span className="text-slate-500 dark:text-slate-400">Disponible en mes actual:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-primary">
                   {profile.currency} {summary.availableBalance.toLocaleString()}
                 </span>
               </>
             ) : (
               <>
                 <span className="text-slate-500 dark:text-slate-400">Saldo actual en alcancía:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-primary">
                   {profile.currency} {summary.totalSavingsVault.toLocaleString()}
                 </span>
               </>
@@ -220,15 +220,15 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   onClick={() => setDestinationType('general')}
                   className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
                     destinationType === 'general'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
+                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
                       : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <PiggyBank className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <PiggyBank className="w-3.5 h-3.5 text-primary" />
                     <span>Ahorro General</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Sin asignar a meta</span>
+                  <span className="text-xs text-slate-500">Sin asignar a meta</span>
                 </button>
 
                 <button
@@ -236,15 +236,15 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   onClick={() => setDestinationType('goal')}
                   className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-1 ${
                     destinationType === 'goal'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
+                      ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
                       : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <Target className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <Target className="w-3.5 h-3.5 text-primary" />
                     <span>Meta de Ahorro</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">Suma a meta y total</span>
+                  <span className="text-xs text-slate-500">Suma a meta y total</span>
                 </button>
               </div>
 
@@ -253,7 +253,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   <select
                     value={selectedGoalId}
                     onChange={(e) => setSelectedGoalId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {goals.map((g) => (
                       <option key={g.id} value={g.id}>
@@ -283,7 +283,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -297,7 +297,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.id} value={c.name}>
@@ -326,7 +326,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
                   ? 'Ej. Usar ahorro para cubrir imprevisto del mes'
                   : 'Ej. Pago de reparación de auto o compra urgente'
               }
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -339,7 +339,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -361,7 +361,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Confirmar</span>

@@ -56,7 +56,7 @@ export default function App() {
     }
   });
   const [accentColor, setAccentColor] = useState<string>(() => {
-    try { return localStorage.getItem('mischeles_accent_v1') || '#059669'; } catch { return '#059669'; }
+    try { return localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1') || '#012677'; } catch { return '#012677'; }
   });
 
   // App Lock State
@@ -106,8 +106,9 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--app-primary', accentColor);
     document.documentElement.style.setProperty('--app-accent', accentColor);
-    try { localStorage.setItem('mischeles_accent_v1', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
+    try { localStorage.setItem('mischeles_accent_v2', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
   }, [accentColor]);
 
   // Refresh current month data
@@ -171,7 +172,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
+    <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
 
@@ -206,7 +207,7 @@ export default function App() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition ${
                     isActive
-                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                      ? 'border-primary text-primary'
                       : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -281,7 +282,7 @@ export default function App() {
             {/* Direct access to profile in mobile tab */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xl font-bold overflow-hidden shadow">
+                <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold overflow-hidden shadow">
                   {profile.photoUrl ? (
                     <img src={profile.photoUrl} alt={profile.name} className="w-full h-full object-cover" />
                   ) : (
@@ -291,7 +292,7 @@ export default function App() {
                 <div>
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white">{profile.name}</h3>
                   <p className="text-xs text-slate-400">{profile.email || 'Sin correo registrado'}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                  <p className="text-xs text-primary font-semibold mt-1">
                     Moneda: {profile.currency}
                   </p>
                 </div>
@@ -300,7 +301,7 @@ export default function App() {
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition"
+                  className="w-full py-3 px-4 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition"
                 >
                   Editar Perfil, Foto y Seguridad Biométrica
                 </button>

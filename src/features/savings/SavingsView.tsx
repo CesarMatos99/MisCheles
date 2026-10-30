@@ -81,7 +81,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Vault Hero - Fondo de Ahorro */}
-      <div className="relative overflow-hidden bg-emerald-700 text-white px-5 py-6 sm:px-7">
+      <div className="relative overflow-hidden bg-primary text-white px-5 py-6 sm:px-7">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-emerald-200 text-xs font-semibold">
@@ -89,7 +89,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
               <span>Fondo de Ahorro / Bóveda</span>
             </div>
             <p className="text-xs text-emerald-100 font-medium">Saldo Total Acumulado</p>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="type-display type-money font-extrabold tracking-tight">
               {profile.currency} {summary.totalSavingsVault.toLocaleString()}
             </h1>
             <p className="text-xs text-emerald-200/90 max-w-xl">
@@ -102,7 +102,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
             {/* Opción de transferir de ahorro a dinero del mes (registro) */}
             <button
               onClick={() => onOpenSavingsModal('withdraw_to_month')}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs rounded-2xl shadow-md transition"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 active:scale-95 text-primary font-bold text-xs rounded-2xl shadow-md transition"
               title="Transferir fondos del ahorro al dinero del mes (Registro)"
             >
               <ArrowUpRight className="w-4 h-4 text-slate-950" />
@@ -124,20 +124,20 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         {/* Breakdown sub-stats divided cleanly by lines */}
         <div className="relative z-10 grid grid-cols-3 divide-x divide-white/15 mt-5 pt-4 border-t border-white/15 text-left">
           <div className="pr-3">
-            <span className="text-[10px] text-emerald-200 block font-medium">Asignado a Metas</span>
-            <span className="text-sm sm:text-lg font-bold text-white">
+            <span className="text-xs text-emerald-200 block font-medium">Asignado a Metas</span>
+            <span className="text-sm sm:text-base font-bold text-white">
               {profile.currency} {totalAssignedToGoals.toLocaleString()}
             </span>
           </div>
           <div className="px-3">
-            <span className="text-[10px] text-emerald-200 block font-medium">Ahorro General Libre</span>
-            <span className="text-sm sm:text-lg font-bold text-white">
+            <span className="text-xs text-emerald-200 block font-medium">Ahorro General Libre</span>
+            <span className="text-sm sm:text-base font-bold text-white">
               {profile.currency} {totalFreeSavings.toLocaleString()}
             </span>
           </div>
           <div className="pl-3">
-            <span className="text-[10px] text-emerald-200 block font-medium">Aportes este mes</span>
-            <span className="text-sm sm:text-lg font-bold text-emerald-300">
+            <span className="text-xs text-emerald-200 block font-medium">Aportes este mes</span>
+            <span className="text-sm sm:text-base font-bold text-emerald-300">
               +{profile.currency} {summary.savingsTransfersTo.toLocaleString()}
             </span>
           </div>
@@ -150,14 +150,14 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         <div className="py-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <Target className="w-4 h-4 text-primary" />
               <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                 Metas de Ahorro
               </h3>
             </div>
             <button
               onClick={() => setIsAddingGoal(!isAddingGoal)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-soft dark:bg-primary-soft text-primary text-xs font-bold hover:bg-primary-soft transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Nueva Meta</span>
@@ -180,7 +180,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                   placeholder="Nombre (ej. Vacaciones, Laptop)"
                   value={newGoalTitle}
                   onChange={(e) => setNewGoalTitle(e.target.value)}
-                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <input
                   type="number"
@@ -189,13 +189,13 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                   placeholder={`Monto Meta (${profile.currency})`}
                   value={newGoalTarget}
                   onChange={(e) => setNewGoalTarget(e.target.value)}
-                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <input
                   type="date"
                   value={newGoalDate}
                   onChange={(e) => setNewGoalDate(e.target.value)}
-                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="flex justify-end gap-2">
@@ -208,7 +208,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700"
+                  className="px-4 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-hover"
                 >
                   Guardar Meta
                 </button>
@@ -236,7 +236,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                           {goal.title}
                         </h4>
                         {goal.targetDate && (
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                             <Calendar className="w-3 h-3" />
                             Límite: {goal.targetDate}
                           </p>
@@ -253,7 +253,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-emerald-600 dark:text-emerald-400">
+                        <span className="text-primary">
                           {profile.currency} {goal.currentAmount.toLocaleString()}
                         </span>
                         <span className="text-slate-400">
@@ -267,7 +267,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                         />
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="text-xs font-bold text-primary">
                           {pct.toFixed(0)}%
                         </span>
                       </div>
@@ -298,10 +298,10 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {movements.map((mov) => {
                 let icon = <ArrowDownRight className="w-4 h-4" />;
-                let badgeColor = 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                let badgeColor = 'bg-emerald-100 dark:bg-emerald-950/60 text-primary';
                 let typeText = 'Aporte desde el mes';
                 let amountSign = '+';
-                let amountColor = 'text-emerald-600 dark:text-emerald-400';
+                let amountColor = 'text-primary';
 
                 if (mov.type === 'withdraw_to_month') {
                   icon = <ArrowUpRight className="w-4 h-4" />;
@@ -327,14 +327,14 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                         <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {mov.description}
                         </p>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                           <span className="font-medium">{typeText}</span>
                           <span>•</span>
                           <span>{mov.date}</span>
                           {mov.category && (
                             <>
                               <span>•</span>
-                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs">
                                 {mov.category}
                               </span>
                             </>

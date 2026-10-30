@@ -110,7 +110,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               <ArrowRightLeft className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Transferir Dinero a Ahorro</h2>
+              <h2 className="type-dialog-title font-bold">Transferir Dinero a Ahorro</h2>
               <p className="text-xs text-emerald-100">
                 Pase de fondos del mes activo a tu alcancía
               </p>
@@ -129,7 +129,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           <span className="text-slate-500 dark:text-slate-400">
             Balance disponible este mes:
           </span>
-          <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+          <span className="font-extrabold text-primary text-sm">
             {profile.currency} {summary.availableBalance.toLocaleString()}
           </span>
         </div>
@@ -154,7 +154,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -170,15 +170,15 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 onClick={() => setDestinationType('general')}
                 className={`p-3 rounded-2xl border text-left transition flex flex-col gap-1.5 ${
                   destinationType === 'general'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
+                    ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
                     : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
-                  <PiggyBank className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <PiggyBank className="w-4 h-4 text-primary" />
                   <span>Ahorro General</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
                   Fondo libre. No se contabiliza en ninguna meta.
                 </p>
               </button>
@@ -188,15 +188,15 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 onClick={() => setDestinationType('goal')}
                 className={`p-3 rounded-2xl border text-left transition flex flex-col gap-1.5 ${
                   destinationType === 'goal'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 shadow-sm ring-1 ring-emerald-500'
+                    ? 'bg-primary-soft dark:bg-primary-soft border-primary text-primary dark:text-primary shadow-sm ring-1 ring-primary'
                     : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
-                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <Target className="w-4 h-4 text-primary" />
                   <span>Meta de Ahorro</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
                   Suma a la meta y también cuenta en ahorro general.
                 </p>
               </button>
@@ -217,7 +217,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 <select
                   value={selectedGoalId}
                   onChange={(e) => setSelectedGoalId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {goals.map((g) => {
                     const percent = g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0;
@@ -246,7 +246,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   ? `Ej. Aporte para ${currentGoal?.title || 'meta'}`
                   : 'Ej. Depósito quincenal a la alcancía'
               }
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -259,12 +259,12 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Clarity note */}
-          <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/50 text-[11px] text-teal-800 dark:text-teal-300 flex items-start gap-2">
+          <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/50 text-xs text-teal-800 dark:text-teal-300 flex items-start gap-2">
             <Sparkles className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400 mt-0.5" />
             <span>
               {destinationType === 'goal'
@@ -291,7 +291,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover active:scale-95 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Transferir a Ahorro</span>

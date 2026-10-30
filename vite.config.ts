@@ -17,7 +17,7 @@ export default defineConfig(() => {
           name: 'MisCheles - Presupuesto y Cobro',
           short_name: 'MisCheles',
           description: 'Administrador de presupuesto mensual, ahorros y gastos personales.',
-          theme_color: '#059669',
+          theme_color: '#012677',
           background_color: '#0f172a',
           display: 'standalone',
           start_url: '/',
