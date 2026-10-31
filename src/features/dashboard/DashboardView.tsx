@@ -34,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenCategory,
 }) => {
   const monthName = MONTH_NAMES_ES[month - 1];
+  const firstName = profile.name.trim().split(/\s+/)[0] || 'Usuario';
   const money = (value: number) => profile.currency + ' ' + value.toLocaleString('es-DO', { maximumFractionDigits: 2 });
   const expenses = transactions.filter((tx) => tx.type === 'expense');
 
@@ -58,7 +59,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="mx-auto max-w-5xl space-y-3 pb-6 animate-in fade-in duration-200">
       <header className='flex items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-slate-800'>
-        <h1 className='type-screen-title text-slate-900 dark:text-white'>Así va tu dinero</h1>
+        <div className='min-w-0'>
+          <p className='type-secondary'>Hola {firstName}</p>
+          <h1 className='type-screen-title text-slate-900 dark:text-white'>Así va tu dinero</h1>
+        </div>
         <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} compact />
       </header>
 
