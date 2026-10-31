@@ -74,6 +74,7 @@ export default function App() {
   // Modals
   const [isMonthSetupOpen, setIsMonthSetupOpen] = useState<boolean>(false);
   const [isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen] = useState<boolean>(false);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
   const [transactionModalType, setTransactionModalType] = useState<'expense' | 'income'>('expense');
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
@@ -231,7 +232,14 @@ export default function App() {
             profile={profile}
             categoryBudgets={categoryBudgets}
             onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
-            onManageBudgets={() => setIsCategoryBudgetModalOpen(true)}
+            onManageBudgets={() => {
+              setEditingCategory(null);
+              setIsCategoryBudgetModalOpen(true);
+            }}
+            onEditCategory={(category) => {
+              setEditingCategory(category);
+              setIsCategoryBudgetModalOpen(true);
+            }}
           />
         )}
 
@@ -297,15 +305,27 @@ export default function App() {
         isOpen={isCategoryBudgetModalOpen}
         monthLabel={MONTH_NAMES_ES[month - 1] + ' ' + year}
         currency={profile.currency}
-        budgets={categoryBudgets}
+        budgets={editingCategory
+          ? categoryBudgets.filter((budget) => budget.category === editingCategory)
+          : categoryBudgets}
+        isSingleCategory={Boolean(editingCategory)}
+        reservedCategories={editingCategory
+          ? categoryBudgets.filter((budget) => budget.category !== editingCategory).map((budget) => budget.category)
+          : []}
         suggestedCategories={[
           ...EXPENSE_CATEGORIES.map((category) => category.name),
           ...transactions.filter((transaction) => transaction.type === 'expense' && transaction.category !== 'Servicios (Luz, Agua, Internet)').map((transaction) => transaction.category),
         ]}
-        onClose={() => setIsCategoryBudgetModalOpen(false)}
+        onClose={() => {
+          setIsCategoryBudgetModalOpen(false);
+          setEditingCategory(null);
+        }}
         onSave={(budgets) => {
-          storageService.saveCategoryBudgets(currentMonthKey, budgets);
-          setCategoryBudgets(budgets);
+          const nextBudgets = editingCategory
+            ? categoryBudgets.flatMap((budget) => budget.category === editingCategory ? budgets : [budget])
+            : budgets;
+          storageService.saveCategoryBudgets(currentMonthKey, nextBudgets);
+          setCategoryBudgets(nextBudgets);
         }}
       />
 

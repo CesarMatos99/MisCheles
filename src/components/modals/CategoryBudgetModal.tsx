@@ -7,6 +7,8 @@ interface CategoryBudgetModalProps {
   monthLabel: string;
   currency: string;
   budgets: CategoryBudget[];
+  isSingleCategory?: boolean;
+  reservedCategories?: string[];
   suggestedCategories: string[];
   onClose: () => void;
   onSave: (budgets: CategoryBudget[]) => void;
@@ -27,6 +29,8 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
   monthLabel,
   currency,
   budgets,
+  isSingleCategory = false,
+  reservedCategories = [],
   suggestedCategories,
   onClose,
   onSave,
@@ -65,9 +69,12 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
       return;
     }
 
-    const names = normalized.map((budget) => normalizeCategory(budget.category));
+    const names = [
+      ...normalized.map((budget) => normalizeCategory(budget.category)),
+      ...reservedCategories.map(normalizeCategory),
+    ];
     if (new Set(names).size !== names.length) {
-      setError('Cada categoría debe aparecer una sola vez.');
+      setError('Cada categoría debe aparecer una sola vez y no puede repetir otra ya configurada.');
       return;
     }
 
@@ -75,17 +82,20 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
     onClose();
   };
 
+  const reservedKeys = new Set(reservedCategories.map(normalizeCategory));
   const suggestions = Array.from(new Set([
     ...suggestedCategories,
     ...budgets.map((budget) => budget.category),
-  ].map((category) => category.trim()).filter(Boolean)));
+  ].map((category) => category.trim()).filter(Boolean)))
+    .filter((category) => !reservedKeys.has(normalizeCategory(category)) || budgets.some((budget) => normalizeCategory(budget.category) === normalizeCategory(category)));
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
       <section role="dialog" aria-modal="true" aria-labelledby="category-budget-title" className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <header className="flex items-start justify-between gap-4 bg-primary px-5 py-4 text-white">
           <div>
-            <h2 id="category-budget-title" className="type-dialog-title">Categorías del mes</h2>
+            <h2 id="category-budget-title" className="type-dialog-title">{isSingleCategory ? 'Editar categoría' : 'Categorías del mes'}</h2>
             <p className="mt-1 text-sm text-white/75">{monthLabel}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white">
@@ -159,10 +169,12 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
             )}
 
             {error && <p role="alert" className="mt-3 text-sm font-medium text-rose-600 dark:text-rose-400">{error}</p>}
-            <button type="button" onClick={() => setDrafts((current) => [...current, emptyDraft()])} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft">
-              <Plus className="h-4 w-4" />
-              Agregar categoría
-            </button>
+            {!isSingleCategory && (
+              <button type="button" onClick={() => setDrafts((current) => [...current, emptyDraft()])} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft">
+                <Plus className="h-4 w-4" />
+                Agregar categoría
+              </button>
+            )}
           </div>
 
           <footer className="flex gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
