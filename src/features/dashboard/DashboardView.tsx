@@ -59,14 +59,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="mx-auto max-w-5xl space-y-3 pb-6 animate-in fade-in duration-200">
-      <header className="flex flex-col gap-3 border-b border-slate-200 pb-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <header className="flex items-end justify-between gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div className="min-w-0">
           <p className="type-secondary">Resumen mensual</p>
-          <h1 className="type-screen-title text-slate-900 dark:text-white">Así va tu dinero</h1>
+          <h1 className="type-screen-title whitespace-nowrap text-slate-900 dark:text-white">Así va tu dinero</h1>
         </div>
-        <div className="flex w-full min-w-0 items-center justify-between gap-1 sm:w-auto sm:shrink-0 sm:justify-start">
-          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
-          <button type="button" onClick={onOpenMonthSetup} aria-label="Configurar ingresos del mes" title="Configurar mes" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} compact />
+          <button type="button" onClick={onOpenMonthSetup} aria-label="Configurar ingresos del mes" title="Configurar mes" className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
             <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>

@@ -6,9 +6,10 @@ interface PeriodSelectorProps {
   year: number;
   month: number;
   onMonthChange: (year: number, month: number) => void;
+  compact?: boolean;
 }
 
-export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onMonthChange }) => {
+export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onMonthChange, compact = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const latestYear = Math.max(2030, new Date().getFullYear() + 4);
@@ -36,14 +37,14 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onM
   };
 
   return (
-    <div ref={rootRef} className="relative inline-flex items-center gap-1">
-      <button type="button" onClick={() => shiftMonth(-1)} aria-label="Mes anterior" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
+    <div ref={rootRef} className={compact ? "relative inline-flex items-center gap-0" : "relative inline-flex items-center gap-1"}>
+      <button type="button" onClick={() => shiftMonth(-1)} aria-label="Mes anterior" className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label="Elegir mes" aria-expanded={isOpen} aria-haspopup="true" className="min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label="Elegir mes" aria-expanded={isOpen} aria-haspopup="true" className={compact ? "min-h-9 whitespace-nowrap rounded-xl px-1 text-xs font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100" : "min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100"}>
         {MONTH_NAMES_ES[month - 1]} {year}
       </button>
-      <button type="button" onClick={() => shiftMonth(1)} aria-label="Mes siguiente" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
+      <button type="button" onClick={() => shiftMonth(1)} aria-label="Mes siguiente" className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
         <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
       {isOpen && (
