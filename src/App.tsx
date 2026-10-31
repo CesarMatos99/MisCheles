@@ -197,7 +197,7 @@ export default function App() {
       {/* Offline Status Toast */}
       <OfflineIndicator />
       {budgetNotice && (
-        <div role={budgetNotice.kind === 'over' ? 'alert' : 'status'} aria-live={budgetNotice.kind === 'over' ? 'assertive' : 'polite'} className={'fixed left-3 right-3 top-20 z-[60] flex items-start gap-3 rounded-xl border p-3 shadow-lg sm:left-auto sm:right-6 sm:top-24 sm:w-96 ' + (budgetNotice.kind === 'over' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/80 dark:text-rose-100' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/80 dark:text-amber-100')}>
+        <div role={budgetNotice.kind === 'over' ? 'alert' : 'status'} aria-live={budgetNotice.kind === 'over' ? 'assertive' : 'polite'} className={'fixed left-3 right-3 top-20 z-[60] flex items-start gap-3 rounded-xl border p-3 shadow-lg sm:left-auto sm:right-6 sm:top-24 sm:w-96 ' + (budgetNotice.kind === 'over' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/65 dark:text-rose-100' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/65 dark:text-amber-100')}>
           <AlertCircle className='mt-0.5 h-5 w-5 shrink-0' aria-hidden='true' />
           <div className='min-w-0 flex-1'>
             <p className='text-sm font-semibold'>{budgetNotice.kind === 'over' ? 'Has superado el monto de la categoría' : 'Has gastado cerca del monto asignado'}</p>
