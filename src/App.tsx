@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Receipt, PiggyBank, PieChart, Download } from 'lucide-react';
 import {
+  CategoryBudget,
   FinancialSummary,
   MonthConfig,
   Transaction,
@@ -19,10 +20,12 @@ import { SavingsView } from './features/savings/SavingsView';
 import { SavingsModal } from './features/savings/SavingsModal';
 import { ProfileView } from './features/profile/ProfileView';
 import { MonthSetupModal } from './components/modals/MonthSetupModal';
+import { CategoryBudgetModal } from './components/modals/CategoryBudgetModal';
 import { TransferModal } from './components/modals/TransferModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { PWAInstallModal } from './components/modals/PWAInstallModal';
 import { BiometricLockScreen } from './components/modals/BiometricLockScreen';
+import { EXPENSE_CATEGORIES, MONTH_NAMES_ES } from './constants/categories';
 
 export default function App() {
   // Current Date default
@@ -64,12 +67,13 @@ export default function App() {
   const [summary, setSummary] = useState<FinancialSummary>(() =>
     storageService.getFinancialSummary(currentMonthKey)
   );
-
-  // Selected Category filter for drilldown
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>(() =>
+    storageService.getCategoryBudgets(currentMonthKey)
+  );
 
   // Modals
   const [isMonthSetupOpen, setIsMonthSetupOpen] = useState<boolean>(false);
+  const [isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen] = useState<boolean>(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
   const [transactionModalType, setTransactionModalType] = useState<'expense' | 'income'>('expense');
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
@@ -105,11 +109,11 @@ export default function App() {
     setMonthConfig(storageService.getMonthConfig(key));
     setTransactions(storageService.getTransactionsByMonth(key));
     setSummary(storageService.getFinancialSummary(key));
+    setCategoryBudgets(storageService.getCategoryBudgets(key));
   }, [year, month]);
 
   useEffect(() => {
     refreshMonthData();
-    setSelectedCategory(null);
   }, [year, month, refreshMonthData]);
 
   // Handle month/year changes
@@ -225,16 +229,9 @@ export default function App() {
             summary={summary}
             transactions={transactions}
             profile={profile}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
+            categoryBudgets={categoryBudgets}
             onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
-            onOpenTransactionModal={handleOpenTransactionModal}
-            onOpenTransferModal={() => setIsTransferModalOpen(true)}
-            onOpenSavingsModal={handleOpenSavingsModal}
-            onOpenExportModal={() => setIsExportModalOpen(true)}
-            onEditTransaction={handleEditTransaction}
-            onDeleteTransaction={handleDeleteTransaction}
-            onViewAllTransactions={() => setActiveTab('transactions')}
+            onManageBudgets={() => setIsCategoryBudgetModalOpen(true)}
           />
         )}
 
@@ -296,6 +293,22 @@ export default function App() {
       )}
 
       {/* Modals */}
+      <CategoryBudgetModal
+        isOpen={isCategoryBudgetModalOpen}
+        monthLabel={MONTH_NAMES_ES[month - 1] + ' ' + year}
+        currency={profile.currency}
+        budgets={categoryBudgets}
+        suggestedCategories={[
+          ...EXPENSE_CATEGORIES.filter((category) => category.id !== 'ahorro').map((category) => category.name),
+          ...transactions.filter((transaction) => transaction.type === 'expense').map((transaction) => transaction.category),
+        ]}
+        onClose={() => setIsCategoryBudgetModalOpen(false)}
+        onSave={(budgets) => {
+          storageService.saveCategoryBudgets(currentMonthKey, budgets);
+          setCategoryBudgets(budgets);
+        }}
+      />
+
       <MonthSetupModal
         isOpen={isMonthSetupOpen}
         onClose={() => setIsMonthSetupOpen(false)}

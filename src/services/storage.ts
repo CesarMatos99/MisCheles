@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   SAVINGS_MOVEMENTS: 'mischeles_savings_movements_v3',
   SAVINGS_GOALS: 'mischeles_savings_goals_v3',
   MONTH_CONFIGS: 'mischeles_month_configs_v2',
+  CATEGORY_BUDGETS: 'mischeles_category_budgets_v1',
   USER_PROFILE: 'mischeles_user_profile_v2',
   APP_THEME: 'mischeles_theme_v2',
   APP_LOCKED: 'mischeles_locked_v2',
@@ -356,6 +357,40 @@ export const storageService = {
     const configs = this.getMonthConfigs();
     configs[config.monthKey] = config;
     localStorage.setItem(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(configs));
+  },
+
+  // Monthly category budgets
+  getCategoryBudgets(monthKey: string): { category: string; amount: number }[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CATEGORY_BUDGETS);
+      if (!data) return [];
+      const byMonth = JSON.parse(data) as Record<string, unknown>;
+      const budgets = byMonth[monthKey];
+      if (!Array.isArray(budgets)) return [];
+      return budgets.filter((budget): budget is { category: string; amount: number } =>
+        Boolean(budget)
+        && typeof budget.category === 'string'
+        && budget.category.trim().length > 0
+        && typeof budget.amount === 'number'
+        && Number.isFinite(budget.amount)
+        && budget.amount > 0,
+      );
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  saveCategoryBudgets(monthKey: string, budgets: { category: string; amount: number }[]): void {
+    let byMonth: Record<string, unknown> = {};
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CATEGORY_BUDGETS);
+      if (data) byMonth = JSON.parse(data);
+    } catch (e) {
+      console.error(e);
+    }
+    byMonth[monthKey] = budgets;
+    localStorage.setItem(STORAGE_KEYS.CATEGORY_BUDGETS, JSON.stringify(byMonth));
   },
 
   // Transactions

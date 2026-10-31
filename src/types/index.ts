@@ -53,6 +53,11 @@ export interface MonthConfig {
   isConfigured: boolean;
 }
 
+export interface CategoryBudget {
+  category: string;
+  amount: number;
+}
+
 export interface UserProfile {
   name: string;
   email: string;

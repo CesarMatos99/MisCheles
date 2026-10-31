@@ -31,13 +31,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
+  const budgetCategories = storageService.getCategoryBudgets(monthKey).map((budget) => ({
+    id: 'budget-' + budget.category,
+    name: budget.category,
+  }));
+  const expenseCategoryOptions = Array.from(
+    new Map([...EXPENSE_CATEGORIES, ...budgetCategories].map((item) => [item.name.toLocaleLowerCase('es-DO'), item])).values(),
+  );
 
   useEffect(() => {
     if (isOpen) {
       if (transactionToEdit) {
         setType(transactionToEdit.type);
         setAmount(String(transactionToEdit.amount));
-        const knownCategories = transactionToEdit.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+        const knownCategories = transactionToEdit.type === 'expense' ? expenseCategoryOptions : INCOME_CATEGORIES;
         const isCustom = !knownCategories.some((item) => item.name === transactionToEdit.category);
         setCategory(isCustom ? '__custom__' : transactionToEdit.category);
         setUsesCustomCategory(isCustom);
@@ -70,7 +77,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentCategories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const currentCategories = type === 'expense' ? expenseCategoryOptions : INCOME_CATEGORIES;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
