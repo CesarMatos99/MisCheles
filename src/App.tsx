@@ -14,6 +14,7 @@ import { BottomNav, ActiveTab } from './components/layout/BottomNav';
 import { FloatingActions } from './components/layout/FloatingActions';
 import { OfflineIndicator } from './components/layout/OfflineIndicator';
 import { DashboardView } from './features/dashboard/DashboardView';
+import { CategoryDetailView } from './features/dashboard/CategoryDetailView';
 import { TransactionsView } from './features/transactions/TransactionsView';
 import { TransactionModal } from './features/transactions/TransactionModal';
 import { SavingsView } from './features/savings/SavingsView';
@@ -71,6 +72,7 @@ export default function App() {
     storageService.getCategoryBudgets(currentMonthKey)
   );
   const [transactionCategoryFilter, setTransactionCategoryFilter] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [budgetNotice, setBudgetNotice] = useState<{ kind: 'near' | 'over'; category: string; amount: number; budgetAmount: number } | null>(null);
 
   // Modals
@@ -142,6 +144,7 @@ export default function App() {
   useEffect(() => {
     refreshMonthData();
     setTransactionCategoryFilter(null);
+    setSelectedCategory(null);
   }, [year, month, refreshMonthData]);
 
   // Handle month/year changes
@@ -212,7 +215,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
         onLockApp={handleLockApp}
-        onOpenProfile={() => setActiveTab('profile')}
+        onOpenProfile={() => { setSelectedCategory(null); setActiveTab('profile'); }}
         profile={profile}
       />
 
@@ -230,7 +233,7 @@ export default function App() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { setSelectedCategory(null); setActiveTab(tab.id); }}
                   className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition ${
                     isActive
                       ? 'border-primary text-primary'
@@ -259,29 +262,40 @@ export default function App() {
       {/* Main Body Content Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
         {activeTab === 'dashboard' && (
-          <DashboardView
-            year={year}
-            month={month}
-            onMonthChange={handleMonthChange}
-            monthConfig={monthConfig}
-            summary={summary}
-            transactions={transactions}
-            profile={profile}
-            categoryBudgets={categoryBudgets}
-            onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
-            onManageBudgets={() => {
-              setEditingCategory(null);
-              setIsCategoryBudgetModalOpen(true);
-            }}
-            onEditCategory={(category) => {
-              setEditingCategory(category);
-              setIsCategoryBudgetModalOpen(true);
-            }}
-            onOpenUnbudgetedCategory={(category) => {
-              setTransactionCategoryFilter(category);
-              setActiveTab('transactions');
-            }}
-          />
+          selectedCategory ? (
+            <CategoryDetailView
+              category={selectedCategory}
+              monthLabel={MONTH_NAMES_ES[month - 1] + ' ' + year}
+              budget={categoryBudgets.find((budget) => budget.category.localeCompare(selectedCategory, 'es-DO', { sensitivity: 'base' }) === 0)}
+              transactions={transactions}
+              profile={profile}
+              onBack={() => setSelectedCategory(null)}
+              onEditTransaction={handleEditTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onManageBudget={() => {
+                const hasBudget = categoryBudgets.some((budget) => budget.category.localeCompare(selectedCategory, 'es-DO', { sensitivity: 'base' }) === 0);
+                setEditingCategory(hasBudget ? selectedCategory : null);
+                setIsCategoryBudgetModalOpen(true);
+              }}
+            />
+          ) : (
+            <DashboardView
+              year={year}
+              month={month}
+              onMonthChange={handleMonthChange}
+              monthConfig={monthConfig}
+              summary={summary}
+              transactions={transactions}
+              profile={profile}
+              categoryBudgets={categoryBudgets}
+              onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
+              onManageBudgets={() => {
+                setEditingCategory(null);
+                setIsCategoryBudgetModalOpen(true);
+              }}
+              onOpenCategory={setSelectedCategory}
+            />
+          )
         )}
 
         {activeTab === 'transactions' && (
@@ -332,7 +346,7 @@ export default function App() {
       {/* Mobile Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
-        onChangeTab={setActiveTab}
+        onChangeTab={(tab) => { setSelectedCategory(null); setActiveTab(tab); }}
       />
 
       {(activeTab === 'dashboard' || activeTab === 'transactions') && (
