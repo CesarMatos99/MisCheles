@@ -16,6 +16,7 @@ interface DashboardViewProps {
   onOpenMonthSetup: () => void;
   onManageBudgets: () => void;
   onEditCategory: (category: string) => void;
+  onOpenUnbudgetedCategory: (category: string) => void;
 }
 
 const categoryKey = (category: string) => category.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-DO');
@@ -32,6 +33,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenMonthSetup,
   onManageBudgets,
   onEditCategory,
+  onOpenUnbudgetedCategory,
 }) => {
   const monthName = MONTH_NAMES_ES[month - 1];
   const money = (value: number) => profile.currency + ' ' + value.toLocaleString('es-DO', { maximumFractionDigits: 2 });
@@ -152,10 +154,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {unbudgeted.map((item) => (
-              <div key={categoryKey(item.category)} className="flex items-center justify-between gap-4 py-2">
+              <button
+                key={categoryKey(item.category)}
+                type="button"
+                onClick={() => onOpenUnbudgetedCategory(item.category)}
+                aria-label={'Ver y editar movimientos de ' + item.category}
+                title="Abrir movimientos en Registro"
+                className="flex w-full items-center justify-between gap-4 py-2 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900/50"
+              >
                 <span className="truncate text-sm text-slate-700 dark:text-slate-300">{item.category}</span>
-                <span className="shrink-0 text-sm font-medium text-slate-900 dark:text-white">{money(item.amount)}</span>
-              </div>
+                <span className="flex shrink-0 items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+                  {money(item.amount)}
+                  <ArrowRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                </span>
+              </button>
             ))}
           </div>
         </section>

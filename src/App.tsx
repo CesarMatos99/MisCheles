@@ -70,6 +70,7 @@ export default function App() {
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>(() =>
     storageService.getCategoryBudgets(currentMonthKey)
   );
+  const [transactionCategoryFilter, setTransactionCategoryFilter] = useState<string | null>(null);
 
   // Modals
   const [isMonthSetupOpen, setIsMonthSetupOpen] = useState<boolean>(false);
@@ -115,6 +116,7 @@ export default function App() {
 
   useEffect(() => {
     refreshMonthData();
+    setTransactionCategoryFilter(null);
   }, [year, month, refreshMonthData]);
 
   // Handle month/year changes
@@ -240,6 +242,10 @@ export default function App() {
               setEditingCategory(category);
               setIsCategoryBudgetModalOpen(true);
             }}
+            onOpenUnbudgetedCategory={(category) => {
+              setTransactionCategoryFilter(category);
+              setActiveTab('transactions');
+            }}
           />
         )}
 
@@ -253,6 +259,8 @@ export default function App() {
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onOpenExportModal={() => setIsExportModalOpen(true)}
+            initialCategoryFilter={transactionCategoryFilter}
+            onCategoryFilterChange={setTransactionCategoryFilter}
           />
         )}
 

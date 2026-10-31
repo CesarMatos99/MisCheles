@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Search,
   Filter,
@@ -24,6 +24,8 @@ interface TransactionsViewProps {
   onEditTransaction: (tx: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
   onOpenExportModal: () => void;
+  initialCategoryFilter?: string | null;
+  onCategoryFilterChange?: (category: string | null) => void;
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
@@ -35,10 +37,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   onEditTransaction,
   onDeleteTransaction,
   onOpenExportModal,
+  initialCategoryFilter = null,
+  onCategoryFilterChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'savings'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+  useEffect(() => {
+    setCategoryFilter(initialCategoryFilter || 'all');
+  }, [initialCategoryFilter]);
+
+  const normalizeCategory = (category: string) => category.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-DO');
 
   const isSavingsTx = (t: Transaction) =>
     t.category === 'Aporte al Ahorro' ||
@@ -61,7 +71,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       matchesType = isSavingsTx(t);
     }
 
-    const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || normalizeCategory(t.category) === normalizeCategory(categoryFilter);
 
     return matchesSearch && matchesType && matchesCategory;
   });
@@ -165,7 +175,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             {monthCategories.length > 0 && (
               <select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setCategoryFilter(next);
+                  onCategoryFilterChange?.(next === 'all' ? null : next);
+                }}
                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">Todas las categorías</option>
