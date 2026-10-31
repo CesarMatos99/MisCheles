@@ -299,8 +299,8 @@ export default function App() {
         currency={profile.currency}
         budgets={categoryBudgets}
         suggestedCategories={[
-          ...EXPENSE_CATEGORIES.filter((category) => category.id !== 'ahorro').map((category) => category.name),
-          ...transactions.filter((transaction) => transaction.type === 'expense').map((transaction) => transaction.category),
+          ...EXPENSE_CATEGORIES.map((category) => category.name),
+          ...transactions.filter((transaction) => transaction.type === 'expense' && transaction.category !== 'Servicios (Luz, Agua, Internet)').map((transaction) => transaction.category),
         ]}
         onClose={() => setIsCategoryBudgetModalOpen(false)}
         onSave={(budgets) => {

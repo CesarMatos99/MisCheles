@@ -115,8 +115,8 @@ const getInitialSeedData = () => {
       monthKey: augKey,
       type: 'expense',
       amount: 7000,
-      category: 'Servicios (Luz, Agua, Internet)',
-      description: 'Pago de electricidad e internet',
+      category: 'Energía eléctrica',
+      description: 'Pago de electricidad',
       date: '2026-08-18',
       paymentMethod: 'Tarjeta de Crédito',
       createdAt: Date.now() - 32 * 86400000,
@@ -184,7 +184,7 @@ const getInitialSeedData = () => {
       type: 'expense',
       amount: 6200,
       category: 'Servicios (Luz, Agua, Internet)',
-      description: 'Servicios básicos hogar',
+      description: 'Pago de electricidad',
       date: '2026-09-16',
       paymentMethod: 'Transferencia Bancaria',
       createdAt: Date.now() - 10 * 86400000,
@@ -371,6 +371,7 @@ export const storageService = {
         Boolean(budget)
         && typeof budget.category === 'string'
         && budget.category.trim().length > 0
+        && budget.category.trim() !== 'Servicios (Luz, Agua, Internet)'
         && typeof budget.amount === 'number'
         && Number.isFinite(budget.amount)
         && budget.amount > 0,

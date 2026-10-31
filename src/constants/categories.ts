@@ -10,7 +10,10 @@ export interface CategoryDef {
 export const EXPENSE_CATEGORIES: CategoryDef[] = [
   { id: 'vivienda', name: 'Vivienda y Alquiler', icon: 'Home', color: '#3b82f6', bgLight: '#eff6ff', bgDark: '#1e3a8a' },
   { id: 'alimentacion', name: 'Alimentación y Supermercado', icon: 'Utensils', color: '#10b981', bgLight: '#ecfdf5', bgDark: '#064e3b' },
-  { id: 'servicios', name: 'Servicios (Luz, Agua, Internet)', icon: 'Zap', color: '#f59e0b', bgLight: '#fffbeb', bgDark: '#78350f' },
+  { id: 'energia', name: 'Energía eléctrica', icon: 'Zap', color: '#f59e0b', bgLight: '#fffbeb', bgDark: '#78350f' },
+  { id: 'agua', name: 'Agua', icon: 'Droplets', color: '#0ea5e9', bgLight: '#f0f9ff', bgDark: '#0c4a6e' },
+  { id: 'internet', name: 'Internet', icon: 'Wifi', color: '#6366f1', bgLight: '#eef2ff', bgDark: '#312e81' },
+  { id: 'telefono', name: 'Teléfono', icon: 'Smartphone', color: '#ec4899', bgLight: '#fdf2f8', bgDark: '#831843' },
   { id: 'transporte', name: 'Transporte y Combustible', icon: 'Car', color: '#8b5cf6', bgLight: '#f5f3ff', bgDark: '#4c1d95' },
   { id: 'salud', name: 'Salud y Farmacia', icon: 'HeartPulse', color: '#ef4444', bgLight: '#fef2f2', bgDark: '#7f1d1d' },
   { id: 'educacion', name: 'Educación y Cursos', icon: 'GraduationCap', color: '#06b6d4', bgLight: '#ecfeff', bgDark: '#164e63' },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CircleAlert, Plus, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ArrowRight, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, Transaction, UserProfile } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
@@ -17,7 +17,7 @@ interface DashboardViewProps {
   onManageBudgets: () => void;
 }
 
-const categoryKey = (category: string) => category.trim().toLocaleLowerCase('es-DO');
+const categoryKey = (category: string) => category.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-DO');
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   year,
@@ -32,13 +32,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onManageBudgets,
 }) => {
   const monthName = MONTH_NAMES_ES[month - 1];
-  const monthLabel = monthName + ' ' + year;
   const money = (value: number) => profile.currency + ' ' + value.toLocaleString('es-DO', { maximumFractionDigits: 2 });
-  const expenses = transactions.filter((tx) =>
-    tx.type === 'expense'
-    && !tx.relatedSavingsMovementId
-    && categoryKey(tx.category) !== categoryKey('Aporte al Ahorro'),
-  );
+  const expenses = transactions.filter((tx) => tx.type === 'expense');
 
   const spendByCategory = new Map<string, number>();
   for (const transaction of expenses) {
@@ -55,11 +50,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  const budgetedTotal = categoryBudgets.reduce((total, budget) => total + budget.amount, 0);
-  const budgetedSpent = categoryBudgets.reduce(
-    (total, budget) => total + (spendByCategory.get(categoryKey(budget.category)) || 0),
-    0,
-  );
   const totalUnbudgeted = unbudgeted.reduce((total, item) => total + item.amount, 0);
   const totalConsumption = expenses.reduce((total, transaction) => total + transaction.amount, 0);
 
@@ -102,25 +92,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       <section>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 py-4 dark:border-slate-800">
-          <div>
-            <h2 className="font-bold text-slate-900 dark:text-white">Presupuesto por categoría</h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{monthLabel} · {money(budgetedSpent)} gastados de {money(budgetedTotal)}</p>
-          </div>
-          <button type="button" onClick={onManageBudgets} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft">
-            <Plus className="h-4 w-4" />
-            <span>{categoryBudgets.length ? 'Editar presupuesto' : 'Definir presupuesto'}</span>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 py-4 dark:border-slate-800">
+          <h2 className="font-bold text-slate-900 dark:text-white">Gastos por categoría</h2>
+          <button type="button" onClick={onManageBudgets} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft">
+            <Tags className="h-4 w-4" />
+            <span>Editar categorías</span>
           </button>
         </div>
 
         {categoryBudgets.length === 0 ? (
-          <button type="button" onClick={onManageBudgets} className="flex w-full items-center gap-3 border-b border-slate-200 py-6 text-left transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/40">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary"><Plus className="h-5 w-5" /></span>
-            <span>
-              <span className="block font-semibold text-slate-900 dark:text-white">Organiza tus gastos del mes</span>
-              <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">Crea topes para supermercado, luz, internet o cualquier categoría.</span>
-            </span>
-          </button>
+          <p className="border-b border-slate-200 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">Aún no has asignado montos a tus categorías.</p>
         ) : (
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {categoryBudgets.map((budget) => {
@@ -142,7 +123,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{percent}% usado</p>
                     </div>
                   </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" role="progressbar" aria-label={'Uso del presupuesto de ' + budget.category} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" role="progressbar" aria-label={'Consumo de ' + budget.category} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
                     <div className={'h-full rounded-full transition-all ' + (overBudget ? 'bg-rose-500' : percent >= 85 ? 'bg-amber-500' : 'bg-primary')} style={{ width: Math.min(percent, 100) + '%' }} />
                   </div>
                 </div>
@@ -154,14 +135,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {unbudgeted.length > 0 && (
         <section>
-          <div className="flex items-start justify-between gap-4 border-b border-slate-200 py-4 dark:border-slate-800">
-            <div className="flex items-start gap-2">
-              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div>
-                <h2 className="font-semibold text-slate-900 dark:text-white">Gastos sin presupuesto</h2>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Asigna un tope si quieres dar seguimiento a estas categorías.</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200 py-3 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Sin monto asignado</h2>
             <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">{money(totalUnbudgeted)}</p>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -175,13 +150,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </section>
       )}
 
-      <section className="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-800">
-        <div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Ahorro acumulado</p>
-          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{money(summary.totalSavingsVault)}</p>
-        </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Los aportes al ahorro no cuentan como gasto de categoría.</p>
-      </section>
     </div>
   );
 };
