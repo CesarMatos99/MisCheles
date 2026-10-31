@@ -64,7 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="type-secondary">Resumen mensual</p>
           <h1 className="type-screen-title text-slate-900 dark:text-white">Así va tu dinero</h1>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex w-full min-w-0 items-center justify-between gap-1 sm:w-auto sm:shrink-0 sm:justify-start">
           <PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />
           <button type="button" onClick={onOpenMonthSetup} aria-label="Configurar ingresos del mes" title="Configurar mes" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
             <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
