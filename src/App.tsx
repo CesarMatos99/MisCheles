@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, PiggyBank, PieChart, Download } from 'lucide-react';
+import { Receipt, PiggyBank, PieChart, Download, AlertCircle, X } from 'lucide-react';
 import {
   CategoryBudget,
   FinancialSummary,
@@ -71,6 +71,7 @@ export default function App() {
     storageService.getCategoryBudgets(currentMonthKey)
   );
   const [transactionCategoryFilter, setTransactionCategoryFilter] = useState<string | null>(null);
+  const [budgetNotice, setBudgetNotice] = useState<{ kind: 'near' | 'over'; category: string; amount: number; budgetAmount: number } | null>(null);
 
   // Modals
   const [isMonthSetupOpen, setIsMonthSetupOpen] = useState<boolean>(false);
@@ -113,6 +114,30 @@ export default function App() {
     setSummary(storageService.getFinancialSummary(key));
     setCategoryBudgets(storageService.getCategoryBudgets(key));
   }, [year, month]);
+
+  useEffect(() => {
+    if (!budgetNotice) return;
+    const timeout = window.setTimeout(() => setBudgetNotice(null), 6500);
+    return () => window.clearTimeout(timeout);
+  }, [budgetNotice]);
+
+  const handleTransactionSaved = (savedTransaction: Transaction) => {
+    if (savedTransaction.type === 'expense') {
+      const key = savedTransaction.category.trim().toLocaleLowerCase('es-DO');
+      const budget = categoryBudgets.find((item) => item.category.trim().toLocaleLowerCase('es-DO') === key);
+      if (budget) {
+        const matchingExpenses = transactions.filter((item) => item.type === 'expense' && item.category.trim().toLocaleLowerCase('es-DO') === key);
+        const previousSpend = matchingExpenses.reduce((total, item) => total + item.amount, 0);
+        const nextSpend = matchingExpenses.filter((item) => item.id !== savedTransaction.id).reduce((total, item) => total + item.amount, savedTransaction.amount);
+        if (nextSpend > budget.amount) {
+          setBudgetNotice({ kind: 'over', category: budget.category, amount: nextSpend - budget.amount, budgetAmount: budget.amount });
+        } else if (previousSpend < budget.amount * 0.8 && nextSpend >= budget.amount * 0.8) {
+          setBudgetNotice({ kind: 'near', category: budget.category, amount: nextSpend, budgetAmount: budget.amount });
+        }
+      }
+    }
+    refreshMonthData();
+  };
 
   useEffect(() => {
     refreshMonthData();
@@ -171,6 +196,16 @@ export default function App() {
     <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
+      {budgetNotice && (
+        <div role={budgetNotice.kind === 'over' ? 'alert' : 'status'} aria-live={budgetNotice.kind === 'over' ? 'assertive' : 'polite'} className={'fixed left-3 right-3 top-20 z-[60] flex items-start gap-3 rounded-xl border p-3 shadow-lg sm:left-auto sm:right-6 sm:top-24 sm:w-96 ' + (budgetNotice.kind === 'over' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/80 dark:text-rose-100' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/80 dark:text-amber-100')}>
+          <AlertCircle className='mt-0.5 h-5 w-5 shrink-0' aria-hidden='true' />
+          <div className='min-w-0 flex-1'>
+            <p className='text-sm font-semibold'>{budgetNotice.kind === 'over' ? 'Has superado el monto de la categoría' : 'Has gastado cerca del monto asignado'}</p>
+            <p className='mt-0.5 text-xs'>{budgetNotice.kind === 'over' ? budgetNotice.category + ': ' + profile.currency + ' ' + budgetNotice.amount.toLocaleString('es-DO') + ' por encima del límite.' : budgetNotice.category + ': ' + profile.currency + ' ' + budgetNotice.amount.toLocaleString('es-DO') + ' de ' + profile.currency + ' ' + budgetNotice.budgetAmount.toLocaleString('es-DO') + '.'}</p>
+          </div>
+          <button type='button' onClick={() => setBudgetNotice(null)} aria-label='Cerrar notificación' className='rounded-lg p-1 hover:bg-black/5 dark:hover:bg-white/10'><X className='h-4 w-4' aria-hidden='true' /></button>
+        </div>
+      )}
 
       {/* Main Header */}
       <Header
@@ -351,7 +386,7 @@ export default function App() {
         onClose={() => setIsTransactionModalOpen(false)}
         monthKey={currentMonthKey}
         profile={profile}
-        onSaved={() => refreshMonthData()}
+        onSaved={handleTransactionSaved}
         transactionToEdit={transactionToEdit}
         defaultType={transactionModalType}
       />

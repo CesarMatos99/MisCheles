@@ -25,14 +25,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
           return (
             <button
               key={tab.id}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onChangeTab(tab.id)}
               className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-2 transition-colors ${
                 isActive
-                  ? 'text-primary font-semibold'
+                  ? 'text-primary font-semibold focus-visible:outline-none'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium'
               }`}
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
+              <Icon className={isActive ? "h-5 w-5 fill-current" : "h-5 w-5"} aria-hidden="true" />
               <span className="text-xs leading-4 tracking-tight">{tab.label}</span>
             </button>
           );

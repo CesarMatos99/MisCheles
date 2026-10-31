@@ -75,18 +75,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {(!monthConfig || !monthConfig.isConfigured) && (
         <button onClick={onOpenMonthSetup} className="flex w-full items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 text-left text-sm text-primary dark:border-primary/30 dark:bg-primary-soft dark:text-primary">
           <Sparkles className="h-5 w-5 shrink-0" />
-          <span className="flex-1">Configura los ingresos de {monthName}</span>
+          <span className="flex-1">Configurar ingresos de {monthName}</span>
           <ArrowRight className="h-4 w-4" />
         </button>
       )}
 
-      <section className="border-b border-slate-200 py-2 dark:border-slate-800">
+      <section className="relative border-b border-slate-200 py-3 pl-4 dark:border-slate-800" style={{ backgroundColor: 'color-mix(in srgb, var(--app-primary) 4%, transparent)' }}>
+        <span aria-hidden="true" className="absolute inset-y-3 left-0 w-1 rounded-full bg-primary" />
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Disponible este mes</p>
         <p className="mt-1 type-display type-money text-slate-900 dark:text-white sm:text-5xl">{money(summary.availableBalance)}</p>
         <div className="mt-3 grid grid-cols-2 gap-4 sm:max-w-lg">
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Ingresos disponibles</p>
-            <p className="mt-1 font-semibold text-slate-900 dark:text-white">{money(summary.totalIncome)}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Dinero al iniciar el mes</p>
+            <p className="mt-1 font-semibold text-slate-900 dark:text-white">{money(summary.initialIncome + summary.carryover)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Gastado en el mes</p>
@@ -127,17 +128,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="truncate">{budget.category}</span>
                         <Pencil className="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-hover:text-primary" aria-hidden="true" />
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{money(spent)} de {money(budget.amount)}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Asignado {money(budget.amount)}</p>
                     </div>
                     <div className="shrink-0 text-right">
                       <p className={overBudget ? 'text-sm font-semibold text-rose-600 dark:text-rose-400' : 'text-sm font-semibold text-slate-900 dark:text-white'}>
                         {overBudget ? 'Excedido ' + money(Math.abs(remaining)) : 'Restan ' + money(remaining)}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{percent}% usado</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Gastado {money(spent)}</p>
                     </div>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" role="progressbar" aria-label={'Consumo de ' + budget.category} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
-                    <div className={'h-full rounded-full transition-all ' + (overBudget ? 'bg-rose-500' : percent >= 85 ? 'bg-amber-500' : 'bg-primary')} style={{ width: Math.min(percent, 100) + '%' }} />
+                    <div className={'h-full rounded-full transition-all ' + (overBudget ? 'bg-rose-500' : percent >= 80 ? 'bg-amber-500' : 'bg-primary')} style={{ width: Math.min(percent, 100) + '%' }} />
                   </div>
                 </button>
               );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, CheckCircle2, DollarSign, Calendar, Tag, CreditCard, FileText } from 'lucide-react';
+import { X, Plus, Minus, CheckCircle2, CircleAlert, DollarSign, Calendar, Tag, CreditCard, FileText } from 'lucide-react';
 import { Transaction, TransactionType, UserProfile } from '../../types';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../../constants/categories';
 import { storageService } from '../../services/storage';
@@ -9,7 +9,7 @@ interface TransactionModalProps {
   onClose: () => void;
   monthKey: string;
   profile: UserProfile;
-  onSaved: () => void;
+  onSaved: (transaction: Transaction) => void;
   transactionToEdit?: Transaction | null;
   defaultType?: TransactionType;
 }
@@ -31,6 +31,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
+  const [showBudgetWarning, setShowBudgetWarning] = useState(false);
   const budgetCategories = storageService.getCategoryBudgets(monthKey).map((budget) => ({
     id: 'budget-' + budget.category,
     name: budget.category,
@@ -41,6 +42,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setShowBudgetWarning(false);
       if (transactionToEdit) {
         setType(transactionToEdit.type);
         setAmount(String(transactionToEdit.amount));
@@ -78,37 +80,54 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   if (!isOpen) return null;
 
   const currentCategories = type === 'expense' ? expenseCategoryOptions : INCOME_CATEGORIES;
+  const finalCategory = usesCustomCategory ? customCategory.trim() : category;
+  const amountValue = Number.parseFloat(amount) || 0;
+  const categoryBudget = type === 'expense' ? storageService.getCategoryBudgets(monthKey).find((budget) => budget.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : undefined;
+  const currentCategoryTransactions = type === 'expense' ? storageService.getTransactionsByMonth(monthKey).filter((transaction) => transaction.type === 'expense' && transaction.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : [];
+  const previousCategorySpend = currentCategoryTransactions.reduce((total, transaction) => total + transaction.amount, 0);
+  const projectedCategorySpend = currentCategoryTransactions.filter((transaction) => transaction.id !== transactionToEdit?.id).reduce((total, transaction) => total + transaction.amount, amountValue);
+  const wouldExceedBudget = Boolean(categoryBudget && projectedCategorySpend > categoryBudget.amount && projectedCategorySpend > previousCategorySpend);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const numAmount = parseFloat(amount);
+  const saveTransaction = (allowBudgetExceeded = false) => {
+    const numAmount = Number.parseFloat(amount);
     if (!numAmount || numAmount <= 0 || (usesCustomCategory && !customCategory.trim())) return;
-    const finalCategory = usesCustomCategory ? customCategory.trim() : category;
+    const savedCategory = usesCustomCategory ? customCategory.trim() : category;
+    if (wouldExceedBudget && !allowBudgetExceeded) {
+      setShowBudgetWarning(true);
+      return;
+    }
 
+    let savedTransaction: Transaction;
     if (transactionToEdit) {
-      storageService.updateTransaction({
+      savedTransaction = {
         ...transactionToEdit,
         type,
         amount: numAmount,
-        category: finalCategory,
-        description: description.trim() || finalCategory,
+        category: savedCategory,
+        description: description.trim() || savedCategory,
         date,
         paymentMethod,
-      });
+      };
+      storageService.updateTransaction(savedTransaction);
     } else {
-      storageService.addTransaction({
+      savedTransaction = storageService.addTransaction({
         monthKey,
         type,
         amount: numAmount,
-        category: finalCategory,
-        description: description.trim() || finalCategory,
+        category: savedCategory,
+        description: description.trim() || savedCategory,
         date,
         paymentMethod,
       });
     }
 
-    onSaved();
+    onSaved(savedTransaction);
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveTransaction();
   };
 
   return (
@@ -122,7 +141,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">
-                {transactionToEdit ? 'Editar Movimiento' : type === 'expense' ? 'Registrar Gasto' : 'Registrar Ingreso Extra'}
+                {transactionToEdit ? 'Editar movimiento' : type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso'}
               </h2>
               <p className="text-xs opacity-90">Control Financiero Mensual</p>
             </div>
@@ -284,6 +303,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </div>
 
+          {showBudgetWarning && wouldExceedBudget && categoryBudget && (
+            <div role='alert' className='rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200'>
+              <div className='flex items-start gap-2'>
+                <CircleAlert className='mt-0.5 h-4 w-4 shrink-0' aria-hidden='true' />
+                <p>Este gasto supera el monto de {categoryBudget.category} por {profile.currency} {(projectedCategorySpend - categoryBudget.amount).toLocaleString('es-DO')}.</p>
+              </div>
+              <div className='mt-3 flex justify-end gap-2'>
+                <button type='button' onClick={() => setShowBudgetWarning(false)} className='min-h-9 rounded-lg px-3 text-xs font-semibold text-slate-700 hover:bg-white/70 dark:text-slate-200 dark:hover:bg-slate-900/60'>Volver a editar</button>
+                <button type='button' onClick={() => saveTransaction(true)} className='min-h-9 rounded-lg bg-rose-700 px-3 text-xs font-semibold text-white hover:bg-rose-800'>Registrar de todas formas</button>
+              </div>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-3 pt-3">
             <button
@@ -302,7 +334,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{transactionToEdit ? 'Guardar Cambios' : 'Registrar'}</span>
+              <span>{transactionToEdit ? 'Guardar cambios' : type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso'}</span>
             </button>
           </div>
         </form>
