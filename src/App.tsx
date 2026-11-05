@@ -1,18 +1,21 @@
+import { isSavingsBudgetCategory } from './domain/transactionPresentation';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, PiggyBank, PieChart, Download, AlertCircle, X } from 'lucide-react';
+import { Receipt, PiggyBank, PieChart, AlertCircle, X, BarChart3 } from 'lucide-react';
 import {
-  CategoryBudget,
-  FinancialSummary,
-  MonthConfig,
   Transaction,
   UserProfile,
   SavingsMovementType,
 } from './types';
-import { storageService, getMonthKey } from './services/storage';
+import { getMonthKey, notifyStorageMutation, storageMutationEvent, type StorageMutation } from './services/storage';
+import { financeApplication } from './application/financeApplication';
+import { useFinanceWorkspace } from './application/useFinanceWorkspace';
+import { useAppModals } from './application/useAppModals';
+import { projectCategoryBudget } from './domain/financialQueries';
 import { Header } from './components/layout/Header';
 import { BottomNav, ActiveTab } from './components/layout/BottomNav';
 import { FloatingActions } from './components/layout/FloatingActions';
 import { OfflineIndicator } from './components/layout/OfflineIndicator';
+import { SyncConflictResolver } from './components/sync/SyncConflictResolver';
 import { DashboardView } from './features/dashboard/DashboardView';
 import { CategoryDetailView } from './features/dashboard/CategoryDetailView';
 import { TransactionsView } from './features/transactions/TransactionsView';
@@ -27,15 +30,16 @@ import { ExportModal } from './components/modals/ExportModal';
 import { PWAInstallModal } from './components/modals/PWAInstallModal';
 import { BiometricLockScreen } from './components/modals/BiometricLockScreen';
 import { EXPENSE_CATEGORIES, MONTH_NAMES_ES } from './constants/categories';
+import { AnalyticsView } from './features/dashboard/AnalyticsView';
+import { useLanguage } from './i18n/LanguageContext';
+import { useAppNavigation } from './navigation/useAppNavigation';
 
 export default function App() {
+  const { t } = useLanguage();
   // Current Date default
   const today = new Date();
   const [year, setYear] = useState<number>(today.getFullYear());
   const [month, setMonth] = useState<number>(today.getMonth() + 1);
-
-  // Active Tab for views
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -52,44 +56,30 @@ export default function App() {
   });
 
   // App Lock State
-  const [isLocked, setIsLocked] = useState<boolean>(() => storageService.isAppLocked());
+  const [isLocked, setIsLocked] = useState<boolean>(() => financeApplication.isAppLocked());
 
   // User Profile
-  const [profile, setProfile] = useState<UserProfile>(() => storageService.getProfile());
+  const [profile, setProfile] = useState<UserProfile>(() => financeApplication.getProfile());
 
   // Month data
   const currentMonthKey = getMonthKey(year, month);
-  const [monthConfig, setMonthConfig] = useState<MonthConfig | null>(() =>
-    storageService.getMonthConfig(currentMonthKey)
-  );
-  const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    storageService.getTransactionsByMonth(currentMonthKey)
-  );
-  const [summary, setSummary] = useState<FinancialSummary>(() =>
-    storageService.getFinancialSummary(currentMonthKey)
-  );
-  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>(() =>
-    storageService.getCategoryBudgets(currentMonthKey)
-  );
+  const { monthConfig, transactions, summary, categoryBudgets, allTransactions, allSavingsMovements, allSavingsGoals, refreshMonthData } = useFinanceWorkspace(year, month);
   const [transactionCategoryFilter, setTransactionCategoryFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [budgetNotice, setBudgetNotice] = useState<{ kind: 'near' | 'over'; category: string; amount: number; budgetAmount: number } | null>(null);
 
-  // Modals
-  const [isMonthSetupOpen, setIsMonthSetupOpen] = useState<boolean>(false);
-  const [isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen] = useState<boolean>(false);
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
-  const [transactionModalType, setTransactionModalType] = useState<'expense' | 'income'>('expense');
-  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const { isMonthSetupOpen, setIsMonthSetupOpen, isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen, editingCategory, setEditingCategory,
+    isTransactionModalOpen, setIsTransactionModalOpen, transactionModalType, setTransactionModalType, transactionToEdit, setTransactionToEdit,
+    isTransferModalOpen, setIsTransferModalOpen, isSavingsModalOpen, setIsSavingsModalOpen, savingsModalMode, setSavingsModalMode,
+    savingsDraft, setSavingsDraft, savingsModalGoalId, setSavingsModalGoalId, analyticsReport, setAnalyticsReport,
+    isExportModalOpen, setIsExportModalOpen, isInstallModalOpen, setIsInstallModalOpen, closeModuleModals } = useAppModals();
+  const [movementError, setMovementError] = useState('');
 
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
-  const [isSavingsModalOpen, setIsSavingsModalOpen] = useState<boolean>(false);
-  const [savingsModalMode, setSavingsModalMode] = useState<SavingsMovementType>('deposit_from_month');
-  const [savingsModalGoalId, setSavingsModalGoalId] = useState<string | undefined>();
-
-  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
-  const [isInstallModalOpen, setIsInstallModalOpen] = useState<boolean>(false);
+  const onModuleChange = useCallback(() => {
+    closeModuleModals();
+    setSelectedCategory(null);
+  }, [closeModuleModals]);
+  const { activeTab, navigateToTab } = useAppNavigation(onModuleChange);
 
   // Synchronize Dark Theme class on html root
   useEffect(() => {
@@ -108,14 +98,17 @@ export default function App() {
     try { localStorage.setItem('mischeles_accent_v2', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
   }, [accentColor]);
 
-  // Refresh current month data
-  const refreshMonthData = useCallback(() => {
-    const key = getMonthKey(year, month);
-    setMonthConfig(storageService.getMonthConfig(key));
-    setTransactions(storageService.getTransactionsByMonth(key));
-    setSummary(storageService.getFinancialSummary(key));
-    setCategoryBudgets(storageService.getCategoryBudgets(key));
-  }, [year, month]);
+  useEffect(() => {
+    const onRemoteSnapshot = (event: Event) => {
+      const detail = (event as CustomEvent<StorageMutation>).detail;
+      if (detail?.origin !== 'remote') return;
+      setProfile(financeApplication.getProfile());
+      setIsDarkMode(localStorage.getItem('presucontrol_theme_v1') === 'dark');
+      setAccentColor(localStorage.getItem('mischeles_accent_v2') || '#012677');
+    };
+    window.addEventListener(storageMutationEvent, onRemoteSnapshot);
+    return () => window.removeEventListener(storageMutationEvent, onRemoteSnapshot);
+  }, []);
 
   useEffect(() => {
     if (!budgetNotice) return;
@@ -128,13 +121,11 @@ export default function App() {
       const key = savedTransaction.category.trim().toLocaleLowerCase('es-DO');
       const budget = categoryBudgets.find((item) => item.category.trim().toLocaleLowerCase('es-DO') === key);
       if (budget) {
-        const matchingExpenses = transactions.filter((item) => item.type === 'expense' && item.category.trim().toLocaleLowerCase('es-DO') === key);
-        const previousSpend = matchingExpenses.reduce((total, item) => total + item.amount, 0);
-        const nextSpend = matchingExpenses.filter((item) => item.id !== savedTransaction.id).reduce((total, item) => total + item.amount, savedTransaction.amount);
-        if (nextSpend > budget.amount) {
-          setBudgetNotice({ kind: 'over', category: budget.category, amount: nextSpend - budget.amount, budgetAmount: budget.amount });
-        } else if (previousSpend < budget.amount * 0.8 && nextSpend >= budget.amount * 0.8) {
-          setBudgetNotice({ kind: 'near', category: budget.category, amount: nextSpend, budgetAmount: budget.amount });
+        const projection = projectCategoryBudget({ transactions, category: budget.category, amount: savedTransaction.amount, editingId: savedTransaction.id, budget: budget.amount });
+        if (projection.exceeded && projection.projected > projection.previous) {
+          setBudgetNotice({ kind: 'over', category: budget.category, amount: projection.projected - budget.amount, budgetAmount: budget.amount });
+        } else if (projection.thresholdCrossed) {
+          setBudgetNotice({ kind: 'near', category: budget.category, amount: projection.projected, budgetAmount: budget.amount });
         }
       }
     }
@@ -142,10 +133,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    refreshMonthData();
     setTransactionCategoryFilter(null);
     setSelectedCategory(null);
-  }, [year, month, refreshMonthData]);
+  }, [year, month]);
 
   // Handle month/year changes
   const handleMonthChange = (newYear: number, newMonth: number) => {
@@ -155,12 +145,12 @@ export default function App() {
 
   // Lock handler
   const handleLockApp = () => {
-    storageService.setAppLocked();
+    financeApplication.setAppLocked();
     setIsLocked(true);
   };
 
   const handleUnlockApp = () => {
-    storageService.setAppUnlocked();
+    financeApplication.setAppUnlocked();
     setIsLocked(false);
   };
 
@@ -179,12 +169,13 @@ export default function App() {
 
   const handleDeleteTransaction = (id: string) => {
     if (confirm('¿Deseas eliminar este registro?')) {
-      storageService.deleteTransaction(id);
-      refreshMonthData();
+      try { financeApplication.deleteTransaction(id); setMovementError(''); refreshMonthData(); }
+      catch (error) { setMovementError(error instanceof Error ? error.message : 'No se pudo eliminar el movimiento.'); }
     }
   };
 
   const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month', goalId?: string) => {
+    setSavingsDraft(undefined);
     setSavingsModalMode(mode);
     setSavingsModalGoalId(goalId);
     setIsSavingsModalOpen(true);
@@ -199,6 +190,7 @@ export default function App() {
     <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
+      <SyncConflictResolver />
       {budgetNotice && (
         <div role={budgetNotice.kind === 'over' ? 'alert' : 'status'} aria-live={budgetNotice.kind === 'over' ? 'assertive' : 'polite'} className={'fixed left-3 right-3 top-20 z-[60] flex items-start gap-3 rounded-xl border p-3 shadow-lg sm:left-auto sm:right-6 sm:top-24 sm:w-96 ' + (budgetNotice.kind === 'over' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/65 dark:text-rose-100' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/65 dark:text-amber-100')}>
           <AlertCircle className='mt-0.5 h-5 w-5 shrink-0' aria-hidden='true' />
@@ -213,9 +205,9 @@ export default function App() {
       {/* Main Header */}
       <Header
         isDarkMode={isDarkMode}
-        onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+        onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
         onLockApp={handleLockApp}
-        onOpenProfile={() => { setSelectedCategory(null); setActiveTab('profile'); }}
+        onOpenProfile={() => navigateToTab('profile')}
         profile={profile}
       />
 
@@ -224,20 +216,22 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex gap-2">
             {[
-              { id: 'dashboard' as ActiveTab, label: 'Inicio', icon: PieChart },
-              { id: 'transactions' as ActiveTab, label: 'Registro', icon: Receipt },
-              { id: 'savings' as ActiveTab, label: 'Ahorro', icon: PiggyBank },
+              { id: 'dashboard' as ActiveTab, label: t('home'), icon: PieChart },
+              { id: 'transactions' as ActiveTab, label: t('register'), icon: Receipt },
+              { id: 'statistics' as ActiveTab, label: t('statistics'), icon: BarChart3 },
+              { id: 'savings' as ActiveTab, label: t('savings'), icon: PiggyBank },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => { setSelectedCategory(null); setActiveTab(tab.id); }}
-                  className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition ${
+                  onClick={() => navigateToTab(tab.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
                     isActive
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -247,20 +241,12 @@ export default function App() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 py-2">
-            <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-500" />
-              <span>Exportar Reporte</span>
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Main Body Content Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        {movementError && <p role="alert" className="mb-3 text-sm text-rose-600 dark:text-rose-300">{movementError}</p>}
         {activeTab === 'dashboard' && (
           selectedCategory ? (
             <CategoryDetailView
@@ -268,7 +254,8 @@ export default function App() {
               monthLabel={MONTH_NAMES_ES[month - 1] + ' ' + year}
               budget={categoryBudgets.find((budget) => budget.category.localeCompare(selectedCategory, 'es-DO', { sensitivity: 'base' }) === 0)}
               transactions={transactions}
-              profile={profile}
+              savingsMovements={financeApplication.getSavingsMovements().filter((movement) => movement.monthKey === currentMonthKey)}
+            profile={profile}
               onBack={() => setSelectedCategory(null)}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
@@ -286,9 +273,11 @@ export default function App() {
               monthConfig={monthConfig}
               summary={summary}
               transactions={transactions}
+              savingsMovements={allSavingsMovements.filter((movement) => movement.monthKey === currentMonthKey)}
               profile={profile}
               categoryBudgets={categoryBudgets}
               onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
+              onOpenExport={() => setIsExportModalOpen(true)}
               onManageBudgets={() => {
                 setEditingCategory(null);
                 setIsCategoryBudgetModalOpen(true);
@@ -304,12 +293,27 @@ export default function App() {
             month={month}
             onMonthChange={handleMonthChange}
             transactions={transactions}
+            savingsMovements={allSavingsMovements}
             profile={profile}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onOpenExportModal={() => setIsExportModalOpen(true)}
             initialCategoryFilter={transactionCategoryFilter}
             onCategoryFilterChange={setTransactionCategoryFilter}
+          />
+        )}
+
+        {activeTab === 'statistics' && (
+          <AnalyticsView
+            year={year}
+            month={month}
+            transactions={allTransactions}
+            savingsMovements={allSavingsMovements}
+            savingsGoals={allSavingsGoals}
+            monthConfigs={financeApplication.getMonthConfigs()}
+            categoryBudgetsByMonth={financeApplication.getAllCategoryBudgets()}
+            profile={profile}
+            onOpenExportModal={(report) => { setAnalyticsReport(report); setIsExportModalOpen(true); }}
           />
         )}
 
@@ -323,6 +327,7 @@ export default function App() {
             onMonthChange={handleMonthChange}
             onOpenSavingsModal={handleOpenSavingsModal}
             onRefresh={refreshMonthData}
+            onOpenExport={() => setIsExportModalOpen(true)}
           />
         )}
 
@@ -331,8 +336,8 @@ export default function App() {
             profile={profile}
             isDarkMode={isDarkMode}
             accentColor={accentColor}
-            onThemeChange={setIsDarkMode}
-            onAccentColorChange={setAccentColor}
+            onThemeChange={(value) => { setIsDarkMode(value); notifyStorageMutation('userSettings', 'theme'); }}
+            onAccentColorChange={(value) => { setAccentColor(value); notifyStorageMutation('userSettings', 'accentColor'); }}
             onProfileUpdated={(updated) => {
               setProfile(updated);
               refreshMonthData();
@@ -346,11 +351,13 @@ export default function App() {
       {/* Mobile Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
-        onChangeTab={(tab) => { setSelectedCategory(null); setActiveTab(tab); }}
+        onChangeTab={navigateToTab}
       />
 
       {(activeTab === 'dashboard' || activeTab === 'transactions') && (
         <FloatingActions
+          contextAction={selectedCategory ? () => isSavingsBudgetCategory(selectedCategory) ? handleOpenSavingsModal('deposit_from_month') : handleOpenTransactionModal('expense') : undefined}
+          contextLabel={selectedCategory ? (isSavingsBudgetCategory(selectedCategory) ? 'Registrar aporte a ahorro' : 'Registrar gasto en ' + selectedCategory) : undefined}
           onExpense={() => handleOpenTransactionModal('expense')}
           onIncome={() => handleOpenTransactionModal('income')}
           onTransfer={() => setIsTransferModalOpen(true)}
@@ -381,8 +388,8 @@ export default function App() {
           const nextBudgets = editingCategory
             ? categoryBudgets.flatMap((budget) => budget.category === editingCategory ? budgets : [budget])
             : budgets;
-          storageService.saveCategoryBudgets(currentMonthKey, nextBudgets);
-          setCategoryBudgets(nextBudgets);
+          financeApplication.saveCategoryBudgets(currentMonthKey, nextBudgets);
+          refreshMonthData();
         }}
       />
 
@@ -402,6 +409,14 @@ export default function App() {
         profile={profile}
         onSaved={handleTransactionSaved}
         transactionToEdit={transactionToEdit}
+        onRequestSavings={(draft) => {
+          setIsTransactionModalOpen(false);
+          setSavingsDraft(draft);
+          setSavingsModalGoalId(undefined);
+          setSavingsModalMode('deposit_from_month');
+          setIsSavingsModalOpen(true);
+        }}
+        initialCategory={selectedCategory || undefined}
         defaultType={transactionModalType}
       />
 
@@ -422,19 +437,21 @@ export default function App() {
         month={month}
         profile={profile}
         summary={summary}
+        initialDraft={savingsDraft}
         initialMode={savingsModalMode}
         initialGoalId={savingsModalGoalId}
         onSaved={() => refreshMonthData()}
       />
 
       <ExportModal
+        analyticsReport={activeTab === 'statistics' ? analyticsReport : undefined}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         year={year}
         month={month}
         summary={summary}
         transactions={transactions}
-        savingsMovements={storageService.getSavingsMovements().filter((m) => m.monthKey === currentMonthKey)}
+        savingsMovements={financeApplication.getSavingsMovements().filter((m) => m.monthKey === currentMonthKey)}
         profile={profile}
       />
 

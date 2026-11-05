@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import { ModalShell } from '../ui/ModalShell';
+import { ModalSurface } from '../ui/ModalSurface';
+import type { AnalyticsReport } from '../../domain/analyticsReport';
+import React, { useEffect, useState } from 'react';
 import { X, FileSpreadsheet, FileText, Download, CheckCircle2, Calendar } from 'lucide-react';
 import { FinancialSummary, Transaction, UserProfile, SavingsMovement } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
 import { exportService } from '../../services/exportService';
 
 interface ExportModalProps {
+  analyticsReport?: AnalyticsReport;
   isOpen: boolean;
   onClose: () => void;
   year: number;
@@ -16,6 +20,7 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({
+  analyticsReport,
   isOpen,
   onClose,
   year,
@@ -25,16 +30,23 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   savingsMovements,
   profile,
 }) => {
+  const [exportError, setExportError] = useState('');
   const [format, setFormat] = useState<'excel' | 'pdf'>('pdf');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const monthName = MONTH_NAMES_ES[month - 1];
 
+  useEffect(() => { if (isOpen) setExportError(''); }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleExport = () => {
+    if (isExporting) return;
+    setExportError('');
     setIsExporting(true);
     try {
-      if (format === 'excel') {
+      if (analyticsReport) {
+        exportService.exportAnalytics(analyticsReport, format, profile);
+      } else if (format === 'excel') {
         exportService.exportToExcel({
           year,
           month,
@@ -53,19 +65,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           profile,
         });
       }
-      setTimeout(() => {
-        setIsExporting(false);
-        onClose();
-      }, 500);
+      onClose();
     } catch (e) {
-      console.error(e);
+      setExportError(e instanceof Error ? e.message : 'No se pudo generar el reporte. Inténtalo de nuevo.');
+    } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <ModalShell title="Exportar reporte" onClose={onClose} size="md">
+      <ModalSurface scroll="auto">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -74,7 +84,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <div>
               <h2 className="type-dialog-title font-bold">Exportar Reporte Financiero</h2>
-              <p className="text-xs text-white/75">{monthName} {year}</p>
+              <p className="text-xs text-white/75">{analyticsReport ? analyticsReport.period : monthName + ' ' + year}</p>
             </div>
           </div>
           <button
@@ -88,7 +98,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {/* Content */}
         <div className="p-5 space-y-4">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Descarga un reporte consolidado con el resumen del mes, cobros, desglose de gastos y operaciones del módulo de ahorro.
+            {analyticsReport ? 'Descarga los indicadores, tablas y movimientos del conjunto consultado en Estadísticas.' : 'Descarga un reporte consolidado con el resumen del mes, ingresos, gastos y operaciones de ahorro.'}
           </p>
 
           {/* Format selection */}
@@ -131,7 +141,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </div>
 
           {/* Quick Metrics preview */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 text-xs">
+          {analyticsReport ? <div className="space-y-2 text-xs">{analyticsReport.metrics.map(([label, value]) => <div key={label} className="flex justify-between gap-3"><span>{label}</span><strong>{value}</strong></div>)}</div> : <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-500 dark:text-slate-400">Fondos Iniciales + Cobro:</span>
               <span className="font-bold text-slate-900 dark:text-white">
@@ -156,8 +166,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 {transactions.length} transacciones
               </span>
             </div>
-          </div>
+          </div>}
 
+          {exportError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{exportError}</p>}
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
@@ -178,7 +189,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };

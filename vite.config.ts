@@ -6,6 +6,7 @@ import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
+    appType: 'spa',
     plugins: [
       react(),
       tailwindcss(),
@@ -52,6 +53,9 @@ export default defineConfig(() => {
       },
     },
     server: {
+      port: 5174,
+      strictPort: true,
+      open: false,
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {
         usePolling: process.env.VITE_USE_POLLING === 'true',

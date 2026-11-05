@@ -1,8 +1,17 @@
+import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
+import { projectCategoryBudget } from '../../domain/financialQueries';
+import { MoneyField } from '../../components/ui/MoneyField';
+import { parseMovementAmount } from '../../domain/movementAmount';
+import { ModalShell } from '../../components/ui/ModalShell';
+import { ModalSurface } from '../../components/ui/ModalSurface';
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, CheckCircle2, CircleAlert, DollarSign, Calendar, Tag, CreditCard, FileText } from 'lucide-react';
+import { X, Plus, Minus, CheckCircle2, CircleAlert } from 'lucide-react';
 import { Transaction, TransactionType, UserProfile } from '../../types';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../../constants/categories';
-import { storageService } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { localizeCategoryName } from '../../i18n/categoryLabels';
+import { isCalendarDayInMonth } from '../../domain/calendarDay';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -12,6 +21,8 @@ interface TransactionModalProps {
   onSaved: (transaction: Transaction) => void;
   transactionToEdit?: Transaction | null;
   defaultType?: TransactionType;
+  initialCategory?: string;
+  onRequestSavings: (draft: { amount: string; description: string; date: string }) => void;
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -21,8 +32,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   profile,
   onSaved,
   transactionToEdit,
+  onRequestSavings,
   defaultType = 'expense',
+  initialCategory,
 }) => {
+  const { language } = useLanguage();
   const [type, setType] = useState<TransactionType>(defaultType);
   const [amount, setAmount] = useState<string>('');
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0].name);
@@ -31,8 +45,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHODS[0]);
+  const [validationError, setValidationError] = useState('');
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
-  const budgetCategories = storageService.getCategoryBudgets(monthKey).map((budget) => ({
+  const budgetCategories = financeApplication.getCategoryBudgets(monthKey).map((budget) => ({
     id: 'budget-' + budget.category,
     name: budget.category,
   }));
@@ -42,6 +57,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setValidationError('');
       setShowBudgetWarning(false);
       if (transactionToEdit) {
         setType(transactionToEdit.type);
@@ -58,40 +74,52 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         setType(defaultType);
         setAmount('');
         const defaultCategory =
-          defaultType === 'expense' ? EXPENSE_CATEGORIES[0].name : INCOME_CATEGORIES[0].name;
-        setCategory(defaultCategory);
-        setUsesCustomCategory(false);
-        setCustomCategory('');
+          defaultType === 'expense' ? initialCategory || EXPENSE_CATEGORIES[0].name : INCOME_CATEGORIES[0].name;
+        const known = (defaultType === 'expense' ? expenseCategoryOptions : INCOME_CATEGORIES).some(item => item.name === defaultCategory);
+        setCategory(known ? defaultCategory : '__custom__');
+        setUsesCustomCategory(!known);
+        setCustomCategory(known ? '' : defaultCategory);
         setDescription('');
         // Generate current date matching monthKey
         const [y, m] = monthKey.split('-');
         const today = new Date();
         const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
         if (currentYearMonth === monthKey) {
-          setDate(today.toISOString().split('T')[0]);
+          setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
         } else {
           setDate(`${y}-${m}-01`);
         }
         setPaymentMethod(PAYMENT_METHODS[0]);
       }
     }
-  }, [isOpen, transactionToEdit, defaultType, monthKey]);
+  }, [isOpen, transactionToEdit, defaultType, monthKey, initialCategory]);
 
   if (!isOpen) return null;
 
   const currentCategories = type === 'expense' ? expenseCategoryOptions : INCOME_CATEGORIES;
   const finalCategory = usesCustomCategory ? customCategory.trim() : category;
   const amountValue = Number.parseFloat(amount) || 0;
-  const categoryBudget = type === 'expense' ? storageService.getCategoryBudgets(monthKey).find((budget) => budget.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : undefined;
-  const currentCategoryTransactions = type === 'expense' ? storageService.getTransactionsByMonth(monthKey).filter((transaction) => transaction.type === 'expense' && transaction.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : [];
-  const previousCategorySpend = currentCategoryTransactions.reduce((total, transaction) => total + transaction.amount, 0);
-  const projectedCategorySpend = currentCategoryTransactions.filter((transaction) => transaction.id !== transactionToEdit?.id).reduce((total, transaction) => total + transaction.amount, amountValue);
-  const wouldExceedBudget = Boolean(categoryBudget && projectedCategorySpend > categoryBudget.amount && projectedCategorySpend > previousCategorySpend);
+  const categoryBudget = type === 'expense' ? financeApplication.getCategoryBudgets(monthKey).find((budget) => budget.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : undefined;
+  const currentCategoryTransactions = type === 'expense' ? financeApplication.getTransactionsByMonth(monthKey).filter((transaction) => transaction.type === 'expense' && transaction.category.toLocaleLowerCase('es-DO') === finalCategory.toLocaleLowerCase('es-DO')) : [];
+  const budgetProjection = categoryBudget ? projectCategoryBudget({ transactions: currentCategoryTransactions, category: finalCategory, amount: amountValue, editingId: transactionToEdit?.id, budget: categoryBudget.amount }) : null;
+  const wouldExceedBudget = Boolean(budgetProjection?.exceeded && budgetProjection.projected > budgetProjection.previous);
 
   const saveTransaction = (allowBudgetExceeded = false) => {
-    const numAmount = Number.parseFloat(amount);
-    if (!numAmount || numAmount <= 0 || (usesCustomCategory && !customCategory.trim())) return;
+    const numAmount = parseMovementAmount(amount);
+    if (numAmount === null || (usesCustomCategory && !customCategory.trim())) {
+      setValidationError('Introduce un monto válido mayor que cero, con hasta dos decimales, y una categoría.');
+      return;
+    }
+    if (type === 'income' && !isCalendarDayInMonth(date, monthKey)) {
+      setValidationError('La fecha debe pertenecer al mes seleccionado. Cambia el mes para registrar un ingreso de otro período.');
+      return;
+    }
+    setValidationError('');
     const savedCategory = usesCustomCategory ? customCategory.trim() : category;
+    if (!transactionToEdit && type === 'expense' && isSavingsBudgetCategory(savedCategory)) {
+      onRequestSavings({ amount, description, date });
+      return;
+    }
     if (wouldExceedBudget && !allowBudgetExceeded) {
       setShowBudgetWarning(true);
       return;
@@ -108,9 +136,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         date,
         paymentMethod,
       };
-      storageService.updateTransaction(savedTransaction);
+      try { financeApplication.updateTransaction(savedTransaction); }
+      catch (error) { setValidationError(error instanceof Error ? error.message : 'No se pudo guardar el movimiento.'); return; }
     } else {
-      savedTransaction = storageService.addTransaction({
+      savedTransaction = financeApplication.addTransaction({
         monthKey,
         type,
         amount: numAmount,
@@ -131,8 +160,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <ModalShell title="Registrar movimiento" onClose={onClose}>
+      <ModalSurface scroll="auto">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -193,33 +222,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-3.5">
-          {/* Amount */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-              Monto ({profile.currency})
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-lg">
-                {profile.currency}
-              </span>
-              <input
-                type="number"
-                step="any"
-                required
-                min="0.01"
-                autoFocus
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className={`w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border rounded-2xl type-money text-xl font-extrabold focus:outline-none focus:ring-2 ${
-                  type === 'expense'
-                    ? 'text-rose-600 dark:text-rose-400 border-slate-200 dark:border-slate-700 focus:ring-primary'
-                    : 'text-primary border-slate-200 dark:border-slate-700 focus:ring-primary'
-                }`}
-              />
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4 px-5 pb-5 pt-5">
+          {validationError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{validationError}</p>}
+          <MoneyField label="Monto" currency={profile.currency} value={amount} onValueChange={setAmount} autoFocus min="0.01" />
 
           {/* Category */}
           <div>
@@ -237,10 +242,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             >
               {currentCategories.map((c) => (
                 <option key={c.id} value={c.name}>
-                  {c.name}
+                  {localizeCategoryName(language, c.name)}
                 </option>
               ))}
-              <option value="__custom__">+ Crear categoría</option>
+              <option value="__custom__">{language === 'en' ? '+ Create category' : '+ Crear categoría'}</option>
             </select>
             {usesCustomCategory && (
               <input
@@ -279,6 +284,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <input
                 type="date"
                 required
+                min={type === 'income' ? `${monthKey}-01` : undefined}
+                max={type === 'income' ? `${monthKey}-${String(new Date(Number(monthKey.slice(0, 4)), Number(monthKey.slice(5, 7)), 0).getDate()).padStart(2, '0')}` : undefined}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
@@ -307,7 +314,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div role='alert' className='rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200'>
               <div className='flex items-start gap-2'>
                 <CircleAlert className='mt-0.5 h-4 w-4 shrink-0' aria-hidden='true' />
-                <p>Este gasto supera el monto de {categoryBudget.category} por {profile.currency} {(projectedCategorySpend - categoryBudget.amount).toLocaleString('es-DO')}.</p>
+                <p>{language === 'en' ? 'This expense exceeds the ' + localizeCategoryName(language, categoryBudget.category) + ' limit by ' : 'Este gasto supera el monto de ' + localizeCategoryName(language, categoryBudget.category) + ' por '}{profile.currency} {((budgetProjection?.projected ?? 0) - categoryBudget.amount).toLocaleString(language === 'en' ? 'en-US' : 'es-DO')}.</p>
               </div>
               <div className='mt-3 flex justify-end gap-2'>
                 <button type='button' onClick={() => setShowBudgetWarning(false)} className='min-h-9 rounded-lg px-3 text-xs font-semibold text-slate-700 hover:bg-white/70 dark:text-slate-200 dark:hover:bg-slate-900/60'>Volver a editar</button>
@@ -338,7 +345,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };

@@ -1,4 +1,9 @@
-import {
+import { calculateFinancialSummary } from '../domain/financialSummary.ts';
+import { currencyDisplayFromCode } from '../domain/currency.ts';
+import { calculateSavingsVaultBalance } from '../domain/financialSummary.ts';
+import { deriveSavingsGoalBalance, savingsGoalOpeningBalance } from '../domain/savingsBalance';
+import { savingsGoalDeletionKeys } from '../../shared/savingsGoalDeletion.ts';
+import type {
   Transaction,
   SavingsMovement,
   SavingsGoal,
@@ -17,6 +22,62 @@ const STORAGE_KEYS = {
   APP_THEME: 'mischeles_theme_v2',
   APP_LOCKED: 'mischeles_locked_v2',
 };
+
+const ACTIVE_ACCOUNT_SCOPE_KEY = 'mischeles_active_account_scope_v1';
+const SCOPED_STORAGE_KEYS = new Set<string>(Object.values(STORAGE_KEYS));
+function readInitialStorageScope(): string {
+  // Never trust a persisted account selector before Firebase confirms the signed-in UID.
+  try { localStorage.removeItem(ACTIVE_ACCOUNT_SCOPE_KEY); } catch { /* Storage can be unavailable. */ }
+  return 'local';
+}
+let activeStorageScope = readInitialStorageScope();
+function scopedStorageKey(key: string): string {
+  if (activeStorageScope === 'local') return key;
+  if (activeStorageScope === 'demo') return 'mischeles_demo_' + key;
+  return 'mischeles_scope_' + activeStorageScope.slice('account:'.length) + '_' + key;
+}
+function readAppValue(key: string): string | null { return localStorage.getItem(scopedStorageKey(key)); }
+function writeAppValue(key: string, value: string): void { localStorage.setItem(scopedStorageKey(key), value); }
+export function setStorageScope(scope: 'local' | 'demo' | { accountUid: string }): void {
+  const next = scope === 'local' || scope === 'demo' ? scope : 'account:' + scope.accountUid;
+  if (next === activeStorageScope) return;
+  activeStorageScope = next;
+  try { localStorage.removeItem(ACTIVE_ACCOUNT_SCOPE_KEY); } catch { /* Scope remains valid for this session if storage is unavailable. */ }
+  notifyStorageMutation('userSettings', 'storage-scope', 'upsert', 'remote');
+}
+export function getScopedStorageReader(): Pick<Storage, 'getItem'> { return { getItem: (key) => SCOPED_STORAGE_KEYS.has(key) ? readAppValue(key) : localStorage.getItem(key) }; }
+
+/** Removes only the client-side mirror belonging to one verified account UID. */
+export function clearAccountScope(uid: string): void {
+  if (!uid || uid.includes('/')) throw new Error('Invalid account UID.');
+  const prefix = 'mischeles_scope_' + uid + '_';
+  try {
+    for (const key of SCOPED_STORAGE_KEYS) localStorage.removeItem(prefix + key);
+  } catch {
+    throw new Error('The local account copy could not be cleared.');
+  }
+}
+
+export function preferredUnauthenticatedScope(): 'local' | 'demo' {
+  try { return localStorage.getItem('mischeles_web_mode_v1') === 'demo' ? 'demo' : 'local'; }
+  catch { return 'local'; }
+}
+
+
+export type SyncCollection = 'transactions' | 'savingsMovements' | 'savingsGoals' | 'monthConfigurations' | 'categoryBudgets' | 'userSettings';
+export interface StorageMutation {
+  collection: SyncCollection;
+  sourceId: string;
+  operation: 'upsert' | 'delete';
+  origin: 'local' | 'remote';
+  expectedRevision?: string | null;
+  deletedRecord?: Record<string, unknown>;
+}
+const STORAGE_MUTATION_EVENT = 'mischeles:storage-mutation';
+export function notifyStorageMutation(collection: SyncCollection, sourceId: string, operation: 'upsert' | 'delete' = 'upsert', origin: 'local' | 'remote' = 'local', deletedRecord?: Record<string, unknown>) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent<StorageMutation>(STORAGE_MUTATION_EVENT, { detail: { collection, sourceId, operation, origin, ...(operation === 'delete' ? { expectedRevision: typeof deletedRecord?._cloudRevision === 'string' ? deletedRecord._cloudRevision : null, deletedRecord } : {}) } }));
+}
+export const storageMutationEvent = STORAGE_MUTATION_EVENT;
 
 export const getMonthKey = (year: number, month: number): string => {
   return `${year}-${String(month).padStart(2, '0')}`;
@@ -319,32 +380,56 @@ const getInitialSeedData = () => {
   return { monthConfigs, transactions, savingsMovements, savingsGoals };
 };
 
+
+function rawArray<T>(key: string): T[] {
+  try {
+    const parsed = JSON.parse(readAppValue(key) || '[]');
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch { return []; }
+}
+function mergeRemoteRecords<T extends Record<string, unknown>>(local: T[], remote: T[], idOf: (item: T) => string, previousRemoteIds: Set<string>, protectedIds: Set<string> = new Set()): T[] {
+  const remoteIds = new Set(remote.map(idOf));
+  const merged = new Map<string, T>();
+  for (const item of local) {
+    const id = idOf(item);
+    if (id && (!previousRemoteIds.has(id) || remoteIds.has(id) || protectedIds.has(id))) merged.set(id, item);
+  }
+  for (const item of remote) {
+    const id = idOf(item);
+    if (id && !(protectedIds.has(id) && merged.has(id))) merged.set(id, item);
+  }
+  return [...merged.values()];
+}
+
 export const storageService = {
   // Profile
   getProfile(): UserProfile {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+      const data = readAppValue(STORAGE_KEYS.USER_PROFILE);
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error(e);
     }
-    return defaultProfile;
+    if (activeStorageScope === 'demo') return { ...defaultProfile, pinCode: '', biometricsEnabled: false, pinLockEnabled: false };
+    return { ...defaultProfile, name: '', email: '', photoUrl: '', pinCode: '', biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0 };
   },
 
   saveProfile(profile: UserProfile): void {
-    localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+    writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+    notifyStorageMutation('userSettings', 'profile');
   },
 
   // Month configs
   getMonthConfigs(): Record<string, MonthConfig> {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.MONTH_CONFIGS);
+      const data = readAppValue(STORAGE_KEYS.MONTH_CONFIGS);
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error(e);
     }
+    if (activeStorageScope !== 'demo') return {};
     const seed = getInitialSeedData();
-    localStorage.setItem(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(seed.monthConfigs));
+    writeAppValue(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(seed.monthConfigs));
     return seed.monthConfigs;
   },
 
@@ -355,19 +440,20 @@ export const storageService = {
 
   saveMonthConfig(config: MonthConfig): void {
     const configs = this.getMonthConfigs();
-    configs[config.monthKey] = config;
-    localStorage.setItem(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(configs));
+    configs[config.monthKey] = { ...(configs[config.monthKey] || {}), ...config };
+    writeAppValue(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(configs));
+    notifyStorageMutation('monthConfigurations', config.monthKey);
   },
 
   // Monthly category budgets
-  getCategoryBudgets(monthKey: string): { category: string; amount: number }[] {
+  getCategoryBudgets(monthKey: string): ({ category: string; amount: number } & Record<string, unknown>)[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CATEGORY_BUDGETS);
+      const data = readAppValue(STORAGE_KEYS.CATEGORY_BUDGETS);
       if (!data) return [];
       const byMonth = JSON.parse(data) as Record<string, unknown>;
       const budgets = byMonth[monthKey];
       if (!Array.isArray(budgets)) return [];
-      return budgets.filter((budget): budget is { category: string; amount: number } =>
+      return budgets.filter((budget): budget is { category: string; amount: number } & Record<string, unknown> =>
         Boolean(budget)
         && typeof budget.category === 'string'
         && budget.category.trim().length > 0
@@ -382,28 +468,47 @@ export const storageService = {
     }
   },
 
+  getAllCategoryBudgets(): Record<string, ({ category: string; amount: number } & Record<string, unknown>)[]> {
+    try {
+      const data = readAppValue(STORAGE_KEYS.CATEGORY_BUDGETS);
+      if (!data) return {};
+      const byMonth = JSON.parse(data) as Record<string, unknown>;
+      return Object.fromEntries(Object.keys(byMonth).map((key) => [key, this.getCategoryBudgets(key)]));
+    } catch (e) {
+      console.error(e);
+      return {};
+    }
+  },
+
   saveCategoryBudgets(monthKey: string, budgets: { category: string; amount: number }[]): void {
     let byMonth: Record<string, unknown> = {};
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CATEGORY_BUDGETS);
+      const data = readAppValue(STORAGE_KEYS.CATEGORY_BUDGETS);
       if (data) byMonth = JSON.parse(data);
     } catch (e) {
       console.error(e);
     }
-    byMonth[monthKey] = budgets;
-    localStorage.setItem(STORAGE_KEYS.CATEGORY_BUDGETS, JSON.stringify(byMonth));
+    const previous = Array.isArray(byMonth[monthKey]) ? byMonth[monthKey] as ({ category: string; amount: number } & Record<string, unknown>)[] : [];
+    const previousByCategory = new Map(previous.map((budget) => [budget.category, budget]));
+    const preserved = budgets.map((budget) => ({ ...(previousByCategory.get(budget.category) || {}), ...budget }));
+    byMonth[monthKey] = preserved;
+    writeAppValue(STORAGE_KEYS.CATEGORY_BUDGETS, JSON.stringify(byMonth));
+    const currentCategories = new Set(budgets.map((budget) => budget.category));
+    for (const budget of previous) if (!currentCategories.has(budget.category)) notifyStorageMutation('categoryBudgets', monthKey + ':' + budget.category, 'delete', 'local', budget);
+    for (const budget of preserved) notifyStorageMutation('categoryBudgets', monthKey + ':' + budget.category);
   },
 
   // Transactions
   getTransactions(): Transaction[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      const data = readAppValue(STORAGE_KEYS.TRANSACTIONS);
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error(e);
     }
+    if (activeStorageScope !== 'demo') return [];
     const seed = getInitialSeedData();
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(seed.transactions));
+    writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(seed.transactions));
     return seed.transactions;
   },
 
@@ -420,7 +525,8 @@ export const storageService = {
       createdAt: Date.now(),
     };
     list.unshift(newTx);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+    writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+    notifyStorageMutation('transactions', newTx.id);
     return newTx;
   },
 
@@ -428,26 +534,57 @@ export const storageService = {
     const list = this.getTransactions();
     const idx = list.findIndex((t) => t.id === tx.id);
     if (idx !== -1) {
+      const previous = list[idx];
+      const savings = this.getSavingsMovements();
+      const linked = previous.relatedSavingsMovementId
+        ? savings.find(movement => movement.id === previous.relatedSavingsMovementId && movement.type === 'deposit_from_month')
+        : undefined;
+      if (linked) {
+        if (!Number.isFinite(tx.amount) || tx.amount <= 0) throw new Error('El aporte debe tener un monto válido mayor que cero.');
+        const delta = tx.amount - linked.amount;
+        const updated = { ...linked, amount: tx.amount, date: tx.date, description: tx.description, monthKey: tx.monthKey };
+        const nextSavings = savings.map(movement => movement.id === linked.id ? updated : movement);
+        if (linked.goalId && !activeStorageScope.startsWith('account:')) {
+          const goals = this.getSavingsGoals();
+          const currentGoal = goals.find(goal => goal.id === linked.goalId);
+          if (currentGoal && currentGoal.currentAmount + delta < 0) throw new Error('El aporte no puede reducirse por debajo del dinero ya retirado de la meta.');
+          this.saveSavingsGoals(goals.map(goal => goal.id === linked.goalId
+            ? { ...goal, currentAmount: Math.max(0, goal.currentAmount + delta) } : goal));
+        }
+        writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(nextSavings));
+        notifyStorageMutation('savingsMovements', linked.id);
+        tx = { ...tx, type: 'expense', category: 'Aporte al Ahorro', relatedSavingsMovementId: linked.id };
+      }
       list[idx] = tx;
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+      writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+      notifyStorageMutation('transactions', tx.id);
     }
   },
 
   deleteTransaction(id: string): void {
-    const list = this.getTransactions().filter((t) => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+    const previous = this.getTransactions();
+    const deleted = previous.find((item) => item.id === id);
+    const linked = deleted?.relatedSavingsMovementId;
+    if (linked && this.getSavingsMovements().some(movement => movement.id === linked && movement.type === 'deposit_from_month')) {
+      this.deleteSavingsMovement(linked);
+      return;
+    }
+    const list = previous.filter((t) => t.id !== id);
+    writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(list));
+    notifyStorageMutation('transactions', id, 'delete', 'local', deleted as unknown as Record<string, unknown>);
   },
 
   // Savings movements
   getSavingsMovements(): SavingsMovement[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SAVINGS_MOVEMENTS);
+      const data = readAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS);
       if (data) return JSON.parse(data);
     } catch (e) {
       console.error(e);
     }
+    if (activeStorageScope !== 'demo') return [];
     const seed = getInitialSeedData();
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(seed.savingsMovements));
+    writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(seed.savingsMovements));
     return seed.savingsMovements;
   },
 
@@ -459,10 +596,12 @@ export const storageService = {
       createdAt: Date.now(),
     };
     list.unshift(newSm);
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(list));
+    writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(list));
+    notifyStorageMutation('savingsMovements', newSm.id);
 
-    // Keep a goal balance in sync with every movement assigned to that goal.
-    if (newSm.goalId) {
+    // Local/demo goal records mirror their full balance. Account records store an opening
+    // balance and derive the current balance from this ledger to avoid double counting.
+    if (newSm.goalId && !activeStorageScope.startsWith('account:')) {
       const goals = this.getSavingsGoals();
       const goalIndex = goals.findIndex((g) => g.id === newSm.goalId);
       if (goalIndex !== -1) {
@@ -493,7 +632,14 @@ export const storageService = {
   deleteSavingsMovement(id: string): void {
     const list = this.getSavingsMovements();
     const target = list.find((m) => m.id === id);
-    if (target?.goalId) {
+    if (target?.type === 'deposit_from_month' && target.balanceAffecting !== false) {
+      const goal = target.goalId ? this.getSavingsGoals().find(item => item.id === target.goalId) : undefined;
+      if (Math.round(this.getTotalSavingsVault() * 100) < Math.round(target.amount * 100) ||
+          (goal && Math.round(goal.currentAmount * 100) < Math.round(target.amount * 100))) {
+        throw new Error('No se puede eliminar este aporte: parte del dinero ya se retiró o gastó. Corrige primero esos movimientos.');
+      }
+    }
+    if (target?.goalId && !activeStorageScope.startsWith('account:')) {
       const goals = this.getSavingsGoals();
       const goalIndex = goals.findIndex((g) => g.id === target.goalId);
       if (goalIndex !== -1) {
@@ -504,11 +650,14 @@ export const storageService = {
     }
 
     const filtered = list.filter((m) => m.id !== id);
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(filtered));
+    writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(filtered));
+    notifyStorageMutation('savingsMovements', id, 'delete', 'local', target as unknown as Record<string, unknown>);
 
     // Also remove any linked transaction in transactions list
-    const txList = this.getTransactions().filter((t) => t.relatedSavingsMovementId !== id);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txList));
+    const transactions = this.getTransactions();
+    const linkedTransactions = transactions.filter((transaction) => transaction.relatedSavingsMovementId === id);
+    writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions.filter((transaction) => transaction.relatedSavingsMovementId !== id)));
+    for (const transaction of linkedTransactions) notifyStorageMutation('transactions', transaction.id, 'delete', 'local', transaction as unknown as Record<string, unknown>);
   },
 
   deleteSavingsGoal(
@@ -524,26 +673,45 @@ export const storageService = {
     const linkedMovements = movements.filter((movement) => movement.goalId === id);
 
     if (resolution === 'fictional') {
-      const deletedMovementIds = new Set(linkedMovements.map((movement) => movement.id));
-      this.saveSavingsMovements(movements.filter((movement) => movement.goalId !== id));
-      const transactions = this.getTransactions().filter(
-        (transaction) => !transaction.relatedSavingsMovementId || !deletedMovementIds.has(transaction.relatedSavingsMovementId),
+      const allTransactions = this.getTransactions();
+      const deletionKeys = savingsGoalDeletionKeys(id, [
+        ...movements.map((movement) => ({
+          collection: 'savingsMovements' as const,
+          id: movement.id,
+          savingsGoalId: movement.goalId,
+        })),
+        ...allTransactions.map((transaction) => ({
+          collection: 'transactions' as const,
+          id: transaction.id,
+          relatedSavingsMovementId: transaction.relatedSavingsMovementId,
+        })),
+      ]);
+      this.saveSavingsMovements(movements.filter((movement) =>
+        !deletionKeys.has('savingsMovements:' + movement.id),
+      ));
+      const deletedTransactions = allTransactions.filter((transaction) =>
+        deletionKeys.has('transactions:' + transaction.id),
       );
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+      writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(allTransactions.filter((transaction) =>
+        !deletionKeys.has('transactions:' + transaction.id),
+      )));
+      for (const transaction of deletedTransactions) notifyStorageMutation('transactions', transaction.id, 'delete');
     } else {
       const reassignedMovements = movements.map((movement) =>
         movement.goalId === id
-          ? { ...movement, goalId: undefined, destinationType: 'general' as const }
+          ? { ...movement, goalId: undefined, destinationType: 'general' as const, balanceAffecting: false }
           : movement,
       );
       this.saveSavingsMovements(reassignedMovements);
 
-      if (resolution === 'month' && goal.currentAmount > 0) {
+      if (goal.currentAmount > 0) {
         this.addSavingsMovement({
           monthKey,
-          type: 'withdraw_to_month',
+          type: resolution === 'general' ? 'goal_to_general' : 'withdraw_to_month',
           amount: goal.currentAmount,
-          description: 'Saldo transferido al mes al cerrar la meta: ' + goal.title,
+          description: resolution === 'general'
+            ? 'Saldo reasignado al ahorro general al cerrar la meta: ' + goal.title
+            : 'Saldo transferido al mes al cerrar la meta: ' + goal.title,
           destinationType: 'general',
           date: new Date().toISOString().slice(0, 10),
         });
@@ -554,86 +722,139 @@ export const storageService = {
   },
 
   saveSavingsMovements(movements: SavingsMovement[]): void {
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(movements));
+    const previous = this.getSavingsMovements();
+    const nextIds = new Set(movements.map((movement) => movement.id));
+    writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(movements));
+    for (const movement of previous) if (!nextIds.has(movement.id)) notifyStorageMutation('savingsMovements', movement.id, 'delete', 'local', movement as unknown as Record<string, unknown>);
+    for (const movement of movements) notifyStorageMutation('savingsMovements', movement.id);
   },
 
   // Savings goals
   getSavingsGoals(): SavingsGoal[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS);
-      if (data) return JSON.parse(data);
+      const data = readAppValue(STORAGE_KEYS.SAVINGS_GOALS);
+      if (data) {
+        const goals = JSON.parse(data) as SavingsGoal[];
+        if (!activeStorageScope.startsWith('account:')) return goals;
+        const movements = this.getSavingsMovements();
+        return goals.map((goal) => ({ ...goal, currentAmount: deriveSavingsGoalBalance(goal, movements) }));
+      }
     } catch (e) {
       console.error(e);
     }
+    if (activeStorageScope !== 'demo') return [];
     const seed = getInitialSeedData();
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(seed.savingsGoals));
+    writeAppValue(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(seed.savingsGoals));
     return seed.savingsGoals;
   },
 
   saveSavingsGoals(goals: SavingsGoal[]): void {
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(goals));
+    const previous = this.getSavingsGoals();
+    const nextIds = new Set(goals.map((goal) => goal.id));
+    const persistedGoals = activeStorageScope.startsWith('account:')
+      ? goals.map((goal) => savingsGoalOpeningBalance(goal, goal.currentAmount, this.getSavingsMovements()))
+      : goals;
+    writeAppValue(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(persistedGoals));
+    for (const goal of previous) if (!nextIds.has(goal.id)) notifyStorageMutation('savingsGoals', goal.id, 'delete', 'local', goal as unknown as Record<string, unknown>);
+    for (const goal of goals) notifyStorageMutation('savingsGoals', goal.id);
   },
 
   // The vault is the sum of goal balances plus unassigned general savings.
   getTotalSavingsVault(): number {
-    const goalsTotal = this.getSavingsGoals().reduce((sum, goal) => sum + Math.max(0, Number(goal.currentAmount) || 0), 0);
-    const generalBalance = this.getSavingsMovements()
-      .filter((movement) => !movement.goalId)
-      .reduce((balance, movement) => balance + (movement.type === 'deposit_from_month' ? movement.amount : -movement.amount), 0);
-    return Math.max(0, goalsTotal + generalBalance);
+    return calculateSavingsVaultBalance(this.getSavingsGoals(), this.getSavingsMovements(), this.getTransactions());
+  },
+
+
+  /** Stores the cloud revision alongside a local record without scheduling another upload. */
+  setCloudRevision(collection: SyncCollection, sourceId: string, revision: string | null): void {
+    if (collection === 'userSettings') return;
+    const setRevision = <T extends Record<string, unknown>>(items: T[], matches: (item: T) => boolean) => {
+      let changed = false;
+      const next = items.map((item) => {
+        if (!matches(item)) return item;
+        const updated = { ...item } as T & { _cloudRevision?: string };
+        if (revision === null) delete updated._cloudRevision;
+        else updated._cloudRevision = revision;
+        changed = true;
+        return updated;
+      });
+      return { next, changed };
+    };
+    if (collection === 'transactions' || collection === 'savingsMovements' || collection === 'savingsGoals') {
+      const key = collection === 'transactions' ? STORAGE_KEYS.TRANSACTIONS : collection === 'savingsMovements' ? STORAGE_KEYS.SAVINGS_MOVEMENTS : STORAGE_KEYS.SAVINGS_GOALS;
+      const { next, changed } = setRevision(rawArray<Record<string, unknown>>(key), (item) => String(item.id || '') === sourceId);
+      if (changed) writeAppValue(key, JSON.stringify(next));
+      return;
+    }
+    if (collection === 'monthConfigurations') {
+      const configs = (() => { try { return JSON.parse(readAppValue(STORAGE_KEYS.MONTH_CONFIGS) || '{}') as Record<string, Record<string, unknown>>; } catch { return {}; } })();
+      const current = configs[sourceId];
+      if (!current) return;
+      if (revision === null) delete current._cloudRevision;
+      else current._cloudRevision = revision;
+      writeAppValue(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(configs));
+      return;
+    }
+    const separator = sourceId.indexOf(':');
+    if (separator < 0) return;
+    const monthKey = sourceId.slice(0, separator);
+    const category = sourceId.slice(separator + 1);
+    const byMonth = (() => { try { return JSON.parse(readAppValue(STORAGE_KEYS.CATEGORY_BUDGETS) || '{}') as Record<string, Record<string, unknown>[]>; } catch { return {}; } })();
+    const budgets = byMonth[monthKey] || [];
+    const { next, changed } = setRevision(budgets, (item) => String(item.category || '') === category);
+    if (changed) { byMonth[monthKey] = next; writeAppValue(STORAGE_KEYS.CATEGORY_BUDGETS, JSON.stringify(byMonth)); }
+  },
+
+  /** Applies a cloud snapshot without emitting local-upload events or erasing unrelated local records. */
+  applyCloudSnapshot(collection: SyncCollection, remoteItems: Record<string, unknown>[], previouslyRemoteIds: Set<string>, protectedLocalIds: Set<string> = new Set()): void {
+    const idOf = (item: Record<string, unknown>) => String(item.id || '');
+    if (collection === 'transactions') {
+      const merged = mergeRemoteRecords(rawArray<Transaction>(STORAGE_KEYS.TRANSACTIONS) as unknown as Record<string, unknown>[], remoteItems, idOf, previouslyRemoteIds, protectedLocalIds);
+      writeAppValue(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(merged));
+    } else if (collection === 'savingsMovements') {
+      const merged = mergeRemoteRecords(rawArray<SavingsMovement>(STORAGE_KEYS.SAVINGS_MOVEMENTS) as unknown as Record<string, unknown>[], remoteItems, idOf, previouslyRemoteIds, protectedLocalIds);
+      writeAppValue(STORAGE_KEYS.SAVINGS_MOVEMENTS, JSON.stringify(merged));
+    } else if (collection === 'savingsGoals') {
+      const merged = mergeRemoteRecords(rawArray<SavingsGoal>(STORAGE_KEYS.SAVINGS_GOALS) as unknown as Record<string, unknown>[], remoteItems, idOf, previouslyRemoteIds, protectedLocalIds);
+      writeAppValue(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(merged));
+    } else if (collection === 'monthConfigurations') {
+      const local = Object.values((() => { try { return JSON.parse(readAppValue(STORAGE_KEYS.MONTH_CONFIGS) || '{}') as Record<string, MonthConfig>; } catch { return {}; } })()) as unknown as Record<string, unknown>[];
+      const merged = mergeRemoteRecords(local, remoteItems, (item) => String(item.monthKey || ''), previouslyRemoteIds, protectedLocalIds);
+      writeAppValue(STORAGE_KEYS.MONTH_CONFIGS, JSON.stringify(Object.fromEntries(merged.map((item) => [String(item.monthKey), item]))));
+    } else if (collection === 'categoryBudgets') {
+      let localByMonth: Record<string, { category: string; amount: number }[]> = {};
+      try { localByMonth = JSON.parse(readAppValue(STORAGE_KEYS.CATEGORY_BUDGETS) || '{}'); } catch { localByMonth = {}; }
+      const local = Object.entries(localByMonth).flatMap(([monthKey, budgets]) => budgets.map((budget) => ({ ...budget, monthKey }))) as unknown as Record<string, unknown>[];
+      const sourceId = (item: Record<string, unknown>) => String(item.monthKey || '') + ':' + String(item.category || item.categoryName || '');
+      const merged = mergeRemoteRecords(local, remoteItems, sourceId, previouslyRemoteIds, protectedLocalIds);
+      const next: Record<string, ({ category: string; amount: number } & Record<string, unknown>)[]> = {};
+      for (const item of merged) { const monthKey = String(item.monthKey || ''); (next[monthKey] ||= []).push({ ...item, category: String(item.category || item.categoryName || ''), amount: Number(item.amount) || 0 }); }
+      writeAppValue(STORAGE_KEYS.CATEGORY_BUDGETS, JSON.stringify(next));
+    } else if (collection === 'userSettings') {
+      const settings = remoteItems[0];
+      if (settings) {
+        const current = this.getProfile();
+        const updated = { ...current, name: String(settings.displayName || current.name), currency: currencyDisplayFromCode(settings.preferredCurrency, current.currency) };
+        writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(updated));
+        if (typeof settings.theme === 'string') localStorage.setItem('presucontrol_theme_v1', settings.theme);
+        if (typeof settings.accentColor === 'string') localStorage.setItem('mischeles_accent_v2', settings.accentColor);
+        if (settings.language === 'es' || settings.language === 'en') localStorage.setItem('mischeles_language_v1', settings.language);
+      }
+    }
+    notifyStorageMutation(collection, '*', 'upsert', 'remote');
   },
 
   // Calculate financial summary for a specific month
   getFinancialSummary(monthKey: string): FinancialSummary {
     const config = this.getMonthConfig(monthKey);
-    const initialIncome = config ? config.initialIncome : 0;
-    const carryover = config ? config.carryoverFromPrev : 0;
-
-    const txs = this.getTransactionsByMonth(monthKey);
-    let totalAdditionalIncome = 0;
-    let totalExpenses = 0;
-
-    for (const t of txs) {
-      if (t.type === 'income') {
-        totalAdditionalIncome += t.amount;
-      } else if (t.type === 'expense') {
-        totalExpenses += t.amount;
-      }
-    }
-
-    const savingsMovs = this.getSavingsMovements().filter((m) => m.monthKey === monthKey);
-    let savingsTransfersTo = 0;
-    let savingsTransfersFrom = 0;
-    let savingsDirectExpenses = 0;
-
-    for (const sm of savingsMovs) {
-      if (sm.type === 'deposit_from_month') {
-        savingsTransfersTo += sm.amount;
-      } else if (sm.type === 'withdraw_to_month') {
-        savingsTransfersFrom += sm.amount;
-      } else if (sm.type === 'direct_expense') {
-        savingsDirectExpenses += sm.amount;
-      }
-    }
-
-    const totalIncome = initialIncome + carryover + totalAdditionalIncome + savingsTransfersFrom;
-    // Since deposit_from_month movements are now tracked as category 'Aporte al Ahorro' in transactions (totalExpenses),
-    // we subtract totalExpenses without subtracting savingsTransfersTo twice.
-    const availableBalance = totalIncome - totalExpenses;
-    const totalSavingsVault = this.getTotalSavingsVault();
-
-    return {
-      initialIncome,
-      carryover,
-      totalAdditionalIncome,
-      totalIncome,
-      totalExpenses,
-      savingsTransfersTo,
-      savingsTransfersFrom,
-      availableBalance,
-      totalSavingsVault,
-      savingsDirectExpenses,
-    };
+    return calculateFinancialSummary({
+      monthKey,
+      initialIncome: config?.initialIncome || 0,
+      carryover: config?.carryoverFromPrev || 0,
+      transactions: this.getTransactionsByMonth(monthKey),
+      savingsMovements: this.getSavingsMovements().filter((movement) => movement.monthKey === monthKey),
+      totalSavingsVault: this.getTotalSavingsVault(),
+    });
   },
 
   // Calculate remaining balance of the previous month
@@ -660,7 +881,8 @@ export const storageService = {
 
   // Reset or clear all data
   resetAllData(): void {
-    localStorage.clear();
-    sessionStorage.clear();
+    if (activeStorageScope.startsWith('account:')) throw new Error('Los datos de una cuenta requieren el flujo específico de gestión de cuenta.');
+    for (const key of SCOPED_STORAGE_KEYS) localStorage.removeItem(scopedStorageKey(key));
+    sessionStorage.removeItem(STORAGE_KEYS.APP_LOCKED);
   },
 };

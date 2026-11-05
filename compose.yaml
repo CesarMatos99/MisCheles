@@ -2,7 +2,7 @@ services:
   web:
     build: .
     ports:
-      - "${MISCHELES_PORT:-5174}:3000"
+      - "5174:5174"
     environment:
       VITE_USE_POLLING: "true"
     volumes:

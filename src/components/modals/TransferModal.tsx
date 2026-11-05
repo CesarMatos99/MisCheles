@@ -1,3 +1,7 @@
+import { parseMovementAmount } from '../../domain/movementAmount';
+import { MoneyField } from '../ui/MoneyField';
+import { ModalShell } from '../ui/ModalShell';
+import { ModalSurface } from '../ui/ModalSurface';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -11,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { UserProfile, FinancialSummary, SavingsGoal } from '../../types';
-import { storageService } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -41,7 +45,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const gList = storageService.getSavingsGoals();
+      const gList = financeApplication.getSavingsGoals();
       setGoals(gList);
       if (gList.length > 0) {
         setSelectedGoalId(gList[0].id);
@@ -56,7 +60,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
   if (!isOpen) return null;
 
-  const numAmount = parseFloat(amount) || 0;
+  const numAmount = parseMovementAmount(amount) ?? 0;
   const currentGoal = goals.find((g) => g.id === selectedGoalId);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -85,7 +89,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         ? `Aporte a meta: ${currentGoal?.title || 'Meta'}`
         : 'Aporte a Ahorro General';
 
-    storageService.addSavingsMovement({
+    financeApplication.addSavingsMovement({
       monthKey,
       type: 'deposit_from_month',
       amount: numAmount,
@@ -101,8 +105,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <ModalShell title="Transferir a ahorro" onClose={onClose} size="md">
+      <ModalSurface scroll="auto">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -136,28 +140,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Amount */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Monto a transferir ({profile.currency})
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-lg">
-                {profile.currency}
-              </span>
-              <input
-                type="number"
-                step="any"
-                required
-                min="1"
-                max={summary.availableBalance > 0 ? summary.availableBalance : undefined}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl type-money text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
+          <MoneyField label="Monto a transferir" currency={profile.currency} value={amount} onValueChange={setAmount} min="1" max={summary.availableBalance > 0 ? summary.availableBalance : undefined} />
 
           {/* Destination Selector: Ahorro General vs Meta */}
           <div>
@@ -298,7 +281,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };

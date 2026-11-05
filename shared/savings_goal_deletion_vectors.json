@@ -1,0 +1,57 @@
+{
+  "cases": [
+    {
+      "name": "delete false goal removes only its movements and exact transaction mirrors",
+      "goalId": "goal-1",
+      "records": [
+        {
+          "collection": "savingsMovements",
+          "id": "deposit-1",
+          "savingsGoalId": "goal-1",
+          "kind": "savings_contribution"
+        },
+        {
+          "collection": "transactions",
+          "id": "mirror-deposit-1",
+          "relatedSavingsMovementId": "deposit-1",
+          "kind": "expense"
+        },
+        {
+          "collection": "savingsMovements",
+          "id": "withdrawal-1",
+          "savingsGoalId": "goal-1",
+          "kind": "savings_withdrawal"
+        },
+        {
+          "collection": "transactions",
+          "id": "mirror-withdrawal-1",
+          "relatedSavingsMovementId": "withdrawal-1",
+          "kind": "expense"
+        },
+        {
+          "collection": "transactions",
+          "id": "unrelated-mirror",
+          "relatedSavingsMovementId": "deposit-other",
+          "kind": "expense"
+        },
+        {
+          "collection": "savingsMovements",
+          "id": "other-goal-deposit",
+          "savingsGoalId": "goal-2",
+          "kind": "savings_contribution"
+        },
+        {
+          "collection": "transactions",
+          "id": "ordinary-expense",
+          "kind": "expense"
+        }
+      ],
+      "expectedKeys": [
+        "savingsMovements:deposit-1",
+        "transactions:mirror-deposit-1",
+        "savingsMovements:withdrawal-1",
+        "transactions:mirror-withdrawal-1"
+      ]
+    }
+  ]
+}

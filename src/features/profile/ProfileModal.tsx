@@ -14,7 +14,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
-import { storageService } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
 import { CURRENCY_OPTIONS } from '../../constants/categories';
 
 interface ProfileModalProps {
@@ -85,7 +85,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       monthlyTargetIncome: parseFloat(monthlyTargetIncome) || 0,
     };
 
-    storageService.saveProfile(updated);
+    financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
     setFeedback('Perfil actualizado con éxito');
     setTimeout(() => {

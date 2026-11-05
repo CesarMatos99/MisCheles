@@ -1,0 +1,26 @@
+[
+  {
+    "name": "basic legacy record",
+    "record": {
+      "id": "record",
+      "amountMinor": 100
+    },
+    "expected": "content:e1741c1ec0d18e8f"
+  },
+  {
+    "name": "nested legacy record",
+    "record": {
+      "id": "legacy-2",
+      "monthKey": "2026-10",
+      "metadata": {
+        "z": "último",
+        "a": true
+      },
+      "tags": [
+        "local",
+        "cuenta"
+      ]
+    },
+    "expected": "content:ea8ae036f0bcd7d2"
+  }
+]

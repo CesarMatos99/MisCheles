@@ -4,3 +4,17 @@ dist
 .env
 .env.*
 *.log
+
+**/.gradle
+**/.idea
+**/.dart_tool
+**/build
+**/*.iml
+**/.flutter_tool_state
+**/local.properties
+functions
+mobile
+docs
+src/**/*.test.ts
+src/**/*.test.tsx
+shared/**/*.test.ts

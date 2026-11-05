@@ -1,12 +1,18 @@
+import { isConsumptionExpenseTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
+import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
+import { unmatchedSavingsContributionAmount } from '../../domain/financialSummary';
 import React from 'react';
 import { ArrowLeft, CalendarDays, Pencil, Receipt, Trash2 } from 'lucide-react';
-import { CategoryBudget, Transaction, UserProfile } from '../../types';
+import { CategoryBudget, SavingsMovement, Transaction, UserProfile } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { localizeCategoryName } from '../../i18n/categoryLabels';
 
 interface CategoryDetailViewProps {
   category: string;
   monthLabel: string;
   budget?: CategoryBudget;
   transactions: Transaction[];
+  savingsMovements: SavingsMovement[];
   profile: UserProfile;
   onBack: () => void;
   onEditTransaction: (transaction: Transaction) => void;
@@ -14,14 +20,19 @@ interface CategoryDetailViewProps {
   onManageBudget: () => void;
 }
 
-const normalizeCategory = (value: string) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-DO');
+const normalizeCategory = normalizeFinancialCategory;
 
-export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category, monthLabel, budget, transactions, profile, onBack, onEditTransaction, onDeleteTransaction, onManageBudget }) => {
+export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category, monthLabel, budget, transactions, savingsMovements, profile, onBack, onEditTransaction, onDeleteTransaction, onManageBudget }) => {
+  const { language } = useLanguage();
+  const displayCategory = localizeCategoryName(language, category);
   const money = (value: number) => profile.currency + ' ' + Math.abs(value).toLocaleString('es-DO', { maximumFractionDigits: 2 });
   const movements = transactions
-    .filter((transaction) => transaction.type === 'expense' && normalizeCategory(transaction.category) === normalizeCategory(category))
+    .filter((transaction) => isConsumptionExpenseTransaction(transaction) && normalizeCategory(transaction.category) === normalizeCategory(category))
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
-  const spent = movements.reduce((total, movement) => total + movement.amount, 0);
+  const isSavings = isSavingsBudgetCategory(category);
+  const contributions = savingsMovements.filter(movement => movement.type === 'deposit_from_month').sort((a, b) => b.date.localeCompare(a.date));
+  const directSavingsExpenses = savingsMovements.filter(movement => movement.type === 'direct_expense' && normalizeCategory(movement.category || 'Otros') === normalizeCategory(category)).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  const spent = isSavings ? contributions.reduce((sum, movement) => sum + movement.amount, 0) + unmatchedSavingsContributionAmount(transactions, savingsMovements) : movements.reduce((total, movement) => total + movement.amount, 0) + directSavingsExpenses.reduce((total, movement) => total + movement.amount, 0);
   const remaining = budget ? budget.amount - spent : undefined;
   const percent = budget ? Math.min(100, Math.round((spent / budget.amount) * 100)) : 0;
 
@@ -33,7 +44,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
 
       <header className='border-b border-slate-200 pb-3 dark:border-slate-800'>
         <p className='type-secondary'>{monthLabel}</p>
-        <h1 className='type-screen-title text-slate-900 dark:text-white'>{category}</h1>
+        <h1 className='type-screen-title text-slate-900 dark:text-white'>{displayCategory}</h1>
       </header>
 
       <section aria-label='Resumen de categoría' className='rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900'>
@@ -42,7 +53,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
         </div>
         <div className='flex items-start justify-between gap-4'>
           <div>
-            <p className='type-secondary'>Gastado</p>
+            <p className='type-secondary'>{isSavings ? 'Aportado a ahorro' : 'Gastado'}</p>
             <p className='mt-1 type-money text-2xl font-bold text-slate-900 dark:text-white'>{money(spent)}</p>
           </div>
           <div className='text-right'>
@@ -58,7 +69,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
               </span>
               <span className='type-secondary'>Monto mensual</span>
             </div>
-            <div className='mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800' role='progressbar' aria-label={'Consumo de ' + category} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
+            <div className='mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800' role='progressbar' aria-label={(isSavings ? 'Aportes a ' : 'Consumo de ') + displayCategory} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
               <div className={'h-full rounded-full ' + (remaining !== undefined && remaining < 0 ? 'bg-rose-500 dark:opacity-80' : percent >= 80 ? 'bg-amber-500 dark:opacity-80' : 'bg-primary dark:opacity-80')} style={{ width: percent + '%' }} />
             </div>
           </div>
@@ -70,10 +81,23 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
       <section>
         <div className='flex items-center justify-between border-b border-slate-200 py-2 dark:border-slate-800'>
           <h2 className='font-semibold text-slate-900 dark:text-white'>Movimientos</h2>
-          <span className='type-secondary'>{movements.length} {movements.length === 1 ? 'movimiento' : 'movimientos'}</span>
+          <span className='type-secondary'>{isSavings ? contributions.length : movements.length + directSavingsExpenses.length} movimientos</span>
         </div>
-        {movements.length === 0 ? (
-          <p className='py-5 text-sm text-slate-500 dark:text-slate-300'>No hay movimientos de {category} en {monthLabel}.</p>
+        {isSavings ? (
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
+            {unmatchedSavingsContributionAmount(transactions, savingsMovements) > 0 && <p className="py-3 text-xs text-slate-500">El total incluye {money(unmatchedSavingsContributionAmount(transactions, savingsMovements))} de aportes antiguos sin destino vinculado.</p>}
+            {contributions.length === 0 && <p className="py-4 text-sm text-slate-500">No hay aportes vinculados en este período.</p>}
+            {contributions.map(movement => <article key={movement.id} className="flex items-center justify-between gap-3 py-3">
+              <div className="min-w-0"><p className="text-sm font-semibold">{movement.description || 'Aporte a ahorro'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300">{movement.date} · {movement.goalTitle || 'Ahorro general'}</p></div>
+              <span className="shrink-0 text-sm font-semibold text-primary">{money(movement.amount)} aportados</span>
+            </article>)}
+            {directSavingsExpenses.length > 0 && <p className="pt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Pagado desde ahorros</p>}
+            {directSavingsExpenses.map(movement => <article key={movement.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="text-sm font-semibold">{movement.description || displayCategory}</p><p className="text-xs text-slate-500 dark:text-slate-300">{movement.date} · Desde ahorro</p></div><span className="shrink-0 text-sm font-semibold text-slate-700 dark:text-slate-200">−{money(movement.amount)}</span></article>)}
+
+          </div>
+        ) : movements.length === 0 ? (
+          <p className='py-5 text-sm text-slate-500 dark:text-slate-300'>No hay movimientos de {displayCategory} en {monthLabel}.</p>
         ) : (
           <div className='divide-y divide-slate-200 dark:divide-slate-800'>
             {movements.map((movement) => (
@@ -82,7 +106,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
                   <Receipt className='h-4 w-4' aria-hidden='true' />
                 </div>
                 <div className='min-w-0 flex-1'>
-                  <p className='truncate text-sm font-semibold text-slate-900 dark:text-white'>{movement.description || category}</p>
+                  <p className='truncate text-sm font-semibold text-slate-900 dark:text-white'>{movement.description || displayCategory}</p>
                   <p className='mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-300'>
                     <CalendarDays className='h-3 w-3 shrink-0' aria-hidden='true' />
                     <span>{movement.date}</span><span aria-hidden='true'>·</span><span className='truncate'>{movement.paymentMethod || 'Sin método'}</span>

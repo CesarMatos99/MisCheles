@@ -11,9 +11,16 @@ export interface Transaction {
   paymentMethod: string; // 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Otro'
   createdAt: number;
   relatedSavingsMovementId?: string; // Links automatic expense to savings movement
+  importedCandidateId?: string;
+  dedupeKey?: string;
+  occurredAt?: string; // Optional UTC ISO timestamp; date remains the calendar grouping field.
+  notes?: string;
+  bankName?: string;
+  bankReferenceHash?: string; // SHA-256 only; never persist the raw bank reference.
+  paymentInstrumentLastFour?: string; // At most the last four digits; never a full card number.
 }
 
-export type SavingsMovementType = 'deposit_from_month' | 'withdraw_to_month' | 'direct_expense';
+export type SavingsMovementType = 'deposit_from_month' | 'withdraw_to_month' | 'direct_expense' | 'goal_to_general';
 
 export interface SavingsMovement {
   id: string;
@@ -27,6 +34,8 @@ export interface SavingsMovement {
   destinationType?: 'general' | 'goal';
   goalId?: string;
   goalTitle?: string;
+  /** Historical entry retained after goal closure without changing active balances. */
+  balanceAffecting?: boolean;
 }
 
 export interface SavingsGoal {
@@ -73,8 +82,9 @@ export interface FinancialSummary {
   initialIncome: number;
   carryover: number;
   totalAdditionalIncome: number;
-  totalIncome: number; // initial + carryover + additional
-  totalExpenses: number;
+  totalIncome: number; // Initial income + additional income; excludes carryover and savings withdrawals.
+  regularExpenses: number; // Expenses paid from monthly funds, excluding savings contributions.
+  totalExpenses: number; // Consumption: regular expenses + direct expenses paid from savings.
   savingsTransfersTo: number; // Money sent to savings this month
   savingsTransfersFrom: number; // Money withdrawn back from savings into this month
   availableBalance: number; // Net available in this month

@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "initial income, carryover, savings transfer and duplicate web mirror",
+      "monthKey": "2026-10",
+      "initialIncomeMinor": 100000,
+      "carryoverMinor": 8000,
+      "records": [
+        {
+          "source": "transaction",
+          "id": "income-1",
+          "kind": "income",
+          "amountMinor": 30000,
+          "monthKey": "2026-10",
+          "categoryName": "Trabajo"
+        },
+        {
+          "source": "transaction",
+          "id": "expense-1",
+          "kind": "expense",
+          "amountMinor": 12000,
+          "monthKey": "2026-10",
+          "categoryName": "Vivienda"
+        },
+        {
+          "source": "transaction",
+          "id": "deposit-mirror",
+          "kind": "expense",
+          "amountMinor": 5000,
+          "monthKey": "2026-10",
+          "categoryName": "Aporte al Ahorro",
+          "relatedSavingsMovementId": "save-1"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "save-1",
+          "kind": "savings_contribution",
+          "amountMinor": 5000,
+          "monthKey": "2026-10",
+          "categoryName": "Ahorro"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "withdraw-1",
+          "kind": "savings_withdrawal",
+          "amountMinor": 1000,
+          "monthKey": "2026-10",
+          "categoryName": "Ahorro"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "direct-1",
+          "kind": "savings_direct_expense",
+          "amountMinor": 700,
+          "monthKey": "2026-10",
+          "categoryName": "Salud"
+        }
+      ],
+      "expected": {
+        "initialIncomeMinor": 100000,
+        "carryoverMinor": 8000,
+        "additionalIncomeMinor": 30000,
+        "totalIncomeMinor": 130000,
+        "regularExpensesMinor": 12000,
+        "totalExpensesMinor": 12700,
+        "savingsContributionsMinor": 5000,
+        "savingsWithdrawalsMinor": 1000,
+        "directSavingsExpensesMinor": 700,
+        "availableMinor": 122000
+      }
+    },
+    {
+      "name": "month filtering, duplicate IDs and direct savings expense",
+      "monthKey": "2026-11",
+      "initialIncomeMinor": 50000,
+      "carryoverMinor": 2500,
+      "records": [
+        {
+          "source": "transaction",
+          "id": "duplicate",
+          "kind": "expense",
+          "amountMinor": 3000,
+          "monthKey": "2026-11",
+          "categoryName": "Comida"
+        },
+        {
+          "source": "transaction",
+          "id": "duplicate",
+          "kind": "expense",
+          "amountMinor": 3000,
+          "monthKey": "2026-11",
+          "categoryName": "Comida"
+        },
+        {
+          "source": "transaction",
+          "id": "old",
+          "kind": "expense",
+          "amountMinor": 99000,
+          "monthKey": "2026-10",
+          "categoryName": "Vivienda"
+        },
+        {
+          "source": "transaction",
+          "id": "income-nov",
+          "kind": "income",
+          "amountMinor": 10000,
+          "monthKey": "2026-11",
+          "categoryName": "Extra"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "direct-nov",
+          "kind": "savings_direct_expense",
+          "amountMinor": 1200,
+          "monthKey": "2026-11",
+          "categoryName": "Salud"
+        }
+      ],
+      "expected": {
+        "initialIncomeMinor": 50000,
+        "carryoverMinor": 2500,
+        "additionalIncomeMinor": 10000,
+        "totalIncomeMinor": 60000,
+        "regularExpensesMinor": 3000,
+        "totalExpensesMinor": 4200,
+        "savingsContributionsMinor": 0,
+        "savingsWithdrawalsMinor": 0,
+        "directSavingsExpensesMinor": 1200,
+        "availableMinor": 59500
+      }
+    },
+    {
+      "name": "linked and legacy savings contributions are counted once",
+      "monthKey": "2026-12",
+      "initialIncomeMinor": 100000,
+      "carryoverMinor": 0,
+      "records": [
+        {
+          "source": "transaction",
+          "id": "food-dec",
+          "kind": "expense",
+          "amountMinor": 10000,
+          "monthKey": "2026-12",
+          "categoryName": "Alimentación"
+        },
+        {
+          "source": "transaction",
+          "id": "save-dec",
+          "kind": "expense",
+          "amountMinor": 2000,
+          "monthKey": "2026-12",
+          "categoryName": "Transporte"
+        },
+        {
+          "source": "transaction",
+          "id": "mirror-dec",
+          "kind": "expense",
+          "amountMinor": 5000,
+          "monthKey": "2026-12",
+          "categoryName": "Aporte al Ahorro",
+          "relatedSavingsMovementId": "save-dec"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "save-dec",
+          "kind": "savings_contribution",
+          "amountMinor": 5000,
+          "monthKey": "2026-12",
+          "categoryName": "Ahorro"
+        },
+        {
+          "source": "transaction",
+          "id": "legacy-save-dec",
+          "kind": "expense",
+          "amountMinor": 7000,
+          "monthKey": "2026-12",
+          "categoryName": " Aporte al Ahorro "
+        },
+        {
+          "source": "transaction",
+          "id": "orphan-mirror-dec",
+          "kind": "expense",
+          "amountMinor": 1000,
+          "monthKey": "2026-12",
+          "categoryName": "Aporte al Ahorro",
+          "relatedSavingsMovementId": "missing-save"
+        },
+        {
+          "source": "transaction",
+          "id": "wrong-link-dec",
+          "kind": "expense",
+          "amountMinor": 500,
+          "monthKey": "2026-12",
+          "categoryName": "Regalo",
+          "relatedSavingsMovementId": "withdraw-dec"
+        },
+        {
+          "source": "savingsMovement",
+          "id": "withdraw-dec",
+          "kind": "savings_withdrawal",
+          "amountMinor": 500,
+          "monthKey": "2026-12",
+          "categoryName": "Ahorro"
+        }
+      ],
+      "expected": {
+        "initialIncomeMinor": 100000,
+        "carryoverMinor": 0,
+        "additionalIncomeMinor": 0,
+        "totalIncomeMinor": 100000,
+        "regularExpensesMinor": 12000,
+        "totalExpensesMinor": 12000,
+        "savingsContributionsMinor": 13500,
+        "savingsWithdrawalsMinor": 500,
+        "directSavingsExpensesMinor": 0,
+        "availableMinor": 75000
+      }
+    }
+  ]
+}

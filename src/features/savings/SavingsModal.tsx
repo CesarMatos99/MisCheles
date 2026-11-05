@@ -1,3 +1,7 @@
+import { parseMovementAmount } from '../../domain/movementAmount';
+import { MoneyField } from '../../components/ui/MoneyField';
+import { ModalShell } from '../../components/ui/ModalShell';
+import { ModalSurface } from '../../components/ui/ModalSurface';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -11,7 +15,7 @@ import {
   Target,
 } from 'lucide-react';
 import { SavingsMovementType, UserProfile, FinancialSummary, SavingsGoal } from '../../types';
-import { storageService } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
 import { EXPENSE_CATEGORIES } from '../../constants/categories';
 
 interface SavingsModalProps {
@@ -25,6 +29,7 @@ interface SavingsModalProps {
   onSaved: () => void;
   initialMode?: SavingsMovementType;
   initialGoalId?: string;
+  initialDraft?: { amount: string; description: string; date: string };
 }
 
 export const SavingsModal: React.FC<SavingsModalProps> = ({
@@ -36,6 +41,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   onSaved,
   initialMode = 'deposit_from_month',
   initialGoalId,
+  initialDraft,
 }) => {
   const [mode, setMode] = useState<SavingsMovementType>(initialMode);
   const [amount, setAmount] = useState<string>('');
@@ -51,12 +57,12 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
-      setAmount('');
-      setDescription('');
+      setAmount(initialDraft?.amount || '');
+      setDescription(initialDraft?.description || '');
       setDestinationType(initialGoalId ? 'goal' : 'general');
       setErrorMsg('');
-      setDate(new Date().toISOString().split('T')[0]);
-      const gList = storageService.getSavingsGoals();
+      setDate(initialDraft?.date || new Date().toISOString().split('T')[0]);
+      const gList = financeApplication.getSavingsGoals();
       setGoals(gList);
       if (gList.length > 0) {
         setSelectedGoalId(initialGoalId || gList[0].id);
@@ -64,11 +70,11 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
         setSelectedGoalId('');
       }
     }
-  }, [isOpen, initialMode, initialGoalId]);
+  }, [isOpen, initialMode, initialGoalId, initialDraft]);
 
   if (!isOpen) return null;
 
-  const numAmount = parseFloat(amount) || 0;
+  const numAmount = parseMovementAmount(amount) ?? 0;
   const currentGoal = goals.find((g) => g.id === selectedGoalId);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -125,7 +131,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
         ? destinationType === 'goal' ? `Retiro de meta: ${currentGoal?.title || 'Meta'}` : 'Transferencia al mes corriente'
         : destinationType === 'goal' ? `Pago desde meta: ${currentGoal?.title || 'Meta'}` : 'Gasto directo desde ahorros';
 
-    storageService.addSavingsMovement({
+    financeApplication.addSavingsMovement({
       monthKey,
       type: mode,
       amount: numAmount,
@@ -144,8 +150,8 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <ModalShell title="Gestionar ahorro" onClose={onClose}>
+      <ModalSurface scroll="auto">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -153,7 +159,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               <SlidersHorizontal className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="type-dialog-title font-bold">Gestionar Acciones de Ahorro</h2>
+              <h2 className="type-dialog-title font-bold">{initialGoalId ? (mode === 'deposit_from_month' ? 'Aportar a la meta' : mode === 'withdraw_to_month' ? 'Retirar de la meta' : 'Pagar desde la meta') : 'Gestionar ahorro'}</h2>
               <p className="text-xs text-white/75">Fondo Total en Bóveda: {profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             </div>
           </div>
@@ -234,6 +240,12 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
           </div>
 
           {/* Select the goal that receives this contribution or funds this withdrawal. */}
+          {initialGoalId ? (
+            <div className="space-y-1" aria-label="Meta seleccionada">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Meta de ahorro</p>
+              <p className="font-semibold">{currentGoal?.title || 'Esta meta ya no está disponible'}</p>
+            </div>
+          ) : (
           <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 {mode === 'deposit_from_month' ? 'Destino del ahorro' : 'Origen de los fondos'}
@@ -290,27 +302,9 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
               )}
           </div>
 
-          {/* Amount */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Monto ({profile.currency})
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-lg">
-                {profile.currency}
-              </span>
-              <input
-                type="number"
-                step="any"
-                required
-                min="1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl type-money text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
+          )}
+
+          <MoneyField label="Monto" currency={profile.currency} value={amount} onValueChange={setAmount} min="1" />
 
           {/* Direct expense category */}
           {mode === 'direct_expense' && (
@@ -392,8 +386,8 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };
 

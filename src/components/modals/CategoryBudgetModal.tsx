@@ -1,6 +1,10 @@
+import { ModalShell } from '../ui/ModalShell';
+import { ModalSurface } from '../ui/ModalSurface';
 import React, { useEffect, useState } from 'react';
 import { Plus, Save, Trash2, X } from 'lucide-react';
 import { CategoryBudget } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { localizeCategoryName } from '../../i18n/categoryLabels';
 
 interface CategoryBudgetModalProps {
   isOpen: boolean;
@@ -35,6 +39,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const { language } = useLanguage();
   const [drafts, setDrafts] = useState<BudgetDraft[]>([]);
   const [error, setError] = useState('');
 
@@ -91,8 +96,8 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-      <section role="dialog" aria-modal="true" aria-labelledby="category-budget-title" className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <ModalShell title="Editar categorías" onClose={onClose} size="lg">
+      <ModalSurface size="lg" scroll="hidden">
         <header className="flex items-start justify-between gap-4 bg-primary px-5 py-4 text-white">
           <div>
             <h2 id="category-budget-title" className="type-dialog-title">{isSingleCategory ? 'Editar categoría' : 'Categorías del mes'}</h2>
@@ -131,7 +136,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
                         className="mt-1.5 block h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       >
                         <option value="" disabled>Selecciona</option>
-                        {suggestions.map((category) => <option key={category} value={category}>{category}</option>)}
+                        {suggestions.map((category) => <option key={category} value={category}>{localizeCategoryName(language, category)}</option>)}
                         <option value="__custom__">+ Crear categoría</option>
                       </select>
                       {draft.isCustom && (
@@ -185,7 +190,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
             </button>
           </footer>
         </form>
-      </section>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };

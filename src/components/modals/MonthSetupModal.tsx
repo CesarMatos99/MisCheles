@@ -1,3 +1,5 @@
+import { ModalShell } from '../ui/ModalShell';
+import { ModalSurface } from '../ui/ModalSurface';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -13,7 +15,8 @@ import {
 } from 'lucide-react';
 import { MonthConfig, UserProfile, SavingsGoal } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
-import { storageService, getPrevMonthKey } from '../../services/storage';
+import { getPrevMonthKey } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
 
 interface MonthSetupModalProps {
   isOpen: boolean;
@@ -48,12 +51,12 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const existing = storageService.getMonthConfig(monthKey);
-      const remainingPrev = storageService.getPreviousMonthRemaining(year, month);
+      const existing = financeApplication.getMonthConfig(monthKey);
+      const remainingPrev = financeApplication.getPreviousMonthRemaining(year, month);
       const effectivePrevBalance = Math.max(remainingPrev, existing?.carryoverFromPrev || 0);
       setPreviousBalance(effectivePrevBalance);
 
-      const gList = storageService.getSavingsGoals();
+      const gList = financeApplication.getSavingsGoals();
       setGoals(gList);
       if (gList.length > 0) {
         setSelectedGoalId(existing?.rolloverGoalId || gList[0].id);
@@ -87,7 +90,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
     // If transferring to savings, record the transfer in storage
     if (previousBalance > 0) {
       if (rolloverAction === 'transfer_to_savings_general') {
-        storageService.addSavingsMovement({
+        financeApplication.addSavingsMovement({
           monthKey: prevKey,
           type: 'deposit_from_month',
           amount: previousBalance,
@@ -96,7 +99,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
           date: new Date().toISOString().split('T')[0],
         });
       } else if (rolloverAction === 'transfer_to_goal' && selectedGoalId && currentGoal) {
-        storageService.addSavingsMovement({
+        financeApplication.addSavingsMovement({
           monthKey: prevKey,
           type: 'deposit_from_month',
           amount: previousBalance,
@@ -123,14 +126,14 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
       isConfigured: true,
     };
 
-    storageService.saveMonthConfig(config);
+    financeApplication.saveMonthConfig(config);
     onSaved(config);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col">
+    <ModalShell title="Configurar mes" onClose={onClose} size="lg">
+      <ModalSurface size="lg" scroll="hidden">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -407,7 +410,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalSurface>
+    </ModalShell>
   );
 };

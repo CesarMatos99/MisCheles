@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Plus, X } from 'lucide-react';
 
 interface FloatingActionsProps {
+  contextAction?: () => void;
+  contextLabel?: string;
   onExpense: () => void;
   onIncome: () => void;
   onTransfer: () => void;
 }
 
-export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onIncome, onTransfer }) => {
+export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onIncome, onTransfer, contextAction, contextLabel }) => {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +37,7 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onI
 
   return (
     <div ref={rootRef} className="fixed z-40 fab-position">
-      {isOpen && (
+      {isOpen && !contextAction && (
         <div
           id="movement-actions-menu"
           role="group"
@@ -57,11 +59,11 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({ onExpense, onI
       )}
       <button
         type="button"
-        aria-label={isOpen ? 'Cerrar opciones de movimiento' : 'Registrar movimiento'}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        aria-controls="movement-actions-menu"
-        onClick={() => setIsOpen((open) => !open)}
+        aria-label={contextAction ? contextLabel || 'Registrar en esta categoría' : isOpen ? 'Cerrar opciones de movimiento' : 'Registrar movimiento'}
+        aria-haspopup={contextAction ? undefined : true}
+        aria-expanded={contextAction ? undefined : isOpen}
+        aria-controls={contextAction ? undefined : "movement-actions-menu"}
+        onClick={() => { if (contextAction) { setIsOpen(false); contextAction(); } else setIsOpen((open) => !open); }}
         className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
       >
         {isOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Plus className="h-5 w-5" aria-hidden="true" />}

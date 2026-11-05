@@ -57,7 +57,7 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
             </p>
           </div>
 
-          {/* Col 2: Total Fondo Mes */}
+          {/* Col 2: Ingresos del período */}
           <div className="px-3 flex flex-col justify-between">
             <div>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
@@ -73,7 +73,7 @@ export const UnifiedStatsBar: React.FC<UnifiedStatsBarProps> = ({
                   +{profile.currency}{summary.carryover.toLocaleString()} sobrante
                 </span>
               ) : (
-                'Cobro base inicial'
+                'Monto inicial + ingresos adicionales'
               )}
             </p>
           </div>

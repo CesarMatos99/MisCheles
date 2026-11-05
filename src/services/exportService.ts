@@ -1,3 +1,6 @@
+import { buildAnalyticsExport } from './analyticsExport';
+import type { AnalyticsReport } from '../domain/analyticsReport';
+import { transactionTypeLabel } from '../domain/transactionPresentation';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -5,6 +8,12 @@ import { Transaction, SavingsMovement, FinancialSummary, UserProfile } from '../
 import { MONTH_NAMES_ES } from '../constants/categories';
 
 export const exportService = {
+  exportAnalytics(report: AnalyticsReport, format: 'excel' | 'pdf', profile: UserProfile) {
+    const output = buildAnalyticsExport(report, format, profile);
+    if (format === 'excel') XLSX.writeFile(output as XLSX.WorkBook, 'MisCheles_Estadisticas.xlsx');
+    else (output as jsPDF).save('MisCheles_Estadisticas.pdf');
+  },
+
   // Export to Excel (.xlsx)
   exportToExcel(params: {
     year: number;
@@ -33,8 +42,10 @@ export const exportService = {
       ['Sobrante Rollover (Mes Anterior)', summary.carryover],
       ['Ingresos Adicionales del Mes', summary.totalAdditionalIncome],
       ['Retiros de Ahorro hacia este Mes', summary.savingsTransfersFrom],
-      ['TOTAL FONDOS DISPONIBLES', summary.totalIncome],
-      ['Gastos Totales del Mes', summary.totalExpenses],
+      ['INGRESOS DEL PERÍODO', summary.totalIncome],
+      ['Arrastre de períodos anteriores', summary.carryover],
+      ['Gastos de consumo', summary.totalExpenses],
+      ['Gastos pagados desde el mes', summary.regularExpenses],
       ['Aportes enviados al Módulo de Ahorro', summary.savingsTransfersTo],
       ['BALANCE DISPONIBLE AL CIERRE', summary.availableBalance],
       [],
@@ -48,7 +59,7 @@ export const exportService = {
     const txHeaders = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Método de Pago', `Monto (${profile.currency})`];
     const txRows = transactions.map((t) => [
       t.date,
-      t.type === 'expense' ? 'Gasto' : 'Ingreso',
+      transactionTypeLabel(t),
       t.category,
       t.description,
       t.paymentMethod || 'Efectivo',
@@ -63,6 +74,7 @@ export const exportService = {
       let typeLabel = 'Aporte desde el Mes';
       if (sm.type === 'withdraw_to_month') typeLabel = 'Retiro hacia el Mes';
       if (sm.type === 'direct_expense') typeLabel = 'Pago Directo / Gasto desde Ahorro';
+      if (sm.type === 'goal_to_general') typeLabel = 'Saldo de meta pasado al ahorro general';
       return [sm.date, typeLabel, sm.description, sm.category || '-', sm.amount];
     });
     const wsSavings = XLSX.utils.aoa_to_sheet([savingsHeaders, ...savingsRows]);
@@ -111,7 +123,7 @@ export const exportService = {
       ['Cobro / Monto Inicial del Mes', `${curr} ${summary.initialIncome.toLocaleString()}`],
       ['Sobrante Acumulado Mes Anterior', `${curr} ${summary.carryover.toLocaleString()}`],
       ['Ingresos Extra del Mes', `${curr} ${summary.totalAdditionalIncome.toLocaleString()}`],
-      ['Gastos Realizados', `${curr} ${summary.totalExpenses.toLocaleString()}`],
+      ['Gastos de consumo', `${curr} ${summary.totalExpenses.toLocaleString()}`],
       ['Transferencias Enviadas al Ahorro', `${curr} ${summary.savingsTransfersTo.toLocaleString()}`],
       ['BALANCE DISPONIBLE FINAL', `${curr} ${summary.availableBalance.toLocaleString()}`],
       ['FONDO TOTAL EN AHORROS', `${curr} ${summary.totalSavingsVault.toLocaleString()}`],
@@ -138,7 +150,7 @@ export const exportService = {
 
     const txBody = transactions.map((t) => [
       t.date,
-      t.type === 'expense' ? 'Gasto' : 'Ingreso',
+      transactionTypeLabel(t),
       t.category,
       t.description,
       t.paymentMethod || 'Efectivo',
@@ -173,6 +185,8 @@ export const exportService = {
         sm.date,
         sm.type === 'deposit_from_month'
           ? 'Aporte al Ahorro'
+          : sm.type === 'goal_to_general'
+          ? 'Reasignación al ahorro general'
           : sm.type === 'withdraw_to_month'
           ? 'Retorno al Mes'
           : 'Pago/Gasto desde Ahorro',

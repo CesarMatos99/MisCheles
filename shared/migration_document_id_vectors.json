@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "collection": "transactions",
+      "sourceId": "expense-1",
+      "documentId": "legacy_transactions_expense-1_02ac26dd"
+    },
+    {
+      "collection": "savingsMovements",
+      "sourceId": "save-1",
+      "documentId": "legacy_savingsMovements_save-1_a0d0ac4a"
+    },
+    {
+      "collection": "savingsGoals",
+      "sourceId": "goal-1",
+      "documentId": "legacy_savingsGoals_goal-1_cd237550"
+    },
+    {
+      "collection": "monthConfigurations",
+      "sourceId": "2026-10",
+      "documentId": "legacy_monthConfigurations_2026-10_751ec613"
+    },
+    {
+      "collection": "categoryBudgets",
+      "sourceId": "2026-10:Internet",
+      "documentId": "legacy_categoryBudgets_2026-10_Internet_fe6402b6"
+    },
+    {
+      "collection": "transactions",
+      "sourceId": "id with/slash",
+      "documentId": "legacy_transactions_id_with_slash_34b4247a"
+    },
+    {
+      "collection": "transactions",
+      "sourceId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "documentId": "legacy_transactions_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_78d37ce5"
+    },
+    {
+      "collection": "categoryBudgets",
+      "sourceId": "2026-10:Café",
+      "documentId": "legacy_categoryBudgets_2026-10_Caf__ea15208a"
+    }
+  ]
+}

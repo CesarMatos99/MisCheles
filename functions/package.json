@@ -1,0 +1,21 @@
+{
+  "name": "mischeles-functions",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test src/account_deletion_policy.test.ts src/mail_import_contract.test.ts src/firestore_mail_persistence.test.ts src/imported_candidate_review.test.ts src/encrypted_mail_token_vault.test.ts src/firestore_mail_connection_store.test.ts src/mail_connection_lifecycle.test.ts src/mail_oauth_flow.test.ts src/firestore_mail_oauth_state_store.test.ts src/mail_oauth_provider_adapters.test.ts src/mail_sync_contract.test.ts src/firestore_mail_sync_checkpoint_store.test.ts src/mail_provider_api.test.ts"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "@types/node": "^22.18.0"
+  }
+}

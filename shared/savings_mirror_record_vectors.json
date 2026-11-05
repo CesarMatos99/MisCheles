@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "legacy savings mirror in transactions",
+      "collection": "transactions",
+      "storedKind": "savings_contribution",
+      "expectedKind": "expense"
+    },
+    {
+      "name": "canonical savings movement",
+      "collection": "savingsMovements",
+      "storedKind": "savings_contribution",
+      "expectedKind": "savings_contribution"
+    },
+    {
+      "name": "ordinary transaction",
+      "collection": "transactions",
+      "storedKind": "expense",
+      "expectedKind": "expense"
+    }
+  ]
+}

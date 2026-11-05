@@ -13,10 +13,13 @@ import {
   UserRound,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
-import { storageService } from '../../services/storage';
+import { financeApplication } from '../../application/financeApplication';
 import { CURRENCY_OPTIONS } from '../../constants/categories';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
+import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
 
-type ProfileSection = 'home' | 'profile' | 'appearance' | 'security';
+type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -48,6 +51,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenInstall,
   onLockApp,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [savedMessage, setSavedMessage] = useState('');
@@ -64,7 +68,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       pinCode: draft.pinCode.trim() || '1234',
       monthlyTargetIncome: Number(draft.monthlyTargetIncome) || 0,
     };
-    storageService.saveProfile(updated);
+    financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
     setDraft(updated);
     setSavedMessage('Cambios guardados');
@@ -80,12 +84,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const title = section === 'profile'
-    ? 'Datos del perfil'
+    ? t('profileData')
     : section === 'appearance'
-    ? 'Apariencia'
+    ? t('appearance')
     : section === 'security'
-    ? 'Seguridad'
-    : 'Perfil';
+    ? t('security')
+    : section === 'account'
+    ? t('accountSync')
+    : t('profile');
 
   const fieldClass = 'w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 dark:border-slate-700 dark:text-white';
 
@@ -94,10 +100,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
         {section !== 'home' && (
           <button type="button" onClick={() => setSection('home')} className="mb-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary">
-            <ArrowLeft className="h-4 w-4" /> Perfil
+            <ArrowLeft className="h-4 w-4" /> {t('profile')}
           </button>
         )}
-        <p className="text-sm text-slate-500 dark:text-slate-400">Cuenta y preferencias</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings')}</p>
         <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">{title}</h1>
       </header>
 
@@ -115,19 +121,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </section>
           <nav className="divide-y divide-slate-200 dark:divide-slate-800" aria-label="Configuración">
             <button type="button" onClick={() => setSection('profile')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
-              <UserRound className="h-5 w-5 text-primary" /><span className="flex-1">Datos del perfil</span><ChevronRight className="h-4 w-4 text-slate-400" />
+              <UserRound className="h-5 w-5 text-primary" /><span className="flex-1">{t('profileData')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
             <button type="button" onClick={() => setSection('appearance')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
-              <Palette className="h-5 w-5 text-primary" /><span className="flex-1">Apariencia</span><ChevronRight className="h-4 w-4 text-slate-400" />
+              <Palette className="h-5 w-5 text-primary" /><span className="flex-1">{t('appearance')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
+            </button>
+            <button type="button" onClick={() => setSection('account')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+              <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('accountSync')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
             <button type="button" onClick={() => setSection('security')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
-              <Shield className="h-5 w-5 text-primary" /><span className="flex-1">Seguridad</span><ChevronRight className="h-4 w-4 text-slate-400" />
+              <Shield className="h-5 w-5 text-primary" /><span className="flex-1">{t('security')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
             <button type="button" onClick={onOpenInstall} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
-              <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">Instalar aplicación</span><ChevronRight className="h-4 w-4 text-slate-400" />
+              <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('installApp')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
             <button type="button" onClick={onLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-rose-600 dark:text-slate-100">
-              <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" /><span className="flex-1">Bloquear aplicación</span>
+              <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" /><span className="flex-1">{t('lockApp')}</span>
             </button>
           </nav>
         </>
@@ -175,20 +184,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {section === 'appearance' && (
         <div className="space-y-7 py-5">
           <section>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Tema</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Elige cómo quieres ver MisCheles.</p>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('language')}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('languageHelp')}</p>
+            <label className="mt-3 block max-w-sm">
+              <span className="sr-only">{t('language')}</span>
+              <select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)} className={fieldClass}>
+                {LANGUAGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.nativeLabel}</option>)}
+              </select>
+            </label>
+          </section>
+          <section className="border-t border-slate-200 pt-5 dark:border-slate-800">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('theme')}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('themeHelp')}</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <button type="button" onClick={() => onThemeChange(false)} aria-pressed={!isDarkMode} className={!isDarkMode ? 'flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary bg-primary-soft px-3 text-sm font-semibold text-primary transition' : 'flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition dark:border-slate-700 dark:text-slate-300'}>
-                <Sun className="h-4 w-4" />Claro
+                <Sun className="h-4 w-4" />{t('light')}
               </button>
               <button type="button" onClick={() => onThemeChange(true)} aria-pressed={isDarkMode} className={isDarkMode ? 'flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary bg-primary-soft px-3 text-sm font-semibold text-primary transition' : 'flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition dark:border-slate-700 dark:text-slate-300'}>
-                <Moon className="h-4 w-4" />Oscuro
+                <Moon className="h-4 w-4" />{t('dark')}
               </button>
             </div>
           </section>
           <section className="border-t border-slate-200 pt-5 dark:border-slate-800">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Color principal</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Se aplica a botones, indicadores y elementos destacados.</p>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('primaryColor')}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('primaryColorHelp')}</p>
             <div className="mt-4 flex flex-wrap gap-4">
               {ACCENT_COLORS.map((color) => {
                 const selected = accentColor.toLowerCase() === color.value;
@@ -200,6 +219,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </section>
         </div>
       )}
+
+      {section === 'account' && <AccountSettingsSection />}
 
       {section === 'security' && (
         <form onSubmit={saveProfile} className="space-y-5 py-5">

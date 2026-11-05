@@ -1,0 +1,16 @@
+{
+  "defaultLanguage": "es",
+  "supported": [
+    {
+      "code": "es",
+      "locale": "es-DO",
+      "name": "Español"
+    },
+    {
+      "code": "en",
+      "locale": "en-US",
+      "name": "English"
+    }
+  ],
+  "storageKey": "mischeles_language_v1"
+}

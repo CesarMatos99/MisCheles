@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTH_NAMES_ES } from '../../constants/categories';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PeriodSelectorProps {
   year: number;
@@ -10,6 +10,8 @@ interface PeriodSelectorProps {
 }
 
 export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onMonthChange, compact = false }) => {
+  const { language, locale } = useLanguage();
+  const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, index, 1)));
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const latestYear = Math.max(2030, new Date().getFullYear() + 4);
@@ -38,25 +40,25 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onM
 
   return (
     <div ref={rootRef} className={compact ? "relative inline-flex items-center gap-0" : "relative inline-flex items-center gap-1"}>
-      <button type="button" onClick={() => shiftMonth(-1)} aria-label="Mes anterior" className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
+      <button type="button" onClick={() => shiftMonth(-1)} aria-label={language === 'es' ? 'Mes anterior' : 'Previous month'} className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label="Elegir mes" aria-expanded={isOpen} aria-haspopup="true" className={compact ? "min-h-9 whitespace-nowrap rounded-xl px-1 text-xs font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100" : "min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100"}>
-        {MONTH_NAMES_ES[month - 1]} {year}
+      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label={language === 'es' ? 'Elegir mes' : 'Choose month'} aria-expanded={isOpen} aria-haspopup="true" className={compact ? "min-h-9 whitespace-nowrap rounded-xl px-1 text-xs font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100" : "min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100"}>
+        {monthNames[month - 1]} {year}
       </button>
-      <button type="button" onClick={() => shiftMonth(1)} aria-label="Mes siguiente" className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
+      <button type="button" onClick={() => shiftMonth(1)} aria-label={language === 'es' ? 'Mes siguiente' : 'Next month'} className={compact ? "flex h-9 w-8 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
         <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
       {isOpen && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
           <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Período</span>
-            <select value={year} onChange={(event) => onMonthChange(Number(event.target.value), month)} aria-label="Año" className="h-9 rounded-lg border border-slate-200 bg-transparent px-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:text-slate-100">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{language === 'es' ? 'Período' : 'Period'}</span>
+            <select value={year} onChange={(event) => onMonthChange(Number(event.target.value), month)} aria-label={language === 'es' ? 'Año' : 'Year'} className="h-9 rounded-lg border border-slate-200 bg-transparent px-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:text-slate-100">
               {years.map((availableYear) => <option key={availableYear} value={availableYear}>{availableYear}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-3 gap-1">
-            {MONTH_NAMES_ES.map((name, index) => {
+            {monthNames.map((name, index) => {
               const selected = month === index + 1;
               return <button key={name} type="button" aria-pressed={selected} onClick={() => { onMonthChange(year, index + 1); setIsOpen(false); }} className={'min-h-10 rounded-lg px-2 text-sm font-medium transition-colors ' + (selected ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>
                 {name.slice(0, 3)}

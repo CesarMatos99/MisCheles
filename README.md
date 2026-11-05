@@ -1,32 +1,42 @@
 # MisCheles
 
-Aplicación para organizar ingresos, gastos, presupuesto mensual y ahorro. La interfaz se comparte entre web y Android; la capa de almacenamiento y las integraciones nativas se conectarán por plataforma.
+MisCheles mantiene su cliente web en React y agrega un cliente Android en Flutter. Ambos comparten el contrato financiero y el esquema de cuentas Firebase/Firestore. La arquitectura separa los registros ficticios, el uso local sin cuenta y la cuenta sincronizada.
 
-## Desarrollo
+## Modos de uso
 
-Este repositorio usa Bun, Vite, React y TypeScript. Con Docker Desktop activo:
+- **Demostración:** registros de ejemplo aislados.
+- **Local:** web guarda en el navegador; Android guarda en una base SQLCipher protegida por una clave del dispositivo. No requiere cuenta.
+- **Cuenta:** Firebase Authentication y Firestore sincronizan registros por UID entre web y Android. Requiere configurar Firebase para cada plataforma.
+
+Los datos locales no se borran al crear una cuenta. La aplicación ofrece una vista previa y permite seleccionar qué registros migrar. Gmail y Outlook están contemplados en el modelo y el contrato backend; la conexión OAuth y el procesamiento de mensajes todavía no están habilitados.
+
+## Probar la web
+
+Con Docker Desktop activo, desde la raíz:
 
 ```powershell
 docker compose up --build -d
 ```
 
-La web estará en `http://localhost:5174`. Los cambios en `src/` se reflejan en el navegador. Para ver los registros usa `docker compose logs -f web`; para detener el servicio usa `docker compose down`.
+Abre [http://localhost:5174](http://localhost:5174). Para ver los registros usa `docker compose logs -f web`; para detener el contenedor usa `docker compose down`.
+
+## Probar Android
+
+Abre `mobile/mischeles_flutter` en VS Code con Flutter y Android SDK configurados. Ejecuta `flutter pub get` y `flutter run` para probar demo y almacenamiento local. La sincronización requiere configuración Firebase; la guía [DESARROLLO.md](DESARROLLO.md) explica los emuladores y sus banderas de configuración.
 
 ## Estructura
 
-```text
-src/
-  components/       # Elementos compartidos, navegación, diálogos y controles
-  features/         # Pantallas agrupadas por dominio funcional
-  constants/        # Categorías y opciones de catálogo
-  hooks/            # Estado y comportamiento reutilizable
-  services/         # Persistencia y exportación
-  types/            # Contratos de datos
-  App.tsx           # Composición de la aplicación y estado de navegación
-```
+- `src/`: cliente web React, módulos y componentes.
+- `src/domain/`: cálculos financieros y divisas del cliente web.
+- `src/firebase/`: Auth, sincronización y repositorios Firestore web.
+- `src/services/localMigrationService.ts`: vista previa y migración segura del almacenamiento web.
+- `mobile/mischeles_flutter/`: cliente Android, dominio Dart, SQLCipher y Firebase.
+- `shared/`: codec Firestore y vectores que comprueban el contrato financiero entre React y Flutter.
+- `functions/`: funciones backend y contrato seguro para candidatos de notificaciones bancarias.
+- `firestore.rules`: reglas de acceso por UID con denegación por defecto.
 
-Las decisiones de producto y seguridad están en `docs/PRODUCTO-Y-ARQUITECTURA.md`; los tamaños, fuentes, botones y paleta están en `docs/SISTEMA-VISUAL.md`.
+## Estado de configuración
 
-## Estado actual
+El repositorio no incluye credenciales y no se ha creado un proyecto Firebase real. La cuenta requiere configurar las aplicaciones Firebase; los tokens OAuth de correo no se guardan en los clientes. El ID Android provisional es `com.mischeles.app`; debe confirmarse antes de publicar.
 
-El prototipo todavía usa `localStorage`, incluye datos demostrativos y no implementa autenticación, respaldo en la nube, base SQLite nativa ni importación bancaria. La interfaz aplica una propuesta minimalista y continua, con tema claro/oscuro y color de acento configurable. Revisa `docs/SISTEMA-VISUAL.md` antes de añadir componentes para conservar los mismos criterios.
+Consulta [DESARROLLO.md](DESARROLLO.md) para comandos y estado de verificación, y [la auditoría de arquitectura](docs/ARQUITECTURA-MULTIPLATAFORMA-Y-AUDITORIA.md) para decisiones, riesgos y etapas.

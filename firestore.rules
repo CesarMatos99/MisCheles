@@ -1,0 +1,240 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true;
+    }
+
+    function validOwnedWrite(uid) {
+      return signedInAs(uid)
+        && request.resource.data.ownerUid == uid
+        && request.resource.data.schemaVersion == 1;
+    }
+
+    function ownsCurrent(uid) {
+      return signedInAs(uid) && resource.data.ownerUid == uid;
+    }
+
+    function validDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function validDateTime(value) {
+      return value is string && value.size() <= 64
+        && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$');
+    }
+
+    function validMonth(value) {
+      return value is string && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])$');
+    }
+
+    function validCurrency(value) {
+      return value is string && value.matches('^[A-Z]{3}$');
+    }
+
+    function validPositiveMinor(value) {
+      return value is int && value > 0 && value <= 9007199254740991;
+    }
+
+    function validNonNegativeMinor(value) {
+      return value is int && value >= 0 && value <= 9007199254740991;
+    }
+
+    function validPayment(value) {
+      return value in ['cash', 'debit_card', 'credit_card', 'bank_transfer', 'other'];
+    }
+
+    function validOrigin(value) {
+      return value in ['manual', 'email_import', 'local_migration'];
+    }
+
+    function validMovement(uid, recordId, savingsOnly) {
+      return validOwnedWrite(uid)
+        && request.resource.data.keys().hasAll([
+          'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'kind',
+          'amountMinor', 'currency', 'occurredOn', 'monthKey', 'categoryName',
+          'description', 'paymentMethod', 'origin'
+        ])
+        && request.resource.data.id == recordId
+        && request.resource.data.kind in (savingsOnly
+          ? ['savings_contribution', 'savings_withdrawal', 'savings_direct_expense', 'savings_reallocation']
+          : ['income', 'expense', 'transfer'])
+        && validPositiveMinor(request.resource.data.amountMinor)
+        && validCurrency(request.resource.data.currency)
+        && validDate(request.resource.data.occurredOn)
+        && validMonth(request.resource.data.monthKey)
+        && request.resource.data.categoryName is string
+        && request.resource.data.description is string
+        && validPayment(request.resource.data.paymentMethod)
+        && validOrigin(request.resource.data.origin)
+        && (!('balanceAffecting' in request.resource.data) || request.resource.data.balanceAffecting is bool)
+        && (!('relatedSavingsMovementId' in request.resource.data) || request.resource.data.relatedSavingsMovementId is string)
+        && (!savingsOnly || request.resource.data.origin != 'email_import')
+        && (!('occurredAt' in request.resource.data) || validDateTime(request.resource.data.occurredAt))
+        && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+        && (!('bankName' in request.resource.data) || (request.resource.data.bankName is string && request.resource.data.bankName.size() <= 120))
+        && (!('bankReferenceHash' in request.resource.data) || (request.resource.data.bankReferenceHash is string && request.resource.data.bankReferenceHash.matches('^[a-f0-9]{64}$')))
+        && (!('paymentInstrumentLastFour' in request.resource.data) || (request.resource.data.paymentInstrumentLastFour is string && request.resource.data.paymentInstrumentLastFour.matches('^[0-9]{4}$')));
+    }
+
+    function importedCandidateLinkValid(uid, movement) {
+      return movement.origin != 'email_import'
+        || (movement.importedCandidateId is string
+          && existsAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId))
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.ownerUid == uid
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.reviewStatus == 'confirmed'
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.confirmedMovementId == movement.id
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.transactionType == movement.kind
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.amountMinor == movement.amountMinor
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.currency == movement.currency
+          && getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.occurredOn == movement.occurredOn
+          && (!('occurredAt' in getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data) || movement.occurredAt == getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.occurredAt)
+          && (!('bankName' in getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data) || movement.bankName == getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.bankName)
+          && (!('bankReferenceHash' in getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data) || movement.bankReferenceHash == getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.bankReferenceHash)
+          && (!('paymentInstrumentLastFour' in getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data) || movement.paymentInstrumentLastFour == getAfter(/databases/$(database)/documents/users/$(uid)/importedCandidates/$(movement.importedCandidateId)).data.paymentInstrumentLastFour));
+    }
+
+    function confirmedImportedMovementExists(uid, candidateId) {
+      return request.resource.data.confirmedMovementId is string
+        && existsAfter(/databases/$(database)/documents/users/$(uid)/transactions/$(request.resource.data.confirmedMovementId))
+        && getAfter(/databases/$(database)/documents/users/$(uid)/transactions/$(request.resource.data.confirmedMovementId)).data.ownerUid == uid
+        && getAfter(/databases/$(database)/documents/users/$(uid)/transactions/$(request.resource.data.confirmedMovementId)).data.importedCandidateId == candidateId
+        && getAfter(/databases/$(database)/documents/users/$(uid)/transactions/$(request.resource.data.confirmedMovementId)).data.origin == 'email_import'
+        && getAfter(/databases/$(database)/documents/users/$(uid)/transactions/$(request.resource.data.confirmedMovementId)).data.kind == request.resource.data.transactionType;
+    }
+
+    match /users/{uid} {
+      allow read: if signedInAs(uid);
+      allow create, update: if validOwnedWrite(uid)
+        && request.resource.data.keys().hasOnly([
+          'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'displayName',
+          'preferredCurrency', 'language', 'theme', 'accentColor',
+          'settingsImportedFromLocal', 'syncEnabled'
+        ])
+        && (!('displayName' in request.resource.data) || request.resource.data.displayName is string)
+        && (!('preferredCurrency' in request.resource.data) || validCurrency(request.resource.data.preferredCurrency))
+        && (!('language' in request.resource.data) || request.resource.data.language in ['es', 'en'])
+        && (!('theme' in request.resource.data) || request.resource.data.theme in ['light', 'dark', 'system'])
+        && (!('accentColor' in request.resource.data) || (request.resource.data.accentColor is string && request.resource.data.accentColor.matches('^#[0-9A-Fa-f]{6}$')))
+        && (!('syncEnabled' in request.resource.data) || request.resource.data.syncEnabled is bool)
+        && (!('settingsImportedFromLocal' in request.resource.data) || request.resource.data.settingsImportedFromLocal is bool);
+      allow delete: if false;
+
+      match /transactions/{recordId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if validMovement(uid, recordId, false)
+          && request.resource.data.keys().hasOnly([
+            'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'kind',
+            'amountMinor', 'currency', 'occurredOn', 'occurredAt', 'monthKey', 'categoryId',
+            'categoryName', 'description', 'notes', 'bankName', 'bankReferenceHash',
+            'paymentInstrumentLastFour', 'paymentMethod', 'origin', 'savingsGoalId',
+            'importedCandidateId', 'dedupeKey', 'localSourceId', 'transferGroupId',
+            'relatedSavingsMovementId', 'legacySnapshot', 'sourceEntity'
+          ])
+          && importedCandidateLinkValid(uid, request.resource.data);
+        allow delete: if ownsCurrent(uid);
+      }
+
+      match /monthConfigurations/{recordId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if validOwnedWrite(uid)
+          && request.resource.data.keys().hasOnly([
+            'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'monthKey',
+            'openingCarryoverMinor', 'initialIncomeMinor', 'autoRolloverEnabled',
+            'legacySnapshot', 'localSourceId', 'sourceEntity', 'origin',
+            'rolloverAction', 'rolloverGoalId', 'rolloverGoalTitle', 'notes', 'isConfigured'
+          ])
+          && request.resource.data.id == recordId
+          && validMonth(request.resource.data.monthKey)
+          && validNonNegativeMinor(request.resource.data.openingCarryoverMinor)
+          && validNonNegativeMinor(request.resource.data.initialIncomeMinor)
+          && request.resource.data.autoRolloverEnabled is bool;
+        allow delete: if ownsCurrent(uid);
+      }
+
+      match /categoryBudgets/{recordId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if validOwnedWrite(uid)
+          && request.resource.data.keys().hasOnly([
+            'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'monthKey',
+            'categoryId', 'categoryName', 'assignedMinor', 'currency', 'legacySnapshot',
+            'localSourceId', 'sourceEntity', 'origin'
+          ])
+          && request.resource.data.id == recordId
+          && validMonth(request.resource.data.monthKey)
+          && request.resource.data.categoryId is string
+          && request.resource.data.categoryName is string
+          && validNonNegativeMinor(request.resource.data.assignedMinor)
+          && validCurrency(request.resource.data.currency);
+        allow delete: if ownsCurrent(uid);
+      }
+
+      match /savingsGoals/{recordId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if validOwnedWrite(uid)
+          && request.resource.data.keys().hasOnly([
+            'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'title',
+            'targetMinor', 'targetDate', 'currency', 'legacyBalanceMinor',
+            'legacySnapshot', 'localSourceId', 'sourceEntity', 'origin'
+          ])
+          && request.resource.data.id == recordId
+          && request.resource.data.title is string
+          && validNonNegativeMinor(request.resource.data.targetMinor)
+          && (!('legacyBalanceMinor' in request.resource.data) || validNonNegativeMinor(request.resource.data.legacyBalanceMinor))
+          && validCurrency(request.resource.data.currency);
+        allow delete: if ownsCurrent(uid);
+      }
+
+      match /savingsMovements/{recordId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if validMovement(uid, recordId, true)
+          && request.resource.data.keys().hasOnly([
+            'id', 'ownerUid', 'schemaVersion', 'createdAt', 'updatedAt', 'kind',
+            'amountMinor', 'currency', 'occurredOn', 'monthKey', 'categoryId',
+            'categoryName', 'description', 'paymentMethod', 'origin', 'savingsGoalId',
+            'occurredAt', 'notes', 'importedCandidateId', 'dedupeKey', 'localSourceId', 'transferGroupId',
+            'legacySnapshot', 'sourceEntity', 'balanceAffecting'
+          ]);
+        allow delete: if ownsCurrent(uid);
+      }
+
+      match /importedCandidates/{recordId} {
+        allow read: if signedInAs(uid) && resource.data.keys().hasOnly([
+          'id', 'ownerUid', 'schemaVersion', 'provider', 'providerMessageId',
+          'connectionId', 'messageFingerprint', 'dedupeKey', 'transactionType', 'occurredOn',
+          'amountMinor', 'currency', 'merchant', 'description', 'paymentHint',
+          'receivedAt', 'occurredAt', 'bankName', 'bankReferenceHash', 'paymentInstrumentLastFour',
+          'reviewStatus', 'possibleDuplicateTransactionIds', 'confirmedMovementId', 'createdAt', 'updatedAt'
+        ]);
+        allow create: if false;
+        allow update: if ownsCurrent(uid)
+          && request.resource.data.ownerUid == uid
+          && resource.data.transactionType in ['income', 'expense']
+          && resource.data.reviewStatus in ['pending_review', 'possible_duplicate']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'reviewStatus', 'confirmedMovementId', 'updatedAt'
+          ])
+          && request.resource.data.reviewStatus in ['confirmed', 'ignored']
+          && (request.resource.data.reviewStatus == 'confirmed'
+            ? confirmedImportedMovementExists(uid, recordId)
+            : !('confirmedMovementId' in request.resource.data));
+        allow delete: if false;
+      }
+
+      match /mailConnections/{connectionId} {
+        // Only sanitized connection status may be read; OAuth credentials and provider cursors stay server-side.
+        allow read: if signedInAs(uid) && resource.data.keys().hasOnly([
+          'id', 'ownerUid', 'schemaVersion', 'provider', 'maskedAddress', 'grantedScopes',
+          'status', 'connectedAt', 'lastSyncAt', 'createdAt', 'updatedAt'
+        ]);
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
