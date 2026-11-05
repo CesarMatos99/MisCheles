@@ -18,6 +18,7 @@ import { CURRENCY_OPTIONS } from '../../constants/categories';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
 import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
+import { localLockCredential } from '../../services/localLockCredential';
 
 type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
 
@@ -55,22 +56,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [savedMessage, setSavedMessage] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [securityError, setSecurityError] = useState('');
   const photoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => setDraft(profile), [profile]);
 
-  const saveProfile = (event: React.FormEvent) => {
+  const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
-    const updated = {
-      ...draft,
-      name: draft.name.trim() || 'Usuario',
-      email: draft.email.trim(),
-      pinCode: draft.pinCode.trim() || '1234',
-      monthlyTargetIncome: Number(draft.monthlyTargetIncome) || 0,
-    };
+    setSecurityError('');
+    if (section === 'security') {
+      try {
+        if (newPin) await localLockCredential.setPin(newPin);
+        if (draft.pinLockEnabled && !newPin && !(await localLockCredential.hasPin())) { setSecurityError('Configura un PIN de 4 dígitos antes de activar el bloqueo.'); return; }
+      } catch (error) { setSecurityError(error instanceof Error ? error.message : 'No se pudo guardar el PIN.'); return; }
+    }
+    const updated: UserProfile = { ...draft, name: draft.name.trim() || 'Usuario', email: draft.email.trim(), biometricsEnabled: false, monthlyTargetIncome: Number(draft.monthlyTargetIncome) || 0 };
     financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
     setDraft(updated);
+    setNewPin('');
     setSavedMessage('Cambios guardados');
     window.setTimeout(() => setSavedMessage(''), 2200);
   };
@@ -225,18 +230,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {section === 'security' && (
         <form onSubmit={saveProfile} className="space-y-5 py-5">
           <label className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
-            <span><span className="block text-sm font-semibold text-slate-900 dark:text-white">Bloqueo al abrir</span><span className="mt-1 block text-xs text-slate-500">Solicita autenticación al volver a entrar a la aplicación.</span></span>
+            <span><span className="block text-sm font-semibold text-slate-900 dark:text-white">Bloquear la aplicación al salir</span><span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">Al volver después de enviarla al fondo, solicita tu PIN. No cierra tu sesión ni sustituye el acceso a tu cuenta.</span></span>
             <input type="checkbox" checked={draft.pinLockEnabled} onChange={(e) => setDraft({ ...draft, pinLockEnabled: e.target.checked })} className="mt-1 h-4 w-4 accent-primary" />
           </label>
-          <label className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
-            <span><span className="block text-sm font-semibold text-slate-900 dark:text-white">Desbloqueo biométrico</span><span className="mt-1 block text-xs text-slate-500">Usa huella o reconocimiento facial si el dispositivo lo permite.</span></span>
-            <input type="checkbox" checked={draft.biometricsEnabled} onChange={(e) => setDraft({ ...draft, biometricsEnabled: e.target.checked })} className="mt-1 h-4 w-4 accent-primary" />
-          </label>
+          <div className="rounded-xl border border-slate-200 p-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:text-slate-300"><strong>Desbloqueo biométrico</strong><p className="mt-1">No está disponible en esta versión web. El acceso biométrico no se simula ni reemplaza la verificación del PIN.</p></div>
           <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">PIN de respaldo (4 dígitos)</span>
-            <input type="password" inputMode="numeric" maxLength={4} value={draft.pinCode} onChange={(e) => setDraft({ ...draft, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} className={fieldClass + ' max-w-40 tracking-[0.4em]'} />
-            <span className="block text-xs text-slate-500">Se usa como alternativa si no puedes desbloquear con biometría.</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">PIN de privacidad (4 dígitos)</span>
+            <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Deja vacío para conservarlo" className={fieldClass + ' max-w-64 tracking-[0.25em]'} />
+            <span className="block text-xs text-slate-500 dark:text-slate-400">Se guarda solo en este dispositivo y no se sincroniza con tu cuenta.</span>
           </label>
+          {securityError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{securityError}</p>}
           <SaveActions savedMessage={savedMessage} />
         </form>
       )}

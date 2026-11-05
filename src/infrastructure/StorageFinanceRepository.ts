@@ -5,6 +5,7 @@ import type { CategoryBudget, FinancialSummary, MonthConfig, SavingsGoal, Saving
 /** Browser localStorage adapter. The existing scoped keys and sync events remain owned by storageService. */
 export class StorageFinanceRepository implements FinanceRepository {
   getProfile(): UserProfile { return storageService.getProfile(); }
+  takeLegacyLockPin(): string | null { return storageService.takeLegacyLockPin(); }
   saveProfile(value: UserProfile): void { storageService.saveProfile(value); }
   getMonthConfigs(): Record<string, MonthConfig> { return storageService.getMonthConfigs(); }
   getMonthConfig(key: string): MonthConfig | null { return storageService.getMonthConfig(key); }

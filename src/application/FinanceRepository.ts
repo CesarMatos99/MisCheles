@@ -2,7 +2,7 @@ import type { CategoryBudget, FinancialSummary, MonthConfig, SavingsGoal, Saving
 
 /** Application port for financial data. UI and use cases depend on this contract, not browser storage. */
 export interface FinanceRepository {
-  getProfile(): UserProfile; saveProfile(profile: UserProfile): void;
+  getProfile(): UserProfile; saveProfile(profile: UserProfile): void; takeLegacyLockPin(): string | null;
   getMonthConfigs(): Record<string, MonthConfig>; getMonthConfig(monthKey: string): MonthConfig | null; saveMonthConfig(config: MonthConfig): void;
   getCategoryBudgets(monthKey: string): CategoryBudget[]; getAllCategoryBudgets(): Record<string, CategoryBudget[]>; saveCategoryBudgets(monthKey: string, budgets: CategoryBudget[]): void;
   getTransactions(): Transaction[]; getTransactionsByMonth(monthKey: string): Transaction[]; addTransaction(transaction: Omit<Transaction, 'id' | 'createdAt'>): Transaction; updateTransaction(transaction: Transaction): void; deleteTransaction(id: string): void;

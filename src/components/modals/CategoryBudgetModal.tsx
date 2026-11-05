@@ -12,6 +12,7 @@ interface CategoryBudgetModalProps {
   currency: string;
   budgets: CategoryBudget[];
   isSingleCategory?: boolean;
+  startWithNewCategory?: boolean;
   reservedCategories?: string[];
   suggestedCategories: string[];
   onClose: () => void;
@@ -34,6 +35,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
   currency,
   budgets,
   isSingleCategory = false,
+  startWithNewCategory = false,
   reservedCategories = [],
   suggestedCategories,
   onClose,
@@ -45,15 +47,11 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setDrafts(budgets.map((budget) => ({
-        category: budget.category,
-        amount: String(budget.amount),
-        isCustom: false,
-        customCategory: '',
-      })));
+      const currentDrafts = budgets.map((budget) => ({ category: budget.category, amount: String(budget.amount), isCustom: false, customCategory: '' }));
+      setDrafts(startWithNewCategory && !isSingleCategory ? [...currentDrafts, emptyDraft()] : currentDrafts);
       setError('');
     }
-  }, [isOpen, budgets]);
+  }, [isOpen, budgets, startWithNewCategory, isSingleCategory]);
 
   if (!isOpen) return null;
 
@@ -100,7 +98,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
       <ModalSurface size="lg" scroll="hidden">
         <header className="flex items-start justify-between gap-4 bg-primary px-5 py-4 text-white">
           <div>
-            <h2 id="category-budget-title" className="type-dialog-title">{isSingleCategory ? 'Editar categoría' : 'Categorías del mes'}</h2>
+            <h2 id="category-budget-title" className="type-dialog-title">{isSingleCategory ? 'Editar categoría' : startWithNewCategory ? 'Agregar categoría' : 'Categorías del mes'}</h2>
             <p className="mt-1 text-sm text-white/75">{monthLabel}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white">

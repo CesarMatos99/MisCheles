@@ -16,7 +16,7 @@ export function buildAnalyticsExport(report: AnalyticsReport, format: 'excel' | 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
         ['ESTADÍSTICAS - MISCHELES'], ['Período', report.period], ['Categoría', report.category],
-        ['Usuario', profile.name], [], ['Indicador', 'Valor'], ...report.metrics,
+        ['Generado', new Date().toLocaleString('es-DO')], [], ['Indicador', 'Valor'], ...report.metrics,
       ]), 'Resumen');
       if (report.breakdown) XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([[report.breakdown.title], ['Categoría / Destino', 'Monto', 'Participación'], ...report.breakdown.rows]), 'Ranking');
       report.tables?.forEach((table, index) => XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([[table.title], table.headers, ...table.rows]), 'Análisis ' + (index + 1)));
@@ -25,7 +25,7 @@ export function buildAnalyticsExport(report: AnalyticsReport, format: 'excel' | 
     } else {
       const pdf = new jsPDF();
       pdf.setFontSize(16); pdf.text('Estadísticas - MisCheles', 14, 18);
-      autoTable(pdf, { startY: 24, body: [['Período', report.period], ['Categoría', report.category], ...report.metrics], theme: 'striped' });
+      autoTable(pdf, { startY: 24, body: [['Período', report.period], ['Categoría', report.category], ['Generado', new Date().toLocaleDateString('es-DO')], ...report.metrics], theme: 'striped' });
       if (report.breakdown) { pdf.addPage(); pdf.setFontSize(12); pdf.text(report.breakdown.title, 14, 18); autoTable(pdf, { startY: 24, head: [['Categoría / Destino', 'Monto', 'Participación']], body: report.breakdown.rows }); }
       report.tables?.forEach(table => { pdf.addPage(); pdf.setFontSize(12); pdf.text(table.title, 14, 18); autoTable(pdf, { startY: 24, head: [table.headers], body: table.rows, styles: { fontSize: 8 } }); });
       if (rows.length) { pdf.addPage(); autoTable(pdf, { head: [header], body: rows, styles: { fontSize: 8 } }); }

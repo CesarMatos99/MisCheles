@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Fingerprint, Lock, ShieldCheck, Delete, ArrowRight, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { Delete, Lock } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { biometricService } from '../../services/biometricService';
 
@@ -14,65 +14,21 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
   const [isVerifyingBio, setIsVerifyingBio] = useState<boolean>(false);
   const [bioSupported, setBioSupported] = useState<boolean>(true);
 
-  useEffect(() => {
-    biometricService.isBiometricAvailable().then((supported) => {
-      setBioSupported(supported);
-      // Auto prompt biometrics if enabled
-      if (profile.biometricsEnabled) {
-        handleBiometricAuth();
-      }
-    });
-  }, [profile.biometricsEnabled]);
-
-  const handleKeyPress = (num: string) => {
-    if (pin.length < 4) {
-      const nextPin = pin + num;
-      setPin(nextPin);
-      setErrorMsg('');
-
-      if (nextPin.length === 4) {
-        // Validate PIN
-        if (biometricService.verifyPin(nextPin, profile.pinCode || '1234')) {
-          onUnlock();
-        } else {
-          setErrorMsg('PIN incorrecto. Intenta de nuevo.');
-          setTimeout(() => setPin(''), 500);
-        }
-      }
+  const handleKeyPress = async (num: string) => {
+    if (pin.length >= 4) return;
+    const nextPin = pin + num;
+    setPin(nextPin);
+    setErrorMsg('');
+    if (nextPin.length === 4) {
+      const valid = await biometricService.verifyPin(nextPin);
+      if (valid) onUnlock();
+      else { setErrorMsg('PIN incorrecto. Intenta de nuevo.'); window.setTimeout(() => setPin(''), 600); }
     }
   };
 
   const handleDelete = () => {
     setPin((prev) => prev.slice(0, -1));
     setErrorMsg('');
-  };
-
-  const handleBiometricAuth = async () => {
-    setIsVerifyingBio(true);
-    setErrorMsg('');
-    try {
-      const success = await biometricService.verifyBiometric();
-      if (success) {
-        onUnlock();
-      } else {
-        // Fallback simulation for browsers/preview environments where navigator.credentials is sandboxed
-        // Provide tactile biometric verification feedback
-        setTimeout(() => {
-          setIsVerifyingBio(false);
-        }, 600);
-      }
-    } catch {
-      setIsVerifyingBio(false);
-    }
-  };
-
-  const triggerSimulatedBiometric = () => {
-    setIsVerifyingBio(true);
-    setErrorMsg('');
-    setTimeout(() => {
-      setIsVerifyingBio(false);
-      onUnlock();
-    }, 800);
   };
 
   return (
@@ -151,20 +107,6 @@ export const BiometricLockScreen: React.FC<BiometricLockScreenProps> = ({ profil
           </button>
         </div>
 
-        {/* Biometric Action Button */}
-        {profile.biometricsEnabled && (
-          <div className="flex flex-col items-center gap-2 mt-1">
-            <button
-              onClick={triggerSimulatedBiometric}
-              disabled={isVerifyingBio}
-              className="group flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-primary-soft hover:bg-primary-soft border border-primary/40 text-primary active:scale-95 transition-all text-sm font-medium"
-            >
-              <Fingerprint className={`w-5 h-5 ${isVerifyingBio ? 'animate-pulse text-primary' : 'group-hover:scale-110 transition-transform'}`} />
-              <span>{isVerifyingBio ? 'Leyendo huella/FaceID...' : 'Desbloquear con Huella'}</span>
-            </button>
-            <span className="text-xs text-slate-500">PIN por defecto: 1234 (configurable en Perfil)</span>
-          </div>
-        )}
       </div>
     </div>
   );

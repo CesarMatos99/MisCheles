@@ -33,6 +33,7 @@ import { EXPENSE_CATEGORIES, MONTH_NAMES_ES } from './constants/categories';
 import { AnalyticsView } from './features/dashboard/AnalyticsView';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAppNavigation } from './navigation/useAppNavigation';
+import { localLockCredential } from './services/localLockCredential';
 
 export default function App() {
   const { t } = useLanguage();
@@ -66,6 +67,7 @@ export default function App() {
   const { monthConfig, transactions, summary, categoryBudgets, allTransactions, allSavingsMovements, allSavingsGoals, refreshMonthData } = useFinanceWorkspace(year, month);
   const [transactionCategoryFilter, setTransactionCategoryFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [startWithNewCategory, setStartWithNewCategory] = useState(false);
   const [budgetNotice, setBudgetNotice] = useState<{ kind: 'near' | 'over'; category: string; amount: number; budgetAmount: number } | null>(null);
 
   const { isMonthSetupOpen, setIsMonthSetupOpen, isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen, editingCategory, setEditingCategory,
@@ -80,6 +82,33 @@ export default function App() {
     setSelectedCategory(null);
   }, [closeModuleModals]);
   const { activeTab, navigateToTab } = useAppNavigation(onModuleChange);
+
+  useEffect(() => {
+    const legacyPin = financeApplication.takeLegacyLockPin();
+    if (!legacyPin) return;
+    void localLockCredential.setPin(legacyPin).catch(() => {
+      const profileWithoutLock = { ...financeApplication.getProfile(), pinLockEnabled: false, biometricsEnabled: false };
+      financeApplication.saveProfile(profileWithoutLock);
+      financeApplication.setAppUnlocked();
+      setProfile(profileWithoutLock);
+      setIsLocked(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!profile.pinLockEnabled) return;
+    let timer: number | undefined;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        timer = window.setTimeout(() => { financeApplication.setAppLocked(); setIsLocked(true); }, 900);
+      } else if (timer !== undefined) {
+        window.clearTimeout(timer);
+        timer = undefined;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => { document.removeEventListener('visibilitychange', onVisibilityChange); if (timer !== undefined) window.clearTimeout(timer); };
+  }, [profile.pinLockEnabled]);
 
   // Synchronize Dark Theme class on html root
   useEffect(() => {
@@ -206,14 +235,13 @@ export default function App() {
       <Header
         isDarkMode={isDarkMode}
         onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
-        onLockApp={handleLockApp}
         onOpenProfile={() => navigateToTab('profile')}
         profile={profile}
       />
 
       {/* Main Navigation Tabs on Desktop */}
       <div className="hidden sm:block border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex gap-2">
             {[
               { id: 'dashboard' as ActiveTab, label: t('home'), icon: PieChart },
@@ -278,7 +306,9 @@ export default function App() {
               categoryBudgets={categoryBudgets}
               onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
               onOpenExport={() => setIsExportModalOpen(true)}
+              onAddCategory={() => { setEditingCategory(null); setStartWithNewCategory(true); setIsCategoryBudgetModalOpen(true); }}
               onManageBudgets={() => {
+                setStartWithNewCategory(false);
                 setEditingCategory(null);
                 setIsCategoryBudgetModalOpen(true);
               }}
@@ -373,6 +403,7 @@ export default function App() {
           ? categoryBudgets.filter((budget) => budget.category === editingCategory)
           : categoryBudgets}
         isSingleCategory={Boolean(editingCategory)}
+        startWithNewCategory={startWithNewCategory}
         reservedCategories={editingCategory
           ? categoryBudgets.filter((budget) => budget.category !== editingCategory).map((budget) => budget.category)
           : []}
@@ -383,6 +414,7 @@ export default function App() {
         onClose={() => {
           setIsCategoryBudgetModalOpen(false);
           setEditingCategory(null);
+          setStartWithNewCategory(false);
         }}
         onSave={(budgets) => {
           const nextBudgets = editingCategory
@@ -390,6 +422,7 @@ export default function App() {
             : budgets;
           financeApplication.saveCategoryBudgets(currentMonthKey, nextBudgets);
           refreshMonthData();
+          setStartWithNewCategory(false);
         }}
       />
 
@@ -449,9 +482,11 @@ export default function App() {
         onClose={() => setIsExportModalOpen(false)}
         year={year}
         month={month}
-        summary={summary}
-        transactions={transactions}
-        savingsMovements={financeApplication.getSavingsMovements().filter((m) => m.monthKey === currentMonthKey)}
+        allTransactions={allTransactions}
+        allSavingsMovements={allSavingsMovements}
+        monthConfigs={financeApplication.getMonthConfigs()}
+        budgetsByMonth={financeApplication.getAllCategoryBudgets()}
+        savingsGoals={allSavingsGoals}
         profile={profile}
       />
 

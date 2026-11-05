@@ -247,3 +247,21 @@ test('rejected mirror reduction preserves data and deleting the mirror removes i
   assert.equal(storageService.getSavingsGoals()[0].currentAmount, 0);
   assert.equal(storageService.getTotalSavingsVault(), 0);
 });
+
+
+test('legacy local PIN is removed from profile storage and exposed once for secure migration', () => {
+  const memory = new MemoryStorage();
+  const session = new MemoryStorage();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: memory });
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: session });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } });
+  setStorageScope('local');
+  memory.setItem('mischeles_user_profile_v2', JSON.stringify({ name: 'Local', email: '', photoUrl: '', currency: 'RD$', pinCode: '7391', biometricsEnabled: true, pinLockEnabled: true, monthlyTargetIncome: 0 }));
+  const profile = storageService.getProfile() as unknown as Record<string, unknown>;
+  assert.equal(profile.pinCode, undefined);
+  assert.equal(profile.biometricsEnabled, false);
+  assert.equal(profile.pinLockEnabled, true);
+  assert.equal(JSON.parse(memory.getItem('mischeles_user_profile_v2') || '{}').pinCode, undefined);
+  assert.equal(storageService.takeLegacyLockPin(), '7391');
+  assert.equal(storageService.takeLegacyLockPin(), null);
+});

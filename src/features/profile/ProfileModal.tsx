@@ -49,8 +49,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [email, setEmail] = useState<string>(profile.email);
   const [photoUrl, setPhotoUrl] = useState<string>(profile.photoUrl || '');
   const [currency, setCurrency] = useState<string>(profile.currency);
-  const [pinCode, setPinCode] = useState<string>(profile.pinCode || '1234');
-  const [biometricsEnabled, setBiometricsEnabled] = useState<boolean>(profile.biometricsEnabled);
   const [pinLockEnabled, setPinLockEnabled] = useState<boolean>(profile.pinLockEnabled);
   const [monthlyTargetIncome, setMonthlyTargetIncome] = useState<string>(
     profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '60000'
@@ -79,8 +77,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       email: email.trim(),
       photoUrl,
       currency,
-      pinCode: pinCode.trim() || '1234',
-      biometricsEnabled,
+      biometricsEnabled: false,
       pinLockEnabled,
       monthlyTargetIncome: parseFloat(monthlyTargetIncome) || 0,
     };
@@ -248,47 +245,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <span>Seguridad y Autenticación</span>
             </div>
 
-            {/* Biometrics Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Fingerprint className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    Desbloqueo Biométrico
-                  </p>
-                  <p className="text-xs text-slate-500">Usa huella dactilar o Face ID al abrir la app</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={biometricsEnabled}
-                  onChange={(e) => setBiometricsEnabled(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            {/* PIN Code Setup */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-2.5">
-                <KeyRound className="w-5 h-5 text-amber-500" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    PIN de Respaldo (4 dígitos)
-                  </p>
-                  <p className="text-xs text-slate-500">Código numérico para acceder a la app</p>
-                </div>
-              </div>
-              <input
-                type="password"
-                maxLength={4}
-                value={pinCode}
-                onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
-                className="w-16 text-center tracking-widest font-mono text-sm py-1 px-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white"
-              />
-            </div>
+            <p className="rounded-xl border border-slate-200 p-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:text-slate-300">El bloqueo y la configuración del PIN se gestionan desde Perfil → Seguridad. La biometría no está disponible en esta versión web.</p>
           </div>
 
           {feedback && (

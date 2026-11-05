@@ -97,14 +97,15 @@ export const getPrevMonthKey = (year: number, month: number): { year: number; mo
   };
 };
 
+let pendingLegacyLockPin = '';
+
 export const defaultProfile: UserProfile = {
   name: 'César Matos',
   email: 'cesarmatos99@gmail.com',
   photoUrl: '',
   currency: 'RD$',
-  pinCode: '1234',
-  biometricsEnabled: true,
-  pinLockEnabled: true,
+  biometricsEnabled: false,
+  pinLockEnabled: false,
   monthlyTargetIncome: 65000,
 };
 
@@ -406,18 +407,30 @@ export const storageService = {
   getProfile(): UserProfile {
     try {
       const data = readAppValue(STORAGE_KEYS.USER_PROFILE);
-      if (data) return JSON.parse(data);
+      if (data) {
+        const stored = JSON.parse(data) as UserProfile & { pinCode?: string };
+        if (stored.pinCode) pendingLegacyLockPin = stored.pinCode;
+        const safe = { ...stored, biometricsEnabled: false } as UserProfile & { pinCode?: string };
+        delete safe.pinCode;
+        if (stored.pinLockEnabled && !stored.pinCode && !pendingLegacyLockPin) safe.pinLockEnabled = false;
+        writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(safe));
+        return safe;
+      }
     } catch (e) {
       console.error(e);
     }
-    if (activeStorageScope === 'demo') return { ...defaultProfile, pinCode: '', biometricsEnabled: false, pinLockEnabled: false };
-    return { ...defaultProfile, name: '', email: '', photoUrl: '', pinCode: '', biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0 };
+    if (activeStorageScope === 'demo') return { ...defaultProfile, biometricsEnabled: false, pinLockEnabled: false };
+    return { ...defaultProfile, name: '', email: '', photoUrl: '', biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0 };
   },
 
   saveProfile(profile: UserProfile): void {
-    writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+    const safe = { ...profile, biometricsEnabled: false } as UserProfile & { pinCode?: string };
+    delete safe.pinCode;
+    writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(safe));
     notifyStorageMutation('userSettings', 'profile');
   },
+
+  takeLegacyLockPin(): string | null { const pin = pendingLegacyLockPin; pendingLegacyLockPin = ''; return pin || null; },
 
   // Month configs
   getMonthConfigs(): Record<string, MonthConfig> {

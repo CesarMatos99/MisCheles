@@ -6,6 +6,7 @@ import type { CategoryBudget, MonthConfig, SavingsGoal, SavingsMovement, Transac
 export class FinanceApplication {
   constructor(private readonly repository: FinanceRepository) {}
   getProfile(): UserProfile { return this.repository.getProfile(); }
+  takeLegacyLockPin(): string | null { return this.repository.takeLegacyLockPin(); }
   saveProfile(value: UserProfile): void { this.repository.saveProfile(value); }
   getMonthConfigs(): Record<string, MonthConfig> { return this.repository.getMonthConfigs(); }
   getMonthConfig(key: string): MonthConfig | null { return this.repository.getMonthConfig(key); }

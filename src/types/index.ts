@@ -72,7 +72,6 @@ export interface UserProfile {
   email: string;
   photoUrl: string;
   currency: string; // '$', 'RD$', '€', 'MXN', etc.
-  pinCode: string; // 4-digit PIN for backup
   biometricsEnabled: boolean;
   pinLockEnabled: boolean;
   monthlyTargetIncome: number;

@@ -155,8 +155,8 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
       <section aria-labelledby="savings-goals-title" className="space-y-4">
         {!selectedGoal ? <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 id="savings-goals-title" className="text-base font-bold text-slate-900 dark:text-white">Metas de ahorro</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Organiza tu fondo por objetivos y sigue cada avance.</p></div>
-            <button type="button" onClick={() => { setIsAddingGoal(!isAddingGoal); setGoalError(''); }} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-primary/30 px-3.5 text-sm font-semibold text-primary transition hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus className="h-4 w-4" aria-hidden="true" />Nueva meta</button>
+            <div><h2 id="savings-goals-title" className="text-base font-bold text-slate-900 dark:text-white">Metas de ahorro</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Organiza tu ahorro por objetivos.</p></div>
+            <button type="button" onClick={() => { setIsAddingGoal(!isAddingGoal); setGoalError(''); }} aria-label={isAddingGoal ? 'Cancelar nueva meta' : 'Crear nueva meta'} aria-expanded={isAddingGoal} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-primary/30 px-3.5 text-sm font-semibold text-primary transition hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Nueva meta</span></button>
           </div>
           {isAddingGoal && <form onSubmit={handleCreateGoal} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Crear una meta</h3>

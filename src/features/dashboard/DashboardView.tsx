@@ -2,7 +2,7 @@ import { isConsumptionExpenseTransaction, normalizeFinancialCategory } from '../
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { spendingByCategory } from '../../domain/financialQueries';
 import React from 'react';
-import { ArrowRight, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
+import { ArrowRight, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -23,6 +23,7 @@ interface DashboardViewProps {
   onOpenMonthSetup: () => void;
   onOpenExport: () => void;
   onManageBudgets: () => void;
+  onAddCategory: () => void;
   onOpenCategory: (category: string) => void;
 }
 
@@ -41,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenMonthSetup,
   onOpenExport,
   onManageBudgets,
+  onAddCategory,
   onOpenCategory,
 }) => {
   const { t, locale, language } = useLanguage();
@@ -102,10 +104,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <section>
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-800">
           <h2 className="font-bold text-slate-900 dark:text-white">{t('myCategories')}</h2>
-          <button type="button" onClick={onManageBudgets} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft">
-            <Tags className="h-4 w-4" />
-            <span>{t('edit')}</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button type="button" onClick={onAddCategory} aria-label="Agregar categoría" title="Agregar categoría" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-primary transition hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Plus className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button type="button" onClick={onManageBudgets} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft">
+              <Tags className="h-4 w-4" aria-hidden="true" />
+              <span>{t('edit')}</span>
+            </button>
+          </div>
         </div>
 
         {categoryBudgets.length === 0 ? (
