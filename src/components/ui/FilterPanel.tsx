@@ -24,9 +24,9 @@ export function FilterPanel({ title, onClose, onClear, onCancel, onApply, size =
       <form onSubmit={event => { event.preventDefault(); onApply(); }} className="flex max-h-[calc(100dvh-6rem)] min-h-0 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">{children}</div>
         <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
-          <button type="button" onClick={onClear} className="min-h-10 rounded-xl px-3 text-sm">Limpiar filtros</button>
-          <button type="button" onClick={onCancel} className="min-h-10 rounded-xl px-3 text-sm">Cancelar</button>
-          <button type="submit" className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white">Aplicar filtros</button>
+          <button type="button" onClick={onClear} className="btn-quiet text-sm">Limpiar filtros</button>
+          <button type="button" onClick={onCancel} className="btn-secondary text-sm">Cancelar</button>
+          <button type="submit" className="btn-primary text-sm">Aplicar filtros</button>
         </footer>
       </form>
     </ModalSurface>

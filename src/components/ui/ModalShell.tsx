@@ -38,7 +38,7 @@ export function ModalShell({ title, onClose, children, size = 'md' }: Props) {
     };
   }, []);
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="app-modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 backdrop-blur-sm">
       <div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className={'w-full outline-none ' + (size === 'lg' ? 'max-w-lg' : 'max-w-md')}>
         {children}
       </div>

@@ -53,7 +53,7 @@ export default function App() {
     }
   });
   const [accentColor, setAccentColor] = useState<string>(() => {
-    try { return localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1') || '#012677'; } catch { return '#012677'; }
+    try { return localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1') || '#002991'; } catch { return '#002991'; }
   });
 
   // App Lock State
@@ -240,8 +240,8 @@ export default function App() {
       />
 
       {/* Main Navigation Tabs on Desktop */}
-      <div className="hidden sm:block border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6">
+      <div className="hidden sm:block border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2 sm:px-6">
           <div className="flex gap-2">
             {[
               { id: 'dashboard' as ActiveTab, label: t('home'), icon: PieChart },
@@ -258,7 +258,7 @@ export default function App() {
                   aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
                     isActive
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-primary-soft text-primary'
                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
                   }`}
                 >
@@ -273,7 +273,7 @@ export default function App() {
       </div>
 
       {/* Main Body Content Container */}
-      <main className="mx-auto w-full max-w-5xl min-w-0 flex-1 space-y-6 p-4 sm:p-6">
+      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-6 sm:py-7">
         {movementError && <p role="alert" className="mb-3 text-sm text-rose-600 dark:text-rose-300">{movementError}</p>}
         {activeTab === 'dashboard' && (
           selectedCategory ? (
