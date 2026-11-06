@@ -19,6 +19,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
 import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
 import { localLockCredential } from '../../services/localLockCredential';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
 
@@ -34,6 +35,7 @@ interface ProfileViewProps {
 }
 
 const ACCENT_COLORS = [
+  { name: 'Azul MisCheles', value: '#002991' },
   { name: 'Azul marino', value: '#012677' },
   { name: 'Azul', value: '#2563eb' },
   { name: 'Verde azulado', value: '#0f766e' },
@@ -98,19 +100,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     ? t('accountSync')
     : t('profile');
 
-  const fieldClass = 'w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 dark:border-slate-700 dark:text-white';
+  const fieldClass = 'app-field';
 
   return (
-    <div className="mx-auto w-full max-w-3xl animate-in fade-in duration-200">
-      <header className="border-b border-slate-200 pb-4 dark:border-slate-800">
+    <div className="app-profile mx-auto w-full max-w-3xl animate-in fade-in duration-200">
+      <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
         {section !== 'home' && (
           <button type="button" onClick={() => setSection('home')} className="mb-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary">
             <ArrowLeft className="h-4 w-4" /> {t('profile')}
           </button>
         )}
-        <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings')}</p>
-        <h1 className="mt-1 type-screen-title text-slate-900 dark:text-white">{title}</h1>
-      </header>
+        <PageHeader title={title} eyebrow={t('settings')} divider={false} />
+      </div>
 
       {section === 'home' && (
         <>
@@ -250,6 +251,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 const SaveActions: React.FC<{ savedMessage: string }> = ({ savedMessage }) => (
   <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
     <p role="status" className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{savedMessage}</p>
-    <button type="submit" className="min-h-11 rounded-xl bg-primary px-5 text-sm font-bold text-white transition hover:bg-primary-hover">Guardar cambios</button>
+    <button type="submit" className="btn-primary text-sm">Guardar cambios</button>
   </div>
 );

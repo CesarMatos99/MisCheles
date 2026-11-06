@@ -38,7 +38,7 @@ export const AccountSettingsSection: React.FC = () => {
   const [includeSettings, setIncludeSettings] = useState(true);
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState('');
-  const button = 'min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-50';
+  const button = 'btn-primary text-sm disabled:opacity-50';
   const reviewLocal = async () => {
     setMigrationMessage('');
     setIncludeSamples(false);

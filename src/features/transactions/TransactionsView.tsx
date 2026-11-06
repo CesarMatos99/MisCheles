@@ -126,11 +126,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   useEffect(() => { try { sessionStorage.setItem('mischeles_transaction_filters_v1', JSON.stringify(filters)); } catch { /* Optional session persistence. */ } }, [filters]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 pb-4 animate-in fade-in duration-200">
+    <div className="app-page mx-auto max-w-5xl pb-4 animate-in fade-in duration-200">
       <PageHeader title="Tus movimientos" period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExportModal} />} />
 
       {/* Seamless Continuous Container divided by clean lines */}
-      <div className="space-y-4">
+      <div className="app-surface space-y-4">
         {/* Row 1: Search and Filters */}
         <div className="space-y-3">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -222,10 +222,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 return (
                   <div
                     key={tx.id}
-                    className="py-3 flex items-center justify-between gap-3 group border-b border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 transition cursor-pointer"
+                    className="py-3 flex flex-wrap items-center justify-between gap-3 group border-b border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 transition sm:flex-nowrap"
                   >
                     <div
-                      className="flex items-center gap-3 min-w-0 flex-1"
+                      className="flex basis-full items-center gap-3 min-w-0 flex-1 sm:basis-auto"
                       onClick={() => onEditTransaction(tx)}
                     >
                       <div
@@ -250,7 +250,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                           {tx.description}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           <span className="font-medium text-slate-700 dark:text-slate-300">
                             {localizeCategoryName(language, tx.category)}
                           </span>
@@ -260,10 +260,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right" onClick={() => onEditTransaction(tx)}>
+                    <div className="flex w-full min-w-0 items-center justify-between gap-2 pl-12 sm:w-auto sm:justify-end sm:pl-0">
+                      <div className="min-w-0 text-left sm:text-right" onClick={() => onEditTransaction(tx)}>
                         <span
-                          className={`text-sm font-extrabold ${
+                          className={`break-words text-sm font-semibold tabular-nums ${
                             isSavings
                               ? 'text-teal-600 dark:text-teal-400'
                               : tx.type === 'expense'
@@ -278,13 +278,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition">
+                      <div className="flex shrink-0 items-center gap-0.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onEditTransaction(tx);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 transition"
+                          aria-label={'Editar ' + tx.description}
+                          className="btn-icon hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 transition"
                           title="Editar"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -294,7 +295,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             e.stopPropagation();
                             onDeleteTransaction(tx.id);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-500 transition"
+                          aria-label={'Eliminar ' + tx.description}
+                          className="btn-icon hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 transition"
                           title="Eliminar"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

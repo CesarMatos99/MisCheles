@@ -1,8 +1,8 @@
-import { isConsumptionExpenseTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
+import { isConsumptionExpenseTransaction, isSavingsContributionTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { spendingByCategory } from '../../domain/financialQueries';
 import React from 'react';
-import { ArrowRight, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -67,7 +67,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalConsumption = summary.totalExpenses;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-3 pb-6 animate-in fade-in duration-200">
+    <div className="app-page mx-auto max-w-5xl pb-6 animate-in fade-in duration-200">
       <PageHeader eyebrow={(locale.startsWith('en') ? 'Hello' : 'Hola') + ' ' + firstName} title={t('moneyOverview')} period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExport} />} />
 
       {(!monthConfig || !monthConfig.isConfigured) && (
@@ -78,10 +78,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       )}
 
-      <section aria-label={t('monthlySummary')} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900'>
+      <section aria-label={t('monthlySummary')} className='balance-panel'>
         <div className='flex items-start justify-between gap-3'>
           <div>
-            <p className='text-sm font-medium text-slate-500 dark:text-slate-300'>{t('availableThisMonth')}</p>
+            <p className='balance-label'>{t('availableThisMonth')}</p>
             <p className='mt-1 type-display type-money text-primary'>{money(summary.availableBalance)}</p>
           </div>
           {monthConfig?.isConfigured && <button type='button' onClick={onOpenMonthSetup} aria-label='Ajustar configuración del mes' title='Ajustar mes' className='inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-500 transition hover:bg-primary-soft hover:text-primary dark:text-slate-300'>
@@ -89,19 +89,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>Ajustar</span>
           </button>}
         </div>
-        <div className='mt-3 grid grid-cols-2 gap-4 border-t border-slate-200 pt-3 dark:border-slate-800'>
+        <div className='metric-strip'>
           <div>
-            <p className='text-xs text-slate-500 dark:text-slate-300'>{t('openingMoney')}</p>
-            <p className='mt-0.5 text-sm font-semibold text-slate-900 dark:text-white'>{money(summary.initialIncome + summary.carryover)}</p>
+            <p className='text-xs text-slate-500 dark:text-slate-300'>{locale.startsWith('en') ? 'Income this month' : 'Ingresos del mes'}</p>
+            <strong className='text-emerald-700 dark:text-emerald-400'>{money(summary.totalIncome)}</strong>
           </div>
           <div>
             <p className='text-xs text-slate-500 dark:text-slate-300'>{t('spentThisMonth')}</p>
-            <p className='mt-0.5 text-sm font-semibold text-slate-900 dark:text-white'>{money(totalConsumption)}</p>
+            <strong className='text-app-foreground'>{money(totalConsumption)}</strong>
           </div>
+          <div><p className='text-xs text-slate-500 dark:text-slate-300'>{locale.startsWith('en') ? 'Moved to savings' : 'Enviado a ahorro'}</p><strong className='text-primary'>{money(summary.savingsTransfersTo)}</strong><p className='mt-1 text-[11px] text-slate-500'>{locale.startsWith('en') ? 'Internal transfer' : 'Transferencia interna'}</p></div>
+          <div><p className='text-xs text-slate-500 dark:text-slate-300'>{locale.startsWith('en') ? 'Total saved' : 'Dinero ahorrado'}</p><strong className='text-primary'>{money(summary.totalSavingsVault)}</strong><p className='mt-1 text-[11px] text-slate-500'>{locale.startsWith('en') ? 'Current savings balance' : 'Saldo actual, no objetivo de metas'}</p></div>
         </div>
       </section>
 
-      <section>
+      <section className="app-surface">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-800">
           <h2 className="font-bold text-slate-900 dark:text-white">{t('myCategories')}</h2>
           <div className="flex shrink-0 items-center gap-1">
@@ -116,7 +118,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {categoryBudgets.length === 0 ? (
-          <p className="border-b border-slate-200 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">{t('assignedAmountsEmpty')}</p>
+          <p className="app-empty mt-3">{t('assignedAmountsEmpty')}</p>
         ) : (
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {categoryBudgets.map((budget) => {
@@ -154,7 +156,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       {unbudgeted.length > 0 && (
-        <section>
+        <section className="app-surface">
           <div className="flex items-center justify-between gap-4 border-b border-slate-200 py-2 dark:border-slate-800">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('unassigned')}</h2>
             <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">{money(totalUnbudgeted)}</p>
@@ -179,6 +181,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
       )}
+
+      <section className="app-surface" aria-labelledby="recent-movements-title">
+        <div className="app-section-heading"><h2 id="recent-movements-title" className="type-section-title">{locale.startsWith('en') ? 'Recent activity' : 'Movimientos recientes'}</h2><span className="text-xs text-slate-500">{monthName}</span></div>
+        {transactions.length === 0 ? <p className="app-empty mt-3">{locale.startsWith('en') ? 'Your activity will appear here when you record a movement.' : 'Tus movimientos aparecerán aquí cuando registres un ingreso o un gasto.'}</p> : [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, 4).map(transaction => {
+          const transfer = isSavingsContributionTransaction(transaction);
+          const Icon = transfer ? ArrowRightLeft : transaction.type === 'income' ? ArrowDownLeft : ArrowUpRight;
+          return <button key={transaction.id} type="button" onClick={() => onOpenCategory(transaction.category)} className="recent-row group">
+            <span className={'movement-icon ' + (transfer ? 'text-primary' : transaction.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300')}><Icon className="h-5 w-5" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold group-hover:text-primary">{transaction.description || localizeCategoryName(language, transaction.category)}</span><span className="mt-0.5 block text-xs text-slate-500">{transfer ? (locale.startsWith('en') ? 'Internal transfer' : 'Transferencia interna') : localizeCategoryName(language, transaction.category)} · {transaction.date}</span></span>
+            <span className="max-w-full text-right text-sm font-semibold tabular-nums">{transfer ? '' : transaction.type === 'income' ? '+' : '−'}{money(transaction.amount)}</span>
+          </button>;
+        })}
+      </section>
 
     </div>
   );

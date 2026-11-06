@@ -17,6 +17,7 @@ import { localizeCategoryName } from '../../i18n/categoryLabels';
 import { analyticsFilterSummaryLabels } from '../../i18n/analyticsFilterLabels';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { ExportButton } from '../../components/ui/ExportButton';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { isSavingsContributionTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
 import { spendingByCategory } from '../../domain/financialQueries';
 
@@ -54,10 +55,10 @@ function buildRange(mode: Mode, year: number, month: number, from: string, to: s
 
 function Metric({ label, value, hint, icon: Icon, color = 'slate', featured = false }: { label: string; value: string; hint: string; icon?: React.ElementType; color?: string; featured?: boolean }) {
   const colors: Record<string, string> = { slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', blue: 'bg-primary/10 text-primary', green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300', amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-300', red: 'bg-rose-500/10 text-rose-700 dark:text-rose-300' };
-  return <div className={'min-w-0 border-b border-slate-200/80 dark:border-slate-800/80 ' + (featured ? 'py-4 sm:py-5' : 'py-2.5 sm:py-3')}><div className="flex items-center justify-between gap-2"><span className={featured ? 'text-xs font-medium text-slate-500 dark:text-slate-400' : 'text-[11px] text-slate-500 dark:text-slate-400'}>{label}</span>{Icon && <span className={'flex h-7 w-7 items-center justify-center rounded-full ' + colors[color]}><Icon className="h-4 w-4" /></span>}</div><p className={(featured ? 'mt-1.5 text-2xl sm:text-[1.7rem]' : 'mt-1 text-sm sm:text-base') + ' font-bold tracking-tight text-app-foreground'}>{value}</p><p className="mt-0.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{hint}</p></div>;
+  return <div className={'analytics-metric ' + (featured ? 'sm:py-4' : '')}><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>{Icon && <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-full ' + colors[color]}><Icon className="h-4 w-4" aria-hidden="true" /></span>}</div><p className={(featured ? 'mt-2 text-xl sm:text-2xl' : 'mt-1 text-base') + ' font-semibold tracking-tight text-app-foreground tabular-nums'}>{value}</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{hint}</p></div>;
 }
 function Heading({ title, detail, action }: { title: string; detail?: string; action?: React.ReactNode }) {
-  return <div className="flex items-end justify-between gap-3 border-b border-slate-200/80 pb-3 dark:border-slate-800/80"><div><h3 className="text-base font-semibold text-app-foreground">{title}</h3>{detail && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{detail}</p>}</div>{action}</div>;
+  return <div className="app-section-heading"><div className="min-w-0"><h3 className="type-section-title text-app-foreground">{title}</h3>{detail && <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{detail}</p>}</div>{action}</div>;
 }
 
 export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allTransactions, savingsMovements: allSavingsMovements, savingsGoals, monthConfigs, categoryBudgetsByMonth, profile, onOpenExportModal }) => {
@@ -207,7 +208,7 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
     { id: 'compare', label: 'Comparar', icon: TrendingUp }, { id: 'evolution', label: 'Evolución', icon: TrendingDown },
   ];
   const modes: { id: Mode; label: string }[] = [{ id: 'month', label: 'Mes' }, { id: 'year', label: 'Año' }, { id: '6m', label: '6 meses' }, { id: '12m', label: '12 meses' }, { id: 'custom', label: 'Rango' }];
-  const borderSection = 'space-y-4 border-b border-slate-200/80 pb-5 dark:border-slate-800/80';
+  const borderSection = 'app-surface space-y-4';
   const generalCompareRows = expenseCategoryDistribution(visibleTx, visibleSavings);
   const includesToday = (fromValue: string, toValue: string) => isValidAnalyticsRange({ from: fromValue, to: toValue }) && parseDay(fromValue) <= today() && parseDay(toValue) >= today();
   const comparisonHasCurrentDate = compareMode === 'months' ? monthA === keyFor(today()) || monthB === keyFor(today()) : includesToday(rangeAFrom, rangeATo) || includesToday(rangeBFrom, rangeBTo);
@@ -244,27 +245,24 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
   };
 
   return <div className="mx-auto w-full min-w-0 max-w-5xl animate-in fade-in duration-200">
-    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200/80 pb-3 dark:border-slate-800/80">
-      <div className="flex min-w-0 items-center gap-2"><h1 className="type-screen-title truncate text-slate-900 dark:text-white">Tus estadísticas</h1><button type="button" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 px-2.5 text-xs font-semibold hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:hover:bg-slate-800"><SlidersHorizontal className="h-4 w-4" />Filtros</button></div>
-      <div className="ml-auto flex min-w-0 items-center justify-between gap-1 sm:justify-end sm:gap-2">{mode === 'custom' ? <span className="type-secondary whitespace-nowrap">{labelDate(safeRange.start)} – {labelDate(safeRange.end)}</span> : mode === 'year' ? <span className="min-h-9 px-2 text-sm font-semibold">{y}</span> : <PeriodSelector compact year={y} month={m} onMonthChange={changeGeneralPeriod} />}<ExportButton disabled={invalidRange || (section === 'compare' && !activeComparison)} onClick={() => onOpenExportModal(makeReport())} /></div>
-    </header>
+    <PageHeader title="Tus estadísticas" period={mode === 'custom' ? <span className="type-secondary">{labelDate(safeRange.start)} – {labelDate(safeRange.end)}</span> : mode === 'year' ? <span className="px-2 text-sm font-semibold">{y}</span> : <PeriodSelector compact year={y} month={m} onMonthChange={changeGeneralPeriod} />} actions={<><button type="button" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen} className="btn-secondary inline-flex items-center gap-1.5 text-xs"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" />Filtros</button><ExportButton disabled={invalidRange || (section === 'compare' && !activeComparison)} onClick={() => onOpenExportModal(makeReport())} /></>} />
     {filtersOpen && <AnalyticsFilters value={{ mode, year: y, month: m, from, to, category, movementType }}
       defaults={{ mode: 'month', year, month, from: dayKey(startMonth(year, month)), to: dayKey(endMonth(year, month)), category: 'Todas', movementType: 'all' }}
       categoriesByType={{ all: [...new Set([...allTransactions.filter(tx => !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), income: [...new Set(allTransactions.filter(tx => tx.type === 'income' && !isSavingsContributionTransaction(tx)).map(tx => tx.category))].sort(), expense: [...new Set([...allTransactions.filter(tx => tx.type === 'expense' && !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), savings: [] }}
       onClose={() => setFiltersOpen(false)}
       onApply={(filters: AnalyticsFiltersValue) => { setMode(filters.mode); setY(filters.year); setM(filters.month); if (!trendYearChosen) setTrendYear(filters.year); setFrom(filters.from); setTo(filters.to); setCategory(filters.category); setMovementType(filters.movementType); setFiltersOpen(false); }} />}
-    <nav className="grid w-full min-w-0 grid-cols-4 gap-1 border-b border-slate-200/80 py-2 dark:border-slate-800/80" aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => setSection(s.id)} aria-current={section === s.id ? "page" : undefined} className={"inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 text-[10px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:text-xs " + (section === s.id ? "bg-primary/10 font-semibold text-primary" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800")}><Icon className="h-4 w-4 shrink-0" /><span className="whitespace-nowrap">{s.label}</span></button>; })}</nav>
+    <nav className="analytics-tabs grid w-full min-w-0 grid-cols-4 gap-1" aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => setSection(s.id)} aria-current={section === s.id ? "page" : undefined} className={"inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 text-[11px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex-row sm:gap-1.5 sm:px-3 sm:text-xs " + (section === s.id ? "font-semibold" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800")}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="whitespace-nowrap">{s.label}</span></button>; })}</nav>
 
     <div className="space-y-5 pt-4">
       {invalidRange && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">Introduce fechas válidas y una fecha final igual o posterior al inicio para consultar y exportar resultados.</p>}
       {!invalidRange && section === 'summary' && <>
-        <section aria-label="Resumen financiero" className="grid grid-cols-2 gap-x-5 sm:grid-cols-4">
+        <section aria-label="Resumen financiero" className="app-surface grid grid-cols-2 gap-x-5 sm:grid-cols-4">
           <Metric featured label="Ingresos" value={fmt(totalIncome)} hint="Dinero inicial del período + ingresos registrados" icon={ArrowUpRight} color="blue" />
           <Metric featured label="Gastos" value={fmt(totalExpenses)} hint="Incluye pagos reales hechos desde ahorros" icon={ReceiptText} color="red" />
           <Metric featured label="Destinado a ahorro" value={category === 'Todas' ? fmt(deposits) : '—'} hint="Aportes internos; no se cuentan como gasto" icon={PiggyBank} color="green" />
           <Metric featured label="Dinero disponible" value={fmt(available)} hint="Saldo inicial + entradas − gastos del mes − aportes" icon={Wallet} color={available < 0 ? 'red' : 'slate'} />
         </section>
-        <section aria-label="Indicadores complementarios" className="grid grid-cols-2 gap-x-4 sm:grid-cols-4">
+        <section aria-label="Indicadores complementarios" className="app-surface grid grid-cols-2 gap-x-4 sm:grid-cols-4">
           <Metric label="Gastos respecto a ingresos" value={percent(spentPercent)} hint="Parte de tus ingresos destinada a gastos" />
           <Metric label="Ingresos enviados a ahorro" value={category === 'Todas' ? percent(savedPercent) : '—'} hint="Parte de tus ingresos destinada al ahorro" />
           <Metric label="Promedio diario" value={fmt(dailyAverage)} hint={elapsedDays + ' días contabilizados'} />

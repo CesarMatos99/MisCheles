@@ -328,17 +328,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-11 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="btn-secondary flex-1 text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className={`flex-1 min-h-11 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg active:scale-95 transition flex items-center justify-center gap-2 ${
-                type === 'expense'
-                  ? 'bg-primary hover:bg-primary-hover shadow-primary/50'
-                  : 'bg-primary hover:bg-primary-hover shadow-primary/50'
-              }`}
+              className="btn-primary flex flex-1 items-center justify-center gap-2 text-sm"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{transactionToEdit ? 'Guardar cambios' : type === 'expense' ? 'Registrar gasto' : 'Registrar ingreso'}</span>

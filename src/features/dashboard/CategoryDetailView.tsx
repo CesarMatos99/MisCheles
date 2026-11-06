@@ -37,7 +37,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
   const percent = budget ? Math.min(100, Math.round((spent / budget.amount) * 100)) : 0;
 
   return (
-    <div className='mx-auto max-w-5xl space-y-4 pb-6 animate-in fade-in duration-200'>
+    <div className='app-surface mx-auto max-w-5xl space-y-4 pb-6 animate-in fade-in duration-200'>
       <button type='button' onClick={onBack} className='inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary dark:text-slate-300'>
         <ArrowLeft className='h-4 w-4' aria-hidden='true' /> Volver a Inicio
       </button>
