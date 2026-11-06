@@ -13,8 +13,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onOpenProfile, profile }) => {
   const { t } = useLanguage();
   return (
-  <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-3 py-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/90">
-    <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+  <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-0 py-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/90">
+    <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white" aria-hidden="true">
           <Wallet className="h-5 w-5" strokeWidth={2.2} />

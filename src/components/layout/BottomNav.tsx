@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, Receipt, PiggyBank, User, BarChart3 } from 'lucide-react';
+import { PieChart, Receipt, PiggyBank, BarChart3 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export type ActiveTab = 'dashboard' | 'transactions' | 'statistics' | 'savings' | 'profile';
@@ -16,12 +16,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
     { id: 'transactions' as ActiveTab, label: t('register'), icon: Receipt },
     { id: 'statistics' as ActiveTab, label: t('statistics'), icon: BarChart3 },
     { id: 'savings' as ActiveTab, label: t('savings'), icon: PiggyBank },
-    { id: 'profile' as ActiveTab, label: t('profile'), icon: User },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/95 sm:hidden safe-area-bottom">
-      <div className="grid grid-cols-5 gap-0.5">
+      <div className="grid grid-cols-4 gap-0.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

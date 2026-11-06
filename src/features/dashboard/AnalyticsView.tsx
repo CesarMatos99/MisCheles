@@ -1,26 +1,30 @@
-import { evolutionMonthCount } from '../../domain/analyticsFilterContract';
 import { AnalyticsFilters, type AnalyticsFiltersValue } from './AnalyticsFilters';
 import { focusedBreakdown } from '../../domain/analyticsBreakdown';
 import { analyticsMonthStats, analyticsRangeSummary, analyticsCategoryTotals } from '../../domain/analyticsQueries';
+import { comparePeriodMetric, equivalentDayRanges, expenseCategoryDistribution, isValidAnalyticsRange, monthRangeForDate, previousCalendarMonth, resolveComparisonRanges, samePeriodPreviousYear, summarizeAnalyticsPeriod, summarizeAnnualEvolution } from '../../domain/analyticsPeriodComparison';
+import { CategoryAnalysis } from './CategoryAnalysis';
+import { QuickExpenseChart } from './QuickExpenseChart';
 import { buildFinancialInsights } from '../../domain/financialInsights';
 import { filterAnalyticsMovements } from '../../domain/analyticsMovementFilter';
 import { parseCalendarDay } from '../../domain/calendarDay';
 import type { AnalyticsReport } from '../../domain/analyticsReport';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BarChart3, Lightbulb, SlidersHorizontal, TrendingDown, TrendingUp, Wallet, PiggyBank, ReceiptText, ArrowUpRight, List } from 'lucide-react';
 import { MonthConfig, SavingsGoal, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
 import { analyticsFilterSummaryLabels } from '../../i18n/analyticsFilterLabels';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { ExportButton } from '../../components/ui/ExportButton';
-import { isSavingsContributionTransaction } from '../../domain/financialClassification';
+import { isSavingsContributionTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
+import { spendingByCategory } from '../../domain/financialQueries';
 
 type Mode = 'month' | 'year' | '6m' | '12m' | 'custom';
 type Section = 'summary' | 'categories' | 'compare' | 'evolution';
 type Range = { start: Date; end: Date };
+type CompareMode = 'months' | 'ranges';
+type ActiveComparison = { a: Range; b: Range; equivalentDays: boolean };
 type Budget = { category: string; amount: number };
 interface Props {
   year: number; month: number; transactions: Transaction[]; savingsMovements: SavingsMovement[];
@@ -68,13 +72,22 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
   const [category, setCategory] = useState('Todas');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [section, setSection] = useState<Section>('summary');
-  const [sort, setSort] = useState<'high' | 'low' | 'name'>('high');
+  const [categorySort, setCategorySort] = useState<'high' | 'low' | 'name'>('high');
+  const [quickSort, setQuickSort] = useState<'high' | 'low' | 'name'>('high');
   const [quickView, setQuickView] = useState<'chart' | 'list'>('chart');
-  const [firstKey, setFirstKey] = useState(keyFor(startMonth(year, month)));
-  const [secondKey, setSecondKey] = useState(keyFor(startMonth(year, month - 1)));
-  const [trendMonths, setTrendMonths] = useState<6 | 12>(6);
+  const [compareMode, setCompareMode] = useState<CompareMode>('months');
+  const [monthA, setMonthA] = useState(''); const [monthB, setMonthB] = useState('');
+  const [rangeAFrom, setRangeAFrom] = useState(''); const [rangeATo, setRangeATo] = useState('');
+  const [rangeBFrom, setRangeBFrom] = useState(''); const [rangeBTo, setRangeBTo] = useState('');
+  const [compareEquivalentDays, setCompareEquivalentDays] = useState(false);
+  const [activeComparison, setActiveComparison] = useState<ActiveComparison | null>(null);
+  const [comparisonError, setComparisonError] = useState('');
+  const [selectedCategoryDetail, setSelectedCategoryDetail] = useState<string | null>(null);
+  const [trendYear, setTrendYear] = useState(year);
+  const [trendYearChosen, setTrendYearChosen] = useState(false);
   const filterSummary = analyticsFilterSummaryLabels(language, category, movementType);
   const fmt = (n: number) => money(n, profile.currency);
+  const changeGeneralPeriod = (nextYear: number, nextMonth: number) => { setY(nextYear); setM(nextMonth); if (!trendYearChosen) setTrendYear(nextYear); };
   const range = useMemo(() => buildRange(mode, y, m, from, to), [mode, y, m, from, to]);
   const invalidRange = Number.isNaN(range.start.getTime()) || Number.isNaN(range.end.getTime()) || range.start > range.end;
   const safeRange = invalidRange ? { start: startMonth(y, m), end: endMonth(y, m) } : range;
@@ -86,17 +99,6 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
   const noDuplicateTx = (tx: Transaction) => !isSavingsContributionTransaction(tx);
   const rangeLabel = mode === 'month' ? labelMonth(keyFor(safeRange.start)) : labelDate(safeRange.start) + ' – ' + labelDate(safeRange.end);
   const periodLabel = mode === 'month' ? labelMonth(keyFor(safeRange.start)) : mode === 'year' ? String(y) : mode === '6m' || mode === '12m' ? 'Últimos ' + (mode === '6m' ? '6' : '12') + ' meses hasta ' + (MONTH_NAMES_ES[m - 1] || '') + ' de ' + y : labelDate(safeRange.start) + ' – ' + labelDate(safeRange.end);
-  const comparisonLabel = 'Comparado con ' + labelMonth(secondKey).toLocaleLowerCase('es-DO').replace(/^(\p{L}+) (\d{4})$/u, '$1 de $2');
-
-  const compareYears = useMemo(() => {
-    const years = new Set([...Object.keys(monthConfigs).map(key => Number(key.slice(0, 4))), ...transactions.map(tx => Number(tx.date.slice(0, 4))), ...savingsMovements.map(sm => Number(sm.date.slice(0, 4))), y]);
-    const currentYear = new Date().getFullYear();
-    for (let offset = -10; offset <= 3; offset++) years.add(currentYear + offset);
-    return Array.from(years).filter(Number.isFinite).sort((a, b) => b - a);
-  }, [monthConfigs, transactions, savingsMovements, y]);
-  const [firstYearPart, firstMonthPart] = firstKey.split('-').map(Number);
-  const [secondYearPart, secondMonthPart] = secondKey.split('-').map(Number);
-
   const totals = analyticsCategoryTotals(visibleTx, visibleSavings);
   const categoryRows = Array.from(totals, ([name, amount]) => ({ name, amount, share: totalExpenses ? amount / totalExpenses * 100 : 0 }));
   const budgetByCategory = new Map<string, number>();
@@ -104,7 +106,7 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
   const focusedRows = movementType === 'income' || movementType === 'savings' ? focusedBreakdown(movementType, visibleTx, visibleSavings) : [];
   const displayCategories = [...categoryRows];
   budgetByCategory.forEach((_, name) => { if ((category === 'Todas' || category === name) && !totals.has(name)) displayCategories.push({ name, amount: 0, share: 0 }); });
-  displayCategories.sort((a, b) => sort === 'high' ? b.amount - a.amount : sort === 'low' ? a.amount - b.amount : a.name.localeCompare(b.name, 'es'));
+  displayCategories.sort((a, b) => categorySort === 'high' ? b.amount - a.amount : categorySort === 'low' ? a.amount - b.amount : a.name.localeCompare(b.name, 'es'));
   const topCategory = [...categoryRows].sort((a, b) => b.amount - a.amount)[0];
   const leastCategory = [...categoryRows].sort((a, b) => a.amount - b.amount)[0];
 
@@ -113,32 +115,58 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
     const selected = selectedRange || { start: startMonth(yy, mm), end: dayLimit ? new Date(yy, mm - 1, Math.min(dayLimit, new Date(yy, mm, 0).getDate())) : endMonth(yy, mm) };
     return analyticsMonthStats({ monthKey: key, transactions, savingsMovements, monthConfigs, category, includeInitialIncome, range: selected });
   };
-  const comparisonIsPartial = firstKey === keyFor(today()) || secondKey === keyFor(today());
-  const comparisonDay = comparisonIsPartial ? today().getDate() : undefined;
-  const aStats = getMonthStats(firstKey, comparisonDay);
-  const bStats = getMonthStats(secondKey, comparisonDay);
-  const difference = bStats.expenses - aStats.expenses;
-  const change = aStats.expenses ? difference / aStats.expenses * 100 : null;
-  const compareCats = Array.from(new Set([...aStats.cats.keys(), ...bStats.cats.keys()])).map(name => ({ name, a: aStats.cats.get(name) || 0, b: bStats.cats.get(name) || 0 })).sort((a, b) => Math.abs(b.b - b.a) - Math.abs(a.b - a.a));
+  const selectedComparisonRanges = activeComparison ? (activeComparison.equivalentDays ? equivalentDayRanges(activeComparison.a, activeComparison.b) : { a: activeComparison.a, b: activeComparison.b, days: Math.min(days(activeComparison.a), days(activeComparison.b)), applied: false }) : null;
+  const comparisonA = activeComparison && selectedComparisonRanges ? summarizeAnalyticsPeriod({ transactions, savingsMovements, monthConfigs, range: selectedComparisonRanges.a, category, movementType, includeInitialIncome }) : null;
+  const comparisonB = activeComparison && selectedComparisonRanges ? summarizeAnalyticsPeriod({ transactions, savingsMovements, monthConfigs, range: selectedComparisonRanges.b, category, movementType, includeInitialIncome }) : null;
+  const comparisonLabelFor = (selected: Range, periodDays: number) => labelDate(selected.start) + ' – ' + labelDate(selected.end) + ' · ' + periodDays + ' días';
+  const comparisonALabel = comparisonA && selectedComparisonRanges ? comparisonLabelFor(selectedComparisonRanges.a, comparisonA.days) : 'Período A';
+  const comparisonBLabel = comparisonB && selectedComparisonRanges ? comparisonLabelFor(selectedComparisonRanges.b, comparisonB.days) : 'Período B';
+  const compareCats = comparisonA && comparisonB ? Array.from(new Set([...comparisonA.categories.keys(), ...comparisonB.categories.keys()])).map(name => ({ name, a: comparisonA.categories.get(name) || 0, b: comparisonB.categories.get(name) || 0 })).sort((a, b) => Math.abs(b.a - b.b) - Math.abs(a.a - a.b)) : [];
+  const comparisonInput = { mode: compareMode, monthA, monthB, rangeAFrom, rangeATo, rangeBFrom, rangeBTo } as const;
+  const comparisonFormValid = resolveComparisonRanges(comparisonInput) !== null;
+  const applyComparison = () => {
+    const ranges = resolveComparisonRanges(comparisonInput);
+    if (!ranges) { setComparisonError(compareMode === 'months' ? 'Selecciona un mes válido para A y otro para B.' : 'Completa los dos rangos con fechas válidas y un inicio anterior o igual al final.'); return; }
+    setActiveComparison({ ...ranges, equivalentDays: compareEquivalentDays }); setComparisonError('');
+  };
+  const applyQuickComparison = (preset: 'previous' | 'year') => {
+    const base = compareMode === 'months' ? monthA ? monthRangeForDate(parseDay(monthA + '-01')) : null : isValidAnalyticsRange({ from: rangeAFrom, to: rangeATo }) ? { from: rangeAFrom, to: rangeATo } : null;
+    if (!base) { setComparisonError('Selecciona primero el período A para usar un acceso rápido.'); return; }
+    const selected = preset === 'previous' ? previousCalendarMonth(base) : samePeriodPreviousYear(base);
+    if (compareMode === 'months') setMonthB(selected.from.slice(0, 7)); else { setRangeBFrom(selected.from); setRangeBTo(selected.to); }
+    setComparisonError('');
+  };
+  const resetComparison = () => { setActiveComparison(null); setComparisonError(''); setMonthA(''); setMonthB(''); setRangeAFrom(''); setRangeATo(''); setRangeBFrom(''); setRangeBTo(''); setCompareEquivalentDays(false); };
 
-  const effectiveTrendMonths = evolutionMonthCount(mode);
-  const evolutionKeys = mode === 'year'
-    ? Array.from({ length: 12 }, (_, index) => keyFor(startMonth(y, index + 1)))
-    : mode === 'custom'
-      ? Array.from({ length: Math.max(1, (safeRange.end.getFullYear() - safeRange.start.getFullYear()) * 12 + safeRange.end.getMonth() - safeRange.start.getMonth() + 1) }, (_, index) => keyFor(moveMonth(startMonth(safeRange.start.getFullYear(), safeRange.start.getMonth() + 1), index)))
-      : Array.from({ length: effectiveTrendMonths }, (_, index) => keyFor(moveMonth(startMonth(y, m), index - effectiveTrendMonths + 1)));
-  const monthSeries = evolutionKeys.map(key => {
-    const [seriesYear, seriesMonth] = key.split('-').map(Number);
-    const clip = mode === 'custom' ? { start: safeRange.start > startMonth(seriesYear, seriesMonth) ? safeRange.start : startMonth(seriesYear, seriesMonth), end: safeRange.end < endMonth(seriesYear, seriesMonth) ? safeRange.end : endMonth(seriesYear, seriesMonth) } : undefined;
-    return { key, label: (MONTH_NAMES_ES[seriesMonth - 1] || '').slice(0, 3), ...getMonthStats(key, undefined, clip) };
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    allTransactions.filter(tx => !isSavingsContributionTransaction(tx)).forEach(tx => { const parsed = Number(tx.date.slice(0, 4)); if (Number.isInteger(parsed)) years.add(parsed); });
+    allSavingsMovements.forEach(movement => { const parsed = Number(movement.date.slice(0, 4)); if (Number.isInteger(parsed)) years.add(parsed); });
+    Object.entries(monthConfigs).forEach(([key, config]) => { if ((Number(config.initialIncome) || 0) !== 0 || (Number(config.carryoverFromPrev) || 0) !== 0) years.add(Number(key.slice(0, 4))); });
+    if (!years.size) years.add(y);
+    years.add(trendYear);
+    return Array.from(years).filter(Number.isFinite).sort((a, b) => b - a);
+  }, [allTransactions, allSavingsMovements, monthConfigs, trendYear, y]);
+  const annualMonthSeries = Array.from({ length: 12 }, (_, index) => {
+    const monthNumber = index + 1; const key = keyFor(startMonth(trendYear, monthNumber));
+    return { key, label: startMonth(trendYear, monthNumber).toLocaleDateString('es-DO', { month: 'short' }).replace('.', ''), ...getMonthStats(key) };
   });
-  const maxSeries = Math.max(1, ...monthSeries.map(i => Math.max(i.income, i.expenses, i.saved)));
-  const avgExpense = monthSeries.reduce((s, i) => s + i.expenses, 0) / Math.max(1, monthSeries.length);
-  const maxMonth = [...monthSeries].sort((a, b) => b.expenses - a.expenses)[0];
-  const minMonth = [...monthSeries].filter(i => i.expenses > 0).sort((a, b) => a.expenses - b.expenses)[0];
-  const direction = monthSeries.length > 1 ? monthSeries[monthSeries.length - 1].expenses - monthSeries[0].expenses : 0;
-
-  const priorRange = { start: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - days(safeRange)), end: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - 1) };
+  const annualSummary = summarizeAnnualEvolution(annualMonthSeries);
+  const monthSeries = annualSummary.activeMonths;
+  const maxSeries = Math.max(1, ...monthSeries.map(item => Math.max(item.income, item.expenses, item.saved)));
+  const avgExpense = annualSummary.averageMonthlyExpenses;
+  const maxMonth = annualSummary.highestExpenseMonth;
+  const minMonth = annualSummary.lowestExpenseMonth;
+  const direction = annualSummary.expenseTrend;
+  const categoryHistory = selectedCategoryDetail ? Array.from({ length: 12 }, (_, index) => {
+    const date = moveMonth(startMonth(safeRange.end.getFullYear(), safeRange.end.getMonth() + 1), index - 11);
+    const key = keyFor(date); const monthRange = { start: startMonth(date.getFullYear(), date.getMonth() + 1), end: endMonth(date.getFullYear(), date.getMonth() + 1) };
+    const historyTransactions = transactions.filter(tx => inRange(parseDay(tx.date), monthRange) && (category === 'Todas' || tx.category === category));
+    const historySavings = savingsMovements.filter(item => inRange(parseDay(item.date), monthRange) && (category === 'Todas' || (item.type === 'direct_expense' && (item.category || 'Otros') === category)));
+    const total = spendingByCategory(historyTransactions, historySavings).get(normalizeFinancialCategory(selectedCategoryDetail))?.amount || 0;
+    return { key, label: date.toLocaleDateString('es-DO', { month: 'short', year: '2-digit' }).replace('.', ''), amount: total };
+  }).filter(point => point.amount > 0) : [];
+    const priorRange = { start: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - days(safeRange)), end: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - 1) };
   const priorTx = transactions.filter(tx => inRange(parseDay(tx.date), priorRange) && tx.type === 'expense' && noDuplicateTx(tx) && (category === 'Todas' || tx.category === category));
   const priorSm = savingsMovements.filter(sm => inRange(parseDay(sm.date), priorRange) && (category === 'Todas' || (sm.type === 'direct_expense' && (sm.category || 'Otros') === category)));
   const priorTotals = new Map<string, number>();
@@ -155,7 +183,7 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
     deposits,
     previousDeposits,
     trendExpenses: monthSeries.map(item => item.expenses),
-    averageExpenses: avgExpense,
+    averageExpenses: avgExpense || 0,
     goals: savingsGoals,
     hasMovements: Boolean(selectedTx.length || selectedSavings.length),
   });
@@ -180,6 +208,9 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
   ];
   const modes: { id: Mode; label: string }[] = [{ id: 'month', label: 'Mes' }, { id: 'year', label: 'Año' }, { id: '6m', label: '6 meses' }, { id: '12m', label: '12 meses' }, { id: 'custom', label: 'Rango' }];
   const borderSection = 'space-y-4 border-b border-slate-200/80 pb-5 dark:border-slate-800/80';
+  const generalCompareRows = expenseCategoryDistribution(visibleTx, visibleSavings);
+  const includesToday = (fromValue: string, toValue: string) => isValidAnalyticsRange({ from: fromValue, to: toValue }) && parseDay(fromValue) <= today() && parseDay(toValue) >= today();
+  const comparisonHasCurrentDate = compareMode === 'months' ? monthA === keyFor(today()) || monthB === keyFor(today()) : includesToday(rangeAFrom, rangeATo) || includesToday(rangeBFrom, rangeBTo);
 
   const makeReport = (): AnalyticsReport => {
     const report: AnalyticsReport = {
@@ -192,18 +223,18 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
           ['Gastos respecto a ingresos', percent(spentPercent)], ['Ingresos enviados a ahorro', percent(savedPercent)],
           ['Promedio diario', fmt(dailyAverage)], ['Movimientos', String(movementCount)]],
       };
-    if (section === 'compare') {
-      report.period = labelMonth(firstKey) + ' frente a ' + labelMonth(secondKey) + (comparisonDay ? ' · hasta el día ' + comparisonDay : '');
-      report.metrics = [['Período A', labelMonth(firstKey)], ['Período B', labelMonth(secondKey)]];
+    if (section === 'compare' && activeComparison && comparisonA && comparisonB) {
+      report.period = comparisonALabel + ' frente a ' + comparisonBLabel;
+      report.metrics = [['Período A', comparisonALabel], ['Período B', comparisonBLabel]];
       report.breakdown = undefined; report.transactions = []; report.savingsMovements = [];
       report.tables = [{
         title: 'Comparación de indicadores',
-        headers: ['Indicador', 'A', 'B', 'Diferencia B − A', 'Variación'],
-        rows: [['Ingresos', aStats.income, bStats.income], ['Gastos', aStats.expenses, bStats.expenses], ['Aportes', aStats.saved, bStats.saved]].map(([name, first, second]) => {
-          const firstValue = Number(first), secondValue = Number(second);
-          return [String(name), fmt(firstValue), fmt(secondValue), fmt(secondValue - firstValue), firstValue ? percent((secondValue - firstValue) / firstValue * 100) : 'No disponible'];
-        }),
-      }, { title: 'Gastos por categoría', headers: ['Categoría', 'A', 'B', 'Diferencia B − A'], rows: compareCats.map(row => [row.name, fmt(row.a), fmt(row.b), fmt(row.b - row.a)]) }];
+        headers: ['Indicador', 'A', 'B', 'Diferencia A − B', 'Variación vs. B'],
+        rows: comparisonA && comparisonB ? [['Ingresos', comparisonA.income, comparisonB.income, 'income'], ['Gastos', comparisonA.expenses, comparisonB.expenses, 'expense'], ['Aportes', comparisonA.savings, comparisonB.savings, 'savings']].map(([name, first, second, kind]) => {
+          const metric = comparePeriodMetric(Number(first), Number(second), kind as 'income' | 'expense' | 'savings');
+          return [String(name), fmt(Number(first)), fmt(Number(second)), (metric.difference > 0 ? '+' : '') + fmt(metric.difference), metric.variationPercent === null ? 'Sin base en B' : (metric.variationPercent > 0 ? '+' : '') + percent(metric.variationPercent)];
+        }) : [],
+      }, { title: 'Gastos por categoría', headers: ['Categoría', 'A', 'B', 'Diferencia A − B'], rows: compareCats.map(row => [row.name, fmt(row.a), fmt(row.b), (row.a - row.b > 0 ? '+' : '') + fmt(row.a - row.b)]) }];
     } else if (section === 'evolution') {
       report.period = monthSeries.length ? labelMonth(monthSeries[0].key) + ' – ' + labelMonth(monthSeries[monthSeries.length - 1].key) : rangeLabel;
       report.metrics = []; report.breakdown = undefined; report.transactions = []; report.savingsMovements = [];
@@ -212,17 +243,17 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
     return report;
   };
 
-  return <div className="mx-auto w-full max-w-5xl animate-in fade-in duration-200">
-    <PageHeader title="Tus estadísticas" period={section === 'compare' ? <span className="type-secondary whitespace-nowrap">{labelMonth(firstKey)} vs {labelMonth(secondKey)}</span> : mode === 'custom' ? <span className="type-secondary whitespace-nowrap">{labelDate(safeRange.start)} – {labelDate(safeRange.end)}</span> : mode === 'year' ? <span className="min-h-11 px-3 text-sm font-semibold">{y}</span> : <PeriodSelector year={y} month={m} onMonthChange={(nextYear, nextMonth) => { setY(nextYear); setM(nextMonth); }} />} actions={<ExportButton disabled={invalidRange || (section === 'compare' && firstKey === secondKey)} onClick={() => onOpenExportModal(makeReport())} />} />
-    <section className="flex items-center gap-3 border-b border-slate-200/80 py-3 dark:border-slate-800/80">
-      <button type="button" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:hover:bg-slate-800"><SlidersHorizontal className="h-4 w-4" />Filtros</button>
-    </section>
-    {filtersOpen && <AnalyticsFilters value={{ mode, year: y, month: m, from, to, category, movementType, firstKey, secondKey }}
-      defaults={{ mode: 'month', year, month, from: dayKey(startMonth(year, month)), to: dayKey(endMonth(year, month)), category: 'Todas', movementType: 'all', firstKey: keyFor(startMonth(year, month)), secondKey: keyFor(startMonth(year, month - 1)) }}
+  return <div className="mx-auto w-full min-w-0 max-w-5xl animate-in fade-in duration-200">
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200/80 pb-3 dark:border-slate-800/80">
+      <div className="flex min-w-0 items-center gap-2"><h1 className="type-screen-title truncate text-slate-900 dark:text-white">Tus estadísticas</h1><button type="button" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 px-2.5 text-xs font-semibold hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:hover:bg-slate-800"><SlidersHorizontal className="h-4 w-4" />Filtros</button></div>
+      <div className="ml-auto flex min-w-0 items-center justify-between gap-1 sm:justify-end sm:gap-2">{mode === 'custom' ? <span className="type-secondary whitespace-nowrap">{labelDate(safeRange.start)} – {labelDate(safeRange.end)}</span> : mode === 'year' ? <span className="min-h-9 px-2 text-sm font-semibold">{y}</span> : <PeriodSelector compact year={y} month={m} onMonthChange={changeGeneralPeriod} />}<ExportButton disabled={invalidRange || (section === 'compare' && !activeComparison)} onClick={() => onOpenExportModal(makeReport())} /></div>
+    </header>
+    {filtersOpen && <AnalyticsFilters value={{ mode, year: y, month: m, from, to, category, movementType }}
+      defaults={{ mode: 'month', year, month, from: dayKey(startMonth(year, month)), to: dayKey(endMonth(year, month)), category: 'Todas', movementType: 'all' }}
       categoriesByType={{ all: [...new Set([...allTransactions.filter(tx => !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), income: [...new Set(allTransactions.filter(tx => tx.type === 'income' && !isSavingsContributionTransaction(tx)).map(tx => tx.category))].sort(), expense: [...new Set([...allTransactions.filter(tx => tx.type === 'expense' && !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), savings: [] }}
-      comparing={section === 'compare'} onClose={() => setFiltersOpen(false)}
-      onApply={(filters: AnalyticsFiltersValue) => { setMode(filters.mode); setY(filters.year); setM(filters.month); setFrom(filters.from); setTo(filters.to); setCategory(filters.category); setMovementType(filters.movementType); setFirstKey(filters.firstKey); setSecondKey(filters.secondKey); setFiltersOpen(false); }} />}
-    <nav className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-200/80 py-2 dark:border-slate-800/80" aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => setSection(s.id)} aria-current={section === s.id ? 'page' : undefined} className={'inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ' + (section === s.id ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800')}><Icon className="h-4 w-4" />{s.label}</button>; })}</nav>
+      onClose={() => setFiltersOpen(false)}
+      onApply={(filters: AnalyticsFiltersValue) => { setMode(filters.mode); setY(filters.year); setM(filters.month); if (!trendYearChosen) setTrendYear(filters.year); setFrom(filters.from); setTo(filters.to); setCategory(filters.category); setMovementType(filters.movementType); setFiltersOpen(false); }} />}
+    <nav className="grid w-full min-w-0 grid-cols-4 gap-1 border-b border-slate-200/80 py-2 dark:border-slate-800/80" aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => setSection(s.id)} aria-current={section === s.id ? "page" : undefined} className={"inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 text-[10px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:text-xs " + (section === s.id ? "bg-primary/10 font-semibold text-primary" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800")}><Icon className="h-4 w-4 shrink-0" /><span className="whitespace-nowrap">{s.label}</span></button>; })}</nav>
 
     <div className="space-y-5 pt-4">
       {invalidRange && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">Introduce fechas válidas y una fecha final igual o posterior al inicio para consultar y exportar resultados.</p>}
@@ -245,15 +276,21 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
           {movementType !== 'all' || category !== 'Todas' ? <p className="py-3 text-xs text-slate-500">Selecciona todos los tipos y categorías para recibir consejos sobre el período completo.</p> : !tips.length ? <p className="py-3 text-xs text-slate-500 dark:text-slate-400">Aún no hay suficientes movimientos para identificar oportunidades.</p> : <div className="divide-y divide-slate-200/70 dark:divide-slate-800/70">{tips.slice(0, 4).map((tip, i) => <article key={i} className="flex gap-3 py-3"><span className={'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ' + (tip.color === 'red' ? 'bg-rose-500/10 text-rose-600' : tip.color === 'amber' ? 'bg-amber-500/10 text-amber-600' : tip.color === 'green' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary')}><Lightbulb className="h-4 w-4" /></span><div className="min-w-0"><h4 className="text-sm font-semibold">{tip.title}</h4><p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{tip.detail}</p>{tip.value && <p className="mt-1 text-xs font-semibold">{tip.value}</p>}</div></article>)}</div>}
         </section>
         <section className={borderSection} aria-label="Lectura rápida de gastos por categoría">
-          <Heading title="Lectura rápida" detail={'Gastos por categoría · ' + rangeLabel} action={<div className="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700" role="group" aria-label="Presentación de gastos"><button type="button" aria-pressed={quickView === 'chart'} onClick={() => setQuickView('chart')} className={'inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs ' + (quickView === 'chart' ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-500')}><BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />Gráfico</button><button type="button" aria-pressed={quickView === 'list'} onClick={() => setQuickView('list')} className={'inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs ' + (quickView === 'list' ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-500')}><List className="h-3.5 w-3.5" aria-hidden="true" />Lista</button></div>} />
-          {!categoryRows.length ? <p className="py-5 text-sm text-slate-500">Aún no hay gastos registrados en este período.</p> : quickView === 'chart' ? <div className="space-y-3 pt-3" role="img" aria-label={'Gráfico de gastos por categoría para ' + rangeLabel}>
-            {categoryRows.slice().sort((a, b) => b.amount - a.amount).map((row, index) => <div key={row.name} className="grid grid-cols-[minmax(5.5rem,0.8fr)_minmax(5rem,2fr)_auto] items-center gap-2"><span className="truncate text-xs text-slate-600 dark:text-slate-300" title={localizeCategoryName(language, row.name)}>{localizeCategoryName(language, row.name)}</span><div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden="true"><div className={'h-full rounded-full ' + (index === 0 ? 'bg-primary' : 'bg-primary/60')} style={{ width: Math.max(2, row.share) + '%' }} /></div><span className="text-right text-xs font-semibold tabular-nums">{fmt(row.amount)}</span></div>)}
-            <p className="sr-only">{categoryRows.map(row => localizeCategoryName(language, row.name) + ': ' + fmt(row.amount) + ', ' + percent(row.share)).join('. ')}</p>
-          </div> : <div className="divide-y divide-slate-200/70 pt-1 dark:divide-slate-800/70">{categoryRows.slice().sort((a, b) => b.amount - a.amount).map((row, index) => <div key={row.name} className="flex items-center justify-between gap-3 py-2.5"><span className="min-w-0 truncate text-sm">{index + 1}. {localizeCategoryName(language, row.name)}</span><span className="shrink-0 text-right text-sm font-semibold tabular-nums">{fmt(row.amount)} <span className="text-xs font-normal text-slate-500">· {percent(row.share)}</span></span></div>)}</div>}
-          <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 dark:border-slate-800 sm:grid-cols-2"><p className="text-xs text-slate-500">Mayor gasto: <strong className="text-app-foreground">{topCategory ? localizeCategoryName(language, topCategory.name) + ' · ' + fmt(topCategory.amount) : 'Sin datos'}</strong></p><p className="text-xs text-slate-500">Menor con movimientos: <strong className="text-app-foreground">{leastCategory ? localizeCategoryName(language, leastCategory.name) + ' · ' + fmt(leastCategory.amount) : 'Sin datos'}</strong></p></div>
+          <Heading title="Lectura rápida" detail={'Gastos por categoría · ' + rangeLabel} />
+          <QuickExpenseChart rows={expenseCategoryDistribution(visibleTx, visibleSavings)} view={quickView} onViewChange={setQuickView} sort={quickSort} onSort={setQuickSort} fmt={fmt} localize={name => localizeCategoryName(language, name)} />
         </section>
       </>}
-      {!invalidRange && section === 'categories' && (movementType === 'all' || movementType === 'expense') && <section className={borderSection}><Heading title="Gastos por categoría" detail={mode === 'custom' ? 'Los presupuestos se comparan cuando el período incluye el mes completo.' : 'Gasto real frente al presupuesto asignado.'} action={<select aria-label="Ordenar categorías" value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="h-9 rounded-lg border border-slate-200 bg-transparent px-2 text-xs dark:border-slate-700"><option value="high">Mayor gasto</option><option value="low">Menor gasto</option><option value="name">Nombre</option></select>} />{!displayCategories.length ? <p className="py-8 text-center text-sm text-slate-500">No hay gastos ni presupuestos en este período.</p> : <div className="divide-y divide-slate-200/80 dark:divide-slate-800/80">{displayCategories.map((c, rank) => { const budget = budgetByCategory.get(c.name) || 0; const remain = budget - c.amount; return <div key={c.name} className="space-y-2 py-4"><div className="flex justify-between gap-3"><div><p className="text-sm font-semibold"><span className="mr-1.5 text-xs tabular-nums text-slate-400">{rank + 1}.</span>{localizeCategoryName(language, c.name)}</p><p className="mt-1 text-xs text-slate-500">{fmt(c.amount)} gastados · {percent(c.share)} del total</p></div><div className="text-right"><p className={'text-sm font-semibold ' + (budget && remain < 0 ? 'text-rose-600' : '')}>{budget ? remain < 0 ? 'Excedido ' + fmt(-remain) : 'Restan ' + fmt(remain) : fmt(c.amount)}</p><p className="mt-1 text-[11px] text-slate-500">{budget ? fmt(budget) + ' asignados' : 'Sin monto asignado'}</p></div></div><div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><div className={'h-full rounded-full ' + (budget && c.amount > budget ? 'bg-rose-500' : 'bg-primary')} style={{ width: clamp(budget ? c.amount / budget * 100 : c.share, 2, 100) + '%' }} /></div></div>; })}</div>}</section>}
+      {!invalidRange && section === 'categories' && (movementType === 'all' || movementType === 'expense') && (() => {
+        const previousRange = { start: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - days(safeRange)), end: new Date(safeRange.start.getFullYear(), safeRange.start.getMonth(), safeRange.start.getDate() - 1) };
+        const previousRows = expenseCategoryDistribution(
+          transactions.filter(tx => inRange(parseDay(tx.date), previousRange)),
+          savingsMovements.filter(sm => inRange(parseDay(sm.date), previousRange)),
+        );
+        const budgets = Array.from(budgetByCategory, ([category, amount]) => ({ category, amount }));
+        return <section className={borderSection}><Heading title="Gastos por categoría" detail="Distribución, variación y presupuesto frente al gasto real." />
+          <CategoryAnalysis rows={expenseCategoryDistribution(visibleTx, visibleSavings)} previousRows={previousRows} history={categoryHistory} budgets={budgets} transactions={visibleTx} savingsMovements={visibleSavings} sort={categorySort} onSort={setCategorySort} selectedCategory={selectedCategoryDetail} onSelect={setSelectedCategoryDetail} fmt={fmt} localize={name => localizeCategoryName(language, name)} periodLabel={rangeLabel} />
+        </section>;
+      })()}
 
       {!invalidRange && section === 'categories' && (movementType === 'income' || movementType === 'savings') && <section className={borderSection}>
         <Heading title={movementType === 'income' ? 'Ingresos registrados por categoría' : 'Destinos de los aportes'}
@@ -265,9 +302,45 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
             <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800"><div className="h-full rounded-full bg-primary" style={{ width: row.share + '%' }} /></div>
           </article>)}</div>}
       </section>}
-      {!invalidRange && section === 'compare' && <section className={borderSection}><Heading title="Comparar períodos" detail="Compara gastos, ingresos, ahorro y categorías entre meses." />{firstKey === secondKey ? <p className="text-xs text-amber-700">Elige meses distintos.</p> : <><div className="space-y-3 border-y border-slate-200 py-4 dark:border-slate-800">{[{ label: 'Gastos', a: aStats.expenses, b: bStats.expenses, favorable: 'down' }, { label: 'Ingresos', a: aStats.income, b: bStats.income, favorable: 'up' }, { label: 'Ahorro', a: aStats.saved, b: bStats.saved, favorable: 'up' }].map(metric => { const delta = metric.b - metric.a; const variation = metric.a ? delta / metric.a * 100 : null; const positive = metric.favorable === 'up' ? delta > 0 : delta < 0; return <div key={metric.label} className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold">{metric.label}</p><p className="mt-0.5 truncate text-[11px] text-slate-500">{labelMonth(firstKey)} {fmt(metric.a)} <span className="px-1">→</span> {labelMonth(secondKey)} {fmt(metric.b)}</p></div><div className="shrink-0 text-right"><p className={'text-xs font-semibold ' + (delta ? positive ? 'text-emerald-600' : 'text-rose-600' : 'text-slate-500')}>{delta > 0 ? '+' : ''}{fmt(delta)}</p><p className="mt-0.5 text-[10px] text-slate-500">{variation === null ? 'Variación no disponible' : (delta > 0 ? '+' : '') + percent(variation)}</p></div></div>; })}</div><p className="text-xs text-slate-500">Comparación de gastos por categoría</p>{comparisonIsPartial && <p className="text-xs text-amber-700 dark:text-amber-300">Un período está en curso. Ambos meses se comparan hasta el día {comparisonDay} para usar el mismo número de días.</p>}<div className="space-y-3">{compareCats.length ? compareCats.map(c => { const max = Math.max(c.a, c.b, 1); const diff = c.b - c.a; return <div key={c.name}><div className="flex justify-between gap-2 text-xs"><span className="truncate font-medium">{localizeCategoryName(language, c.name)}</span><span className={diff > 0 ? 'text-rose-600' : diff < 0 ? 'text-emerald-600' : 'text-slate-500'}>{diff ? (diff > 0 ? '+' : '') + fmt(diff) : 'Sin cambio'}</span></div><div className="mt-2 grid gap-2"><div className="grid grid-cols-[1.5rem_1fr] items-center gap-2"><span className="text-[10px] text-slate-500">A</span><div title={labelMonth(firstKey) + ' · ' + fmt(c.a)} className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-slate-400 dark:bg-slate-500" style={{ width: (c.a ? clamp(c.a / max * 100, 2, 100) : 0) + '%' }} /></div></div><div className="grid grid-cols-[1.5rem_1fr] items-center gap-2"><span className="text-[10px] text-slate-500">B</span><div title={labelMonth(secondKey) + ' · ' + fmt(c.b)} className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-primary" style={{ width: (c.b ? clamp(c.b / max * 100, 2, 100) : 0) + '%' }} /></div></div></div><div className="flex justify-between text-[10px] text-slate-500"><span>{fmt(c.a)}</span><span>{fmt(c.b)}</span></div></div>; }) : <p className="py-5 text-center text-xs text-slate-500">No hay gastos en los meses elegidos.</p>}</div><p className="text-[11px] text-slate-500">Barras: {labelMonth(firstKey)} (gris) · {labelMonth(secondKey)} (color principal)</p></>}</section>}
+      {!invalidRange && section === 'compare' && <section className={borderSection}>
+        <Heading title="Comparar períodos" detail="Elige A y B y aplica para iniciar la comparación." />
+        <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+          <div role="group" aria-label="Modalidad de comparación" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+            <button type="button" aria-pressed={compareMode === 'months'} onClick={() => { setCompareMode('months'); setComparisonError(''); }} className={'min-h-10 rounded-lg px-2 text-sm font-medium ' + (compareMode === 'months' ? 'bg-white text-primary shadow-sm dark:bg-slate-800' : 'text-slate-500')}>Meses</button>
+            <button type="button" aria-pressed={compareMode === 'ranges'} onClick={() => { setCompareMode('ranges'); setComparisonError(''); }} className={'min-h-10 rounded-lg px-2 text-sm font-medium ' + (compareMode === 'ranges' ? 'bg-white text-primary shadow-sm dark:bg-slate-800' : 'text-slate-500')}>Rangos de fechas</button>
+          </div>
+          {compareMode === 'months' ? <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+            <label className="min-w-0 text-xs font-medium">Período A<input aria-label="Mes del período A" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-transparent px-3 text-sm dark:border-slate-700" type="month" value={monthA} onChange={event => { setMonthA(event.target.value); setComparisonError(''); }} /></label>
+            <label className="min-w-0 text-xs font-medium">Período B<input aria-label="Mes del período B" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-transparent px-3 text-sm dark:border-slate-700" type="month" value={monthB} onChange={event => { setMonthB(event.target.value); setComparisonError(''); }} /></label>
+          </div> : <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+            <fieldset className="min-w-0 space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"><legend className="px-1 text-xs font-semibold">Período A</legend><label className="block text-xs">Desde<input aria-label="Período A desde" className="mt-1 min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-transparent px-2 text-sm dark:border-slate-700" type="date" value={rangeAFrom} onChange={event => { setRangeAFrom(event.target.value); setComparisonError(''); }} /></label><label className="block text-xs">Hasta<input aria-label="Período A hasta" className="mt-1 min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-transparent px-2 text-sm dark:border-slate-700" type="date" value={rangeATo} onChange={event => { setRangeATo(event.target.value); setComparisonError(''); }} /></label></fieldset>
+            <fieldset className="min-w-0 space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"><legend className="px-1 text-xs font-semibold">Período B</legend><label className="block text-xs">Desde<input aria-label="Período B desde" className="mt-1 min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-transparent px-2 text-sm dark:border-slate-700" type="date" value={rangeBFrom} onChange={event => { setRangeBFrom(event.target.value); setComparisonError(''); }} /></label><label className="block text-xs">Hasta<input aria-label="Período B hasta" className="mt-1 min-h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-transparent px-2 text-sm dark:border-slate-700" type="date" value={rangeBTo} onChange={event => { setRangeBTo(event.target.value); setComparisonError(''); }} /></label></fieldset>
+          </div>}
+          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => applyQuickComparison('previous')} className="min-h-9 rounded-lg border border-slate-200 px-2.5 text-xs font-medium text-primary hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Usar mes anterior</button><button type="button" onClick={() => applyQuickComparison('year')} className="min-h-9 rounded-lg border border-slate-200 px-2.5 text-xs font-medium text-primary hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Mismo período del año anterior</button></div>
+          {comparisonHasCurrentDate && <label className="flex min-h-10 items-start gap-2 text-xs"><input type="checkbox" checked={compareEquivalentDays} onChange={event => setCompareEquivalentDays(event.target.checked)} className="mt-0.5 accent-primary" /><span>Comparar los mismos días transcurridos<span className="mt-0.5 block text-[11px] text-slate-500">Solo ajusta el cálculo cuando un rango incluye hoy; no cambia las fechas seleccionadas.</span></span></label>}
+          {comparisonError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{comparisonError}</p>}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-slate-800"><button type="button" onClick={resetComparison} className="min-h-10 rounded-lg px-3 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Limpiar selección</button><button type="button" onClick={applyComparison} className="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Aplicar comparación</button></div>
+        </div>
+        {activeComparison && comparisonA && comparisonB && selectedComparisonRanges ? <>
+          <div className="grid gap-2 border-y border-slate-200 py-3 text-xs sm:grid-cols-2 dark:border-slate-800"><p><strong>A:</strong> {comparisonALabel}</p><p><strong>B:</strong> {comparisonBLabel}</p></div>
+          {selectedComparisonRanges.applied && <p className="text-xs text-slate-500">Se comparan los primeros {selectedComparisonRanges.days} días de cada período en curso.</p>}
+          {dayKey(activeComparison.a.start) === dayKey(activeComparison.b.start) && dayKey(activeComparison.a.end) === dayKey(activeComparison.b.end) && <p className="text-xs text-amber-700 dark:text-amber-300">A y B cubren las mismas fechas; los resultados serán iguales.</p>}
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">{[{ label: 'Ingresos', a: comparisonA.income, b: comparisonB.income, kind: 'income' as const }, { label: 'Gastos reales', a: comparisonA.expenses, b: comparisonB.expenses, kind: 'expense' as const }, { label: 'Aportes a ahorro', a: comparisonA.savings, b: comparisonB.savings, kind: 'savings' as const }].map(metric => { const change = comparePeriodMetric(metric.a, metric.b, metric.kind); const color = change.favorable === 'good' ? 'text-emerald-700 dark:text-emerald-400' : change.favorable === 'bad' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500'; return <div key={metric.label} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-3"><div className="min-w-0"><p className="text-xs font-semibold">{metric.label}</p><p className="mt-1 text-[11px] text-slate-500">A {fmt(metric.a)} <span className="px-1">·</span> B {fmt(metric.b)}</p></div><div className="text-right"><p className={'text-xs font-semibold tabular-nums ' + color}>{change.difference > 0 ? '+' : ''}{fmt(change.difference)}</p><p className={'mt-1 text-[10px] ' + color}>{change.variationPercent === null ? 'Sin base en B' : (change.variationPercent > 0 ? '+' : '') + percent(change.variationPercent) + ' vs. B'}</p></div></div>; })}</div>
+        </> : <p className="text-xs text-slate-500">La comparación no está activa. Las categorías de abajo corresponden a los filtros generales de {rangeLabel}; selecciona A y B y pulsa «Aplicar comparación» para comparar.</p>}
+        <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800"><h4 className="text-sm font-semibold">Categorías</h4><p className="text-[11px] text-slate-500">{activeComparison ? 'Gasto real por categoría en A y B.' : 'Gastos reales del período general · ' + rangeLabel}</p>
+          {(activeComparison ? compareCats : generalCompareRows.map(row => ({ name: row.category, a: row.amount, b: 0 }))).length ? <div className="divide-y divide-slate-200/70 dark:divide-slate-800/70">{(activeComparison ? compareCats : generalCompareRows.map(row => ({ name: row.category, a: row.amount, b: 0 }))).map(row => { const metric = activeComparison ? comparePeriodMetric(row.a, row.b, 'expense') : null; return <div key={row.name} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 py-2.5 text-xs"><button type="button" onClick={() => { setSelectedCategoryDetail(row.name); setSection('categories'); }} className="min-w-0 truncate text-left font-medium text-primary hover:underline" title={localizeCategoryName(language, row.name)}>{localizeCategoryName(language, row.name)}</button>{activeComparison ? <div className="min-w-0 text-right"><p className="font-semibold tabular-nums">A {fmt(row.a)} · B {fmt(row.b)}</p><p className={'mt-0.5 text-[10px] tabular-nums ' + (metric?.favorable === 'good' ? 'text-emerald-700 dark:text-emerald-400' : metric?.favorable === 'bad' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500')}>A−B {metric && metric.difference > 0 ? '+' : ''}{fmt(metric?.difference || 0)} · {metric?.variationPercent === null ? 'Sin base en B' : (metric && metric.variationPercent > 0 ? '+' : '') + percent(metric?.variationPercent || 0)}</p></div> : <div className="text-right"><p className="font-semibold tabular-nums">{fmt(row.a)}</p><p className="text-[10px] text-slate-500">{generalCompareRows.find(item => item.category === row.name)?.share.toLocaleString('es-DO', { maximumFractionDigits: 1 })}% del total</p></div>}</div>; })}</div> : <p className="py-4 text-xs text-slate-500">No hay gastos reales por categoría en este período.</p>}
+        </div>
+      </section>}
 
-      {!invalidRange && section === 'evolution' && <section className={borderSection}><Heading title="Evolución financiera" detail="Ingresos, gastos y aportes a ahorro por mes." action={undefined} /><div className="flex gap-4 text-[11px] text-slate-500"><span>● Ingresos</span><span className="text-rose-500">● Gastos</span><span className="text-emerald-600">● Ahorro</span></div><div className="flex h-44 items-end gap-1 border-b border-slate-200 pb-6 dark:border-slate-800 sm:gap-2">{monthSeries.map(i => <div key={i.key} title={labelMonth(i.key) + ': ingresos ' + fmt(i.income) + ', gastos ' + fmt(i.expenses) + ', ahorro ' + fmt(i.saved)} className="relative flex h-full min-w-0 flex-1 items-end justify-center gap-0.5">{[[i.income, 'bg-primary'], [i.expenses, 'bg-rose-400'], [i.saved, 'bg-emerald-500']].map(([value, color], idx) => <div key={idx} className={'w-full max-w-4 rounded-t-sm ' + color} style={{ height: Math.max(Number(value) ? 3 : 0, Number(value) / maxSeries * 100) + '%' }} />)}<span className="absolute -bottom-5 text-[9px] text-slate-500">{i.label}</span></div>)}</div><div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-4"><div><p className="text-[11px] text-slate-500">Promedio mensual de gastos</p><p className="mt-1 text-sm font-semibold">{fmt(avgExpense)}</p></div><div><p className="text-[11px] text-slate-500">Mayor gasto</p><p className="mt-1 text-sm font-semibold">{maxMonth?.expenses ? labelMonth(maxMonth.key) + ' · ' + fmt(maxMonth.expenses) : 'Sin datos'}</p></div><div><p className="text-[11px] text-slate-500">Menor gasto con movimientos</p><p className="mt-1 text-sm font-semibold">{minMonth ? labelMonth(minMonth.key) + ' · ' + fmt(minMonth.expenses) : 'Sin datos'}</p></div><div><p className="text-[11px] text-slate-500">Tendencia</p><p className={'mt-1 text-sm font-semibold ' + (direction > 0 ? 'text-rose-600' : direction < 0 ? 'text-emerald-600' : '')}>{direction > 0 ? 'Subió ' : direction < 0 ? 'Bajó ' : 'Estable '}{fmt(Math.abs(direction))}</p></div></div></section>}
+      {!invalidRange && section === 'evolution' && <section className={borderSection}>
+        <Heading title="Evolución financiera" detail={'Ingresos, gastos reales y aportes a ahorro · ' + trendYear} action={<label className="flex items-center gap-2 text-xs text-slate-500">Año<select aria-label="Año de evolución" value={trendYear} onChange={event => { setTrendYear(Number(event.target.value)); setTrendYearChosen(true); }} className="min-h-9 max-w-28 rounded-lg border border-slate-200 bg-transparent px-2 text-sm font-semibold text-app-foreground dark:border-slate-700">{availableYears.map(value => <option key={value} value={value}>{value}</option>)}</select></label>} />
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500"><span><span className="text-primary">●</span> Ingresos</span><span><span className="text-rose-500">●</span> Gastos</span><span><span className="text-emerald-600">●</span> Ahorro</span></div>
+        {!monthSeries.length ? <p className="py-5 text-sm text-slate-500">No hay movimientos financieros registrados para {trendYear} con estos filtros.</p> : <>
+          {monthSeries.length === 1 && <p className="text-xs text-slate-500">Hay información de un solo mes; aún no se puede determinar una tendencia.</p>}
+          <div className="grid min-w-0 grid-cols-3 items-end gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12" aria-label={'Evolución mensual de ' + trendYear} role="list">{monthSeries.map(item => <div key={item.key} role="listitem" title={labelMonth(item.key) + ': ingresos ' + fmt(item.income) + ', gastos ' + fmt(item.expenses) + ', ahorro ' + fmt(item.saved)} className="min-w-0"><div className="flex h-24 items-end justify-center gap-1 border-b border-slate-200 dark:border-slate-800">{[[item.income, 'bg-primary'], [item.expenses, 'bg-rose-400'], [item.saved, 'bg-emerald-500']].map(([amount, color], index) => <div key={index} className={'w-3 max-w-full rounded-t-sm ' + color} style={{ height: Number(amount) ? Math.max(4, Number(amount) / maxSeries * 100) + '%' : '0%' }} />)}</div><p className="mt-1 truncate text-center text-[10px] text-slate-500">{item.label}</p></div>)}</div>
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 dark:border-slate-800 sm:grid-cols-4"><div><p className="text-[11px] text-slate-500">Promedio mensual de gastos</p><p className="mt-1 text-sm font-semibold">{avgExpense === null ? 'Sin datos' : fmt(avgExpense)}</p><p className="text-[10px] text-slate-500">{monthSeries.length} {monthSeries.length === 1 ? 'mes con movimientos' : 'meses con movimientos'}</p></div><div><p className="text-[11px] text-slate-500">Mayor gasto</p><p className="mt-1 text-sm font-semibold">{maxMonth ? labelMonth(maxMonth.key) + ' · ' + fmt(maxMonth.expenses) : 'Sin gastos'}</p></div><div><p className="text-[11px] text-slate-500">Menor gasto con movimientos</p><p className="mt-1 text-sm font-semibold">{minMonth ? labelMonth(minMonth.key) + ' · ' + fmt(minMonth.expenses) : 'Sin gastos'}</p></div><div><p className="text-[11px] text-slate-500">Tendencia entre meses activos</p><p className={'mt-1 text-sm font-semibold ' + (direction === null ? 'text-slate-500' : direction > 0 ? 'text-rose-600' : direction < 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500')}>{direction === null ? 'Datos insuficientes' : direction > 0 ? 'Subió ' + fmt(direction) : direction < 0 ? 'Bajó ' + fmt(Math.abs(direction)) : 'Sin variación'}</p></div></div>
+        </>}
+      </section>}
 
 
     </div>

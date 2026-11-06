@@ -133,16 +133,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       <div className="space-y-4">
         {/* Row 1: Search and Filters */}
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
             {/* Search Input */}
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por concepto o categoría..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-100 py-2 pl-10 pr-10 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                aria-label="Buscar movimientos"
+                className="min-h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-slate-100 py-2 pl-10 pr-10 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
               {searchTerm && (
                 <button
@@ -155,7 +156,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </div>
 
 
-            <button type="button" onClick={() => { setDraftFilters(filters); setFilterError(''); setFiltersOpen(true); }} aria-expanded={filtersOpen} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Filter className="h-4 w-4" />Filtros</button>
+            <button type="button" onClick={() => { setDraftFilters(filters); setFilterError(''); setFiltersOpen(true); }} aria-expanded={filtersOpen} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:gap-2 sm:px-4"><Filter className="h-4 w-4" />Filtros</button>
           </div>
           {hasActiveFilters && <div role="status" aria-live="polite" className="flex flex-col gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300 sm:flex-row sm:items-center sm:justify-between"><p className="min-w-0"><span className="font-semibold text-slate-800 dark:text-slate-100">Filtros activos:</span> {activeFilterLabels.join(' · ')}</p><button type="button" onClick={clearAppliedFilters} className="min-h-9 shrink-0 self-start rounded-lg px-2.5 font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:self-auto">Limpiar filtros</button></div>}
           {filtersOpen && <FilterPanel title="Filtros de movimientos" onClose={() => setFiltersOpen(false)} onCancel={() => setFiltersOpen(false)} onClear={() => { setDraftFilters({ ...DEFAULT_TRANSACTION_FILTERS }); setFilterError(''); }} onApply={() => { if (!isTransactionFilterRangeValid(draftFilters)) { setFilterError('Revisa el rango de fechas: la fecha inicial debe ser anterior o igual a la fecha final.'); return; } setFilters(draftFilters); onCategoryFilterChange?.(draftFilters.category === 'all' ? null : draftFilters.category); setFilterError(''); setFiltersOpen(false); }} size="md">

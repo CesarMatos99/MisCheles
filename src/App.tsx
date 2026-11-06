@@ -216,7 +216,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white pb-20 sm:pb-6 transition-colors duration-200">
+    <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white app-shell-bottom-nav-space transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
       <SyncConflictResolver />
@@ -241,7 +241,7 @@ export default function App() {
 
       {/* Main Navigation Tabs on Desktop */}
       <div className="hidden sm:block border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6">
           <div className="flex gap-2">
             {[
               { id: 'dashboard' as ActiveTab, label: t('home'), icon: PieChart },
@@ -273,7 +273,7 @@ export default function App() {
       </div>
 
       {/* Main Body Content Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className="mx-auto w-full max-w-5xl min-w-0 flex-1 space-y-6 p-4 sm:p-6">
         {movementError && <p role="alert" className="mb-3 text-sm text-rose-600 dark:text-rose-300">{movementError}</p>}
         {activeTab === 'dashboard' && (
           selectedCategory ? (

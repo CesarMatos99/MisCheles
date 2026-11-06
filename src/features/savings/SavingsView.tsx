@@ -137,13 +137,13 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
       {movementError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{movementError}</p>}
 
       <section aria-labelledby="savings-summary-title" className="py-1 sm:py-2">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p id="savings-summary-title" className="text-sm font-medium text-slate-500 dark:text-slate-400">Saldo total ahorrado</p>
             <p className="type-display type-money mt-1 text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white sm:text-5xl">{profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Saldo vigente del fondo.</p>
           </div>
-          <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month')} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:w-auto"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" />Gestionar</button>
+          <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month')} className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 self-end rounded-lg px-2 text-xs font-semibold text-slate-500 transition hover:bg-primary-soft hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-slate-300 sm:self-auto"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" />Gestionar</button>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800/80 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-slate-200/80 dark:sm:divide-slate-800/80">
           <div className="sm:pr-4"><p className="text-xs text-slate-500 dark:text-slate-400">Ahorro libre</p><p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{profile.currency} {totalFreeSavings.toLocaleString()}</p></div>
