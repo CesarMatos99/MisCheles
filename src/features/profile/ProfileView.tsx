@@ -103,7 +103,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const fieldClass = 'app-field';
 
   return (
-    <div className="app-profile mx-auto w-full max-w-3xl animate-in fade-in duration-200">
+    <div className="app-profile mx-auto w-full max-w-5xl animate-in fade-in duration-200">
       <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
         {section !== 'home' && (
           <button type="button" onClick={() => setSection('home')} className="mb-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary">
@@ -115,7 +115,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {section === 'home' && (
         <>
-          <section className="flex items-center gap-4 border-b border-slate-200 py-6 dark:border-slate-800">
+          <section className="flex flex-col items-center gap-3 border-b border-slate-200 py-6 text-center dark:border-slate-800 sm:flex-row sm:items-center sm:gap-4 sm:text-left">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
               {profile.photoUrl ? <img src={profile.photoUrl} alt={profile.name} className="h-full w-full object-cover" /> : profile.name.charAt(0).toUpperCase()}
             </div>
@@ -125,23 +125,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
             </div>
           </section>
-          <nav className="divide-y divide-slate-200 dark:divide-slate-800" aria-label="Configuración">
-            <button type="button" onClick={() => setSection('profile')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+          <nav className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-slate-800 lg:grid-cols-2 lg:gap-3 lg:divide-y-0" aria-label="Configuración">
+            <button type="button" onClick={() => setSection('profile')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <UserRound className="h-5 w-5 text-primary" /><span className="flex-1">{t('profileData')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('appearance')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+            <button type="button" onClick={() => setSection('appearance')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <Palette className="h-5 w-5 text-primary" /><span className="flex-1">{t('appearance')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('account')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+            <button type="button" onClick={() => setSection('account')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('accountSync')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('security')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+            <button type="button" onClick={() => setSection('security')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <Shield className="h-5 w-5 text-primary" /><span className="flex-1">{t('security')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={onOpenInstall} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100">
+            <button type="button" onClick={onOpenInstall} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('installApp')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={onLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-rose-600 dark:text-slate-100">
+            <button type="button" onClick={onLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-rose-600 dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" /><span className="flex-1">{t('lockApp')}</span>
             </button>
           </nav>
