@@ -55,6 +55,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
+  const [sort, setSort] = useState<{ key: 'date' | 'category' | 'description' | 'type' | 'amount'; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   useEffect(() => {
     if (initialCategoryFilter) setFilters(current => ({ ...current, category: initialCategoryFilter }));
@@ -67,6 +68,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     setSearchTerm('');
     setFilterError('');
     onCategoryFilterChange?.(null);
+  };
+
+  const updateQuickFilter = (key: 'type' | 'category', value: string) => {
+    setFilters(current => ({ ...current, [key]: value }));
+    setDraftFilters(current => ({ ...current, [key]: value }));
+    if (key === 'category') onCategoryFilterChange?.(value === 'all' ? null : value);
   };
 
   const activeFilterLabels = [
@@ -84,6 +91,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     () => filterTransactionRecords(transactions, filters, searchTerm, isSavingsTx, category => localizeCategoryName(language, category)),
     [transactions, filters, searchTerm, language],
   );
+  const sortedTransactions = useMemo(() => {
+    const records = [...filtered];
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    records.sort((left, right) => {
+      let comparison = 0;
+      if (sort.key === 'amount') comparison = left.amount - right.amount;
+      else if (sort.key === 'category') comparison = localizeCategoryName(language, left.category).localeCompare(localizeCategoryName(language, right.category), language);
+      else if (sort.key === 'description') comparison = left.description.localeCompare(right.description, language);
+      else if (sort.key === 'type') comparison = left.type.localeCompare(right.type, language);
+      else comparison = left.date.localeCompare(right.date);
+      if (comparison === 0) comparison = right.createdAt - left.createdAt || left.id.localeCompare(right.id);
+      return comparison * direction;
+    });
+    return records;
+  }, [filtered, language, sort]);
 
   const totalExpenses = filtered
     .filter((t) => t.type === 'expense' && !isSavingsTx(t))
@@ -131,15 +153,24 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     ...savingsMovements.filter((movement) => movement.monthKey === selectedMonthKey).map((movement) => movement.category || 'Aporte al Ahorro'),
   ]));
   const savingsPagination = paginate(savingsLedger, page, pageSize);
-  const transactionPagination = paginate(filtered, page, pageSize);
+  const transactionPagination = paginate(sortedTransactions, page, pageSize);
   const pagination = filters.type === 'savings' ? savingsPagination : transactionPagination;
   const visibleCount = pagination.totalItems;
-  useEffect(() => { setPage(1); }, [filters.type, filters.category, filters.from, filters.to, searchTerm, pageSize, selectedMonthKey]);
+  useEffect(() => { setPage(1); }, [filters.type, filters.category, filters.from, filters.to, searchTerm, pageSize, selectedMonthKey, sort]);
   useEffect(() => { setPage(current => Math.min(current, pagination.totalPages)); }, [pagination.totalPages]);
   useEffect(() => { try { sessionStorage.setItem('mischeles_transaction_filters_v1', JSON.stringify(filters)); } catch { /* Optional session persistence. */ } }, [filters]);
 
+  const sortColumn = (key: typeof sort.key, label: string, align: 'left' | 'right' = 'left') => {
+    const active = sort.key === key;
+    return <th key={key} scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={'px-3 py-3 font-semibold ' + (align === 'right' ? 'text-right' : 'text-left')}>
+      <button type="button" onClick={() => setSort(current => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }))} className={'min-h-10 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ' + (align === 'right' ? 'text-right' : 'text-left')}>
+        {label}{active ? (sort.direction === 'asc' ? ' ↑' : ' ↓') : ''}
+      </button>
+    </th>;
+  };
+
   return (
-    <div className="app-page mx-auto max-w-5xl pb-4 animate-in fade-in duration-200">
+    <div className="app-page mx-auto max-w-none pb-4 animate-in fade-in duration-200">
       <PageHeader title="Tus movimientos" period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExportModal} />} />
 
       {/* Seamless Continuous Container divided by clean lines */}
@@ -171,6 +202,20 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
             <button type="button" onClick={() => { setDraftFilters(filters); setFilterError(''); setFiltersOpen(true); }} aria-expanded={filtersOpen} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:gap-2 sm:px-4"><Filter className="h-4 w-4" />Filtros</button>
           </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <label className="min-w-0 text-xs font-medium text-slate-500">
+              <span className="sr-only">Filtrar por tipo</span>
+              <select aria-label="Filtrar por tipo" value={filters.type} onChange={event => updateQuickFilter('type', event.target.value)} className="app-field min-h-11 w-full py-2 text-sm sm:w-auto sm:min-w-36">
+                <option value="all">Todos los tipos</option><option value="expense">Gastos</option><option value="income">Ingresos</option><option value="savings">Ahorros</option>
+              </select>
+            </label>
+            <label className="min-w-0 text-xs font-medium text-slate-500">
+              <span className="sr-only">Filtrar por categoría</span>
+              <select aria-label="Filtrar por categoría" value={filters.category} onChange={event => updateQuickFilter('category', event.target.value)} className="app-field min-h-11 w-full truncate py-2 text-sm sm:w-auto sm:min-w-44">
+                <option value="all">Todas las categorías</option>{monthCategories.map(category => <option key={category} value={category}>{localizeCategoryName(language, category)}</option>)}
+              </select>
+            </label>
+          </div>
           {hasActiveFilters && <div role="status" aria-live="polite" className="flex flex-col gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300 sm:flex-row sm:items-center sm:justify-between"><p className="min-w-0"><span className="font-semibold text-slate-800 dark:text-slate-100">Filtros activos:</span> {activeFilterLabels.join(' · ')}</p><button type="button" onClick={clearAppliedFilters} className="min-h-9 shrink-0 self-start rounded-lg px-2.5 font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:self-auto">Limpiar filtros</button></div>}
           {filtersOpen && <FilterPanel title="Filtros de movimientos" onClose={() => setFiltersOpen(false)} onCancel={() => setFiltersOpen(false)} onClear={() => { setDraftFilters({ ...DEFAULT_TRANSACTION_FILTERS }); setFilterError(''); }} onApply={() => { if (!isTransactionFilterRangeValid(draftFilters)) { setFilterError('Revisa el rango de fechas: la fecha inicial debe ser anterior o igual a la fecha final.'); return; } setFilters(draftFilters); onCategoryFilterChange?.(draftFilters.category === 'all' ? null : draftFilters.category); setFilterError(''); setFiltersOpen(false); }} size="md">
             <div className="space-y-4">
@@ -183,16 +228,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* Row 2: Financial summary for the complete filtered set (not only the visible page). */}
-        <div className="grid grid-cols-2 gap-2 border-b border-slate-200 pb-3 dark:border-slate-800 sm:grid-cols-3">
-          <div className="rounded-xl bg-rose-50/70 px-3 py-2.5 dark:bg-rose-950/20">
+        <div className="grid grid-flow-col auto-cols-[minmax(132px,1fr)] gap-2 overflow-x-auto border-b border-slate-200 pb-3 dark:border-slate-800 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-3 sm:overflow-visible">
+          <div className="min-w-0 rounded-xl bg-rose-50/70 px-3 py-2.5 dark:bg-rose-950/20">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700/80 dark:text-rose-300/80">Gastos del período</p>
             <p className="mt-0.5 text-base font-extrabold tracking-tight text-rose-700 dark:text-rose-300">{profile.currency} {totalExpenses.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl bg-emerald-50/70 px-3 py-2.5 dark:bg-emerald-950/20">
+          <div className="min-w-0 rounded-xl bg-emerald-50/70 px-3 py-2.5 dark:bg-emerald-950/20">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">Ingresos del período</p>
             <p className="mt-0.5 text-base font-extrabold tracking-tight text-emerald-700 dark:text-emerald-300">{profile.currency} {totalIncomes.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl bg-slate-100/80 px-3 py-2.5 dark:bg-slate-800/70">
+          <div className="min-w-0 rounded-xl bg-slate-100/80 px-3 py-2.5 dark:bg-slate-800/70">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Movimientos filtrados</p>
             <p className="mt-0.5 text-base font-extrabold tracking-tight text-slate-800 dark:text-slate-100">{visibleCount}</p>
           </div>
@@ -213,79 +258,49 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   <div className="flex min-w-0 items-center gap-3"><div className="rounded-2xl bg-teal-50 p-2.5 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><PiggyBank className="h-4 w-4" aria-hidden="true" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{item.description}</p><div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><span>{item.method}</span><span>·</span><span>{localizeCategoryName(language, item.category)}</span>{item.goalTitle && <><span>·</span><span>Meta: {item.goalTitle}</span></>}<span>·</span><span>{item.date}</span></div></div></div>
                   <span className={'shrink-0 text-sm font-bold ' + (positive ? 'text-emerald-700 dark:text-emerald-300' : neutral ? 'text-slate-500 dark:text-slate-300' : 'text-slate-800 dark:text-slate-100')}>{positive ? '+' : neutral ? '' : '−'}{profile.currency} {item.amount.toLocaleString()}</span>
                 </div>;
-              }) : transactionPagination.items.map((tx) => {
-                const isSavings = isSavingsTx(tx);
-                return (
-                  <div
-                    key={tx.id}
-                    className="py-3 flex flex-wrap items-center justify-between gap-3 group border-b border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40 transition sm:flex-nowrap"
-                  >
-                    <div
-                      className="flex basis-full items-center gap-3 min-w-0 flex-1 sm:basis-auto"
-                      onClick={() => onEditTransaction(tx)}
-                    >
-                      <CategoryIcon category={tx.category} />
-
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                          {tx.description}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">
-                            {localizeCategoryName(language, tx.category)}
-                          </span>
-                          <span>•</span>
-                          <span>{tx.date}</span>
+              }) : <>
+                <div role="list" aria-label="Tus movimientos" className="lg:hidden">
+                  {transactionPagination.items.map(tx => {
+                    const isSavings = isSavingsTx(tx);
+                    return <div role="listitem" key={tx.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-slate-200 px-1 py-3 dark:border-slate-800">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <CategoryIcon category={tx.category} />
+                        <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{tx.description}</p><p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{localizeCategoryName(language, tx.category)} · {tx.date}</p></div>
+                      </div>
+                      <div className="min-w-0 text-right">
+                        <span className={'block whitespace-nowrap text-sm font-semibold tabular-nums ' + (isSavings ? 'text-teal-600 dark:text-teal-400' : tx.type === 'expense' ? 'text-rose-600 dark:text-rose-400' : 'text-primary')}>{tx.type === 'expense' ? '−' : '+'}{profile.currency} {tx.amount.toLocaleString()}</span>
+                        <p className="text-xs text-slate-400">{isSavings ? 'Ahorro' : tx.type === 'income' ? 'Ingreso' : 'Gasto'}</p>
+                      </div>
+                      <div className="col-span-2 flex items-center justify-between pl-12 text-xs text-slate-500 dark:text-slate-400"><span className="truncate">{tx.paymentMethod}</span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button onClick={() => onEditTransaction(tx)} aria-label={'Editar ' + tx.description} className="btn-icon min-h-11 min-w-11 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700" title="Editar"><Edit2 className="h-4 w-4" /></button>
+                          <button onClick={() => onDeleteTransaction(tx.id)} aria-label={'Eliminar ' + tx.description} className="btn-icon min-h-11 min-w-11 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-950/60" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex w-full min-w-0 items-center justify-between gap-2 pl-12 sm:w-auto sm:justify-end sm:pl-0">
-                      <div className="min-w-0 text-left sm:text-right" onClick={() => onEditTransaction(tx)}>
-                        <span
-                          className={`break-words text-sm font-semibold tabular-nums ${
-                            isSavings
-                              ? 'text-teal-600 dark:text-teal-400'
-                              : tx.type === 'expense'
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-primary'
-                          }`}
-                        >
-                          {tx.type === 'expense' ? '-' : '+'}
-                          {profile.currency} {tx.amount.toLocaleString()}
-                        </span>
-                        <p className="text-xs text-slate-400">{tx.paymentMethod}</p>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditTransaction(tx);
-                          }}
-                          aria-label={'Editar ' + tx.description}
-                          className="btn-icon hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 transition"
-                          title="Editar"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteTransaction(tx.id);
-                          }}
-                          aria-label={'Eliminar ' + tx.description}
-                          className="btn-icon hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 transition"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    </div>;
+                  })}
+                </div>
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="w-full min-w-[760px] table-fixed text-sm" aria-label="Tus movimientos">
+                    <thead className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500 dark:border-slate-700">
+                      <tr>{sortColumn('date', 'Fecha')}{sortColumn('category', 'Categoría')}{sortColumn('description', 'Concepto')}{sortColumn('type', 'Tipo')}{sortColumn('amount', 'Monto', 'right')}<th scope="col" className="px-3 py-2 text-right font-semibold">Acciones</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {transactionPagination.items.map(tx => {
+                        const isSavings = isSavingsTx(tx);
+                        return <tr key={tx.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-slate-500 dark:text-slate-400">{tx.date}</td>
+                          <td className="px-3 py-3"><div className="flex min-w-0 items-center gap-2"><CategoryIcon category={tx.category} /><span className="truncate text-sm text-slate-700 dark:text-slate-200">{localizeCategoryName(language, tx.category)}</span></div></td>
+                          <td className="px-3 py-3"><p className="truncate font-medium text-slate-900 dark:text-white" title={tx.description}>{tx.description}</p><p className="truncate text-xs text-slate-400">{tx.paymentMethod}</p></td>
+                          <td className="px-3 py-3"><span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{isSavings ? 'Ahorro' : tx.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
+                          <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums"><span className={isSavings ? 'text-teal-600 dark:text-teal-400' : tx.type === 'expense' ? 'text-rose-600 dark:text-rose-400' : 'text-primary'}>{tx.type === 'expense' ? '−' : '+'}{profile.currency} {tx.amount.toLocaleString()}</span></td>
+                          <td className="px-2 py-2"><div className="flex items-center justify-end gap-1"><button onClick={() => onEditTransaction(tx)} aria-label={'Editar ' + tx.description} className="btn-icon min-h-11 min-w-11 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700" title="Editar"><Edit2 className="h-4 w-4" /></button><button onClick={() => onDeleteTransaction(tx.id)} aria-label={'Eliminar ' + tx.description} className="btn-icon min-h-11 min-w-11 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-950/60" title="Eliminar"><Trash2 className="h-4 w-4" /></button></div></td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>}
             </div>
           )}
         </div>
