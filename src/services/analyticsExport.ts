@@ -4,7 +4,19 @@ import { transactionTypeLabel } from '../domain/transactionPresentation.ts';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
-export function buildAnalyticsExport(report: AnalyticsReport, format: 'excel' | 'pdf', profile: UserProfile): XLSX.WorkBook | jsPDF {
+import type JsPdfDocument from 'jspdf';
+import { buildAnalyticsPdf, type PdfBrandingOptions } from './pdfReport';
+
+export function buildAnalyticsExport(
+  report: AnalyticsReport,
+  format: 'excel' | 'pdf',
+  profile: UserProfile,
+  options: PdfBrandingOptions = {},
+): XLSX.WorkBook | JsPdfDocument {
+  if (format === 'pdf') return buildAnalyticsPdf(report, profile, options);
+  return buildAnalyticsExportLegacy(report, format, profile);
+}
+function buildAnalyticsExportLegacy(report: AnalyticsReport, format: 'excel' | 'pdf', profile: UserProfile): XLSX.WorkBook | jsPDF {
     const rows = [
       ...report.transactions.map(t => [t.date, transactionTypeLabel(t), t.category, t.description, t.amount]),
       ...report.savingsMovements.map(sm => [sm.date,

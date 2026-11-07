@@ -72,12 +72,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ analyticsReport, isOpe
   const movementCount = (selectedReport?.transactions.length || 0) + (selectedReport?.savingsMovements.length || 0);
   const toggleSection = (section: ExportSection) => setSections(current => current.includes(section) ? current.filter(item => item !== section) : [...current, section]);
   const selectFullReport = () => setSections(SECTION_OPTIONS.map(item => item.id));
-  const handleExport = () => {
+  const handleExport = async () => {
     if (isExporting) return;
     if (!selectedReport) { setExportError('Selecciona un período válido y al menos una sección.'); return; }
     setExportError('');
     setIsExporting(true);
-    try { exportService.exportAnalytics(selectedReport, format, profile); onClose(); }
+    try { await exportService.exportAnalytics(selectedReport, format, profile); onClose(); }
     catch (error) { setExportError(error instanceof Error ? error.message : 'No se pudo generar el reporte. Inténtalo de nuevo.'); }
     finally { setIsExporting(false); }
   };

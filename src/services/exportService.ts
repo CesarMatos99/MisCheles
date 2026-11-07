@@ -1,15 +1,16 @@
 import { buildAnalyticsExport } from './analyticsExport';
+import { buildMonthlyPdf, loadPdfBrandIconDataUrl } from './pdfReport';
+import jsPDF from 'jspdf';
 import type { AnalyticsReport } from '../domain/analyticsReport';
 import { transactionTypeLabel } from '../domain/transactionPresentation';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { Transaction, SavingsMovement, FinancialSummary, UserProfile } from '../types';
 import { MONTH_NAMES_ES } from '../constants/categories';
 
 export const exportService = {
-  exportAnalytics(report: AnalyticsReport, format: 'excel' | 'pdf', profile: UserProfile) {
-    const output = buildAnalyticsExport(report, format, profile);
+  async exportAnalytics(report: AnalyticsReport, format: 'excel' | 'pdf', profile: UserProfile) {
+    const brandIconDataUrl = format === 'pdf' ? await loadPdfBrandIconDataUrl() : undefined;
+    const output = buildAnalyticsExport(report, format, profile, { brandIconDataUrl });
     if (format === 'excel') XLSX.writeFile(output as XLSX.WorkBook, 'MisCheles_Estadisticas.xlsx');
     else (output as jsPDF).save('MisCheles_Estadisticas.pdf');
   },
@@ -86,7 +87,7 @@ export const exportService = {
   },
 
   // Export to PDF
-  exportToPDF(params: {
+  async exportToPDF(params: {
     year: number;
     month: number;
     summary: FinancialSummary;
@@ -94,6 +95,21 @@ export const exportService = {
     savingsMovements: SavingsMovement[];
     profile: UserProfile;
   }) {
+    const brandIconDataUrl = await loadPdfBrandIconDataUrl();
+    const doc = buildMonthlyPdf(params, { brandIconDataUrl });
+    doc.save(`MisCheles_${MONTH_NAMES_ES[params.month - 1]}_${params.year}.pdf`);
+  },
+
+  async exportToPDFLegacy(params: {
+    year: number;
+    month: number;
+    summary: FinancialSummary;
+    transactions: Transaction[];
+    savingsMovements: SavingsMovement[];
+    profile: UserProfile;
+  }) {
+    return this.exportToPDF(params);
+    /*
     const { year, month, summary, transactions, savingsMovements, profile } = params;
     const monthName = MONTH_NAMES_ES[month - 1];
     const doc = new jsPDF();
@@ -206,5 +222,6 @@ export const exportService = {
 
     const filename = `MisCheles_${monthName}_${year}.pdf`;
     doc.save(filename);
+    */
   },
 };
