@@ -285,6 +285,9 @@ export default function App() {
               summary={summary}
               transactions={transactions}
               savingsMovements={allSavingsMovements.filter((movement) => movement.monthKey === currentMonthKey)}
+              allTransactions={allTransactions}
+              allSavingsMovements={allSavingsMovements}
+              monthConfigs={financeApplication.getMonthConfigs()}
               profile={profile}
               categoryBudgets={categoryBudgets}
               onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
@@ -296,6 +299,7 @@ export default function App() {
                 setIsCategoryBudgetModalOpen(true);
               }}
               onOpenCategory={setSelectedCategory}
+              onOpenTransactions={() => navigateToTab('transactions')}
             />
           )
         )}

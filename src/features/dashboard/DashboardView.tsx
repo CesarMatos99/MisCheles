@@ -1,7 +1,7 @@
 import { isConsumptionExpenseTransaction, isSavingsContributionTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { spendingByCategory } from '../../domain/financialQueries';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
@@ -11,6 +11,8 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { getCategoryPresentation } from '../../domain/categoryPresentation';
+import { availableBalanceTrend } from '../../domain/availableBalanceTrend';
+import { AvailableBalanceChart } from './AvailableBalanceChart';
 
 interface DashboardViewProps {
   year: number;
@@ -20,6 +22,9 @@ interface DashboardViewProps {
   summary: FinancialSummary;
   transactions: Transaction[];
   savingsMovements: SavingsMovement[];
+  allTransactions: Transaction[];
+  allSavingsMovements: SavingsMovement[];
+  monthConfigs: Record<string, MonthConfig>;
   categoryBudgets: CategoryBudget[];
   profile: UserProfile;
   onOpenMonthSetup: () => void;
@@ -27,6 +32,7 @@ interface DashboardViewProps {
   onManageBudgets: () => void;
   onAddCategory: () => void;
   onOpenCategory: (category: string) => void;
+  onOpenTransactions: () => void;
 }
 
 const categoryKey = normalizeFinancialCategory;
@@ -39,6 +45,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   summary,
   transactions,
   savingsMovements,
+  allTransactions,
+  allSavingsMovements,
+  monthConfigs,
   categoryBudgets,
   profile,
   onOpenMonthSetup,
@@ -46,6 +55,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onManageBudgets,
   onAddCategory,
   onOpenCategory,
+  onOpenTransactions,
 }) => {
   const { t, locale, language } = useLanguage();
   const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month - 1, 1));
@@ -67,9 +77,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const totalUnbudgeted = unbudgeted.reduce((total, item) => total + item.amount, 0);
   const totalConsumption = summary.totalExpenses;
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const selectedMonthStart = new Date(year, month - 1, 1);
+  const selectedMonthEnd = new Date(year, month, 0);
+  const trendEndDate = selectedMonthEnd > todayStart ? todayStart : selectedMonthEnd;
+  const trendPoints = useMemo(() => selectedMonthStart > todayStart ? [] : availableBalanceTrend({
+    transactions: allTransactions,
+    savingsMovements: allSavingsMovements,
+    monthConfigs,
+    endDate: trendEndDate,
+  }), [allTransactions, allSavingsMovements, monthConfigs, year, month]);
 
   return (
-    <div className="app-page mx-auto max-w-5xl pb-6 animate-in fade-in duration-200">
+    <div className="app-page mx-auto w-full max-w-none pb-6 animate-in fade-in duration-200">
       <PageHeader eyebrow={(locale.startsWith('en') ? 'Hello' : 'Hola') + ' ' + firstName} title={t('moneyOverview')} period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExport} />} />
 
       {(!monthConfig || !monthConfig.isConfigured) && (
@@ -80,7 +101,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       )}
 
-      <section aria-label={t('monthlySummary')} className='balance-panel'>
+      <section aria-label={t('monthlySummary')} className='balance-panel dashboard-balance-panel'>
         <div className='flex items-start justify-between gap-3'>
           <div>
             <p className='balance-label'>{t('availableThisMonth')}</p>
@@ -104,6 +125,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div><p className='text-xs text-slate-500 dark:text-slate-300'>{locale.startsWith('en') ? 'Total saved' : 'Dinero ahorrado'}</p><strong className='text-primary'>{money(summary.totalSavingsVault)}</strong><p className='mt-1 text-[11px] text-slate-500'>{locale.startsWith('en') ? 'Current savings balance' : 'Saldo actual, no objetivo de metas'}</p></div>
         </div>
       </section>
+
+      <div className="dashboard-columns">
+        <div className="dashboard-primary-column">
+          <AvailableBalanceChart points={trendPoints} currency={profile.currency} locale={locale} />
 
       <section className="app-surface">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-800">
@@ -185,9 +210,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </section>
       )}
 
-      <section className="app-surface" aria-labelledby="recent-movements-title">
-        <div className="app-section-heading"><h2 id="recent-movements-title" className="type-section-title">{locale.startsWith('en') ? 'Recent activity' : 'Movimientos recientes'}</h2><span className="text-xs text-slate-500">{monthName}</span></div>
-        {transactions.length === 0 ? <p className="app-empty mt-3">{locale.startsWith('en') ? 'Your activity will appear here when you record a movement.' : 'Tus movimientos aparecerán aquí cuando registres un ingreso o un gasto.'}</p> : [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, 4).map(transaction => {
+        </div>
+
+        <section className="app-surface dashboard-recent-panel" aria-labelledby="recent-movements-title">
+        <div className="app-section-heading"><div><h2 id="recent-movements-title" className="type-section-title">{locale.startsWith('en') ? 'Recent activity' : 'Movimientos recientes'}</h2><span className="text-xs text-slate-500">{monthName}</span></div><button type="button" onClick={onOpenTransactions} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Ver Registro<ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
+        {transactions.length === 0 ? <p className="app-empty mt-3">{locale.startsWith('en') ? 'Your activity will appear here when you record a movement.' : 'Tus movimientos aparecerán aquí cuando registres un ingreso o un gasto.'}</p> : [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, 5).map(transaction => {
           const transfer = isSavingsContributionTransaction(transaction);
           return <button key={transaction.id} type="button" onClick={() => onOpenCategory(transaction.category)} className="recent-row group">
             <CategoryIcon category={transaction.category} size='sm' />
@@ -195,7 +222,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="max-w-full text-right text-sm font-semibold tabular-nums">{transfer ? '' : transaction.type === 'income' ? '+' : '−'}{money(transaction.amount)}</span>
           </button>;
         })}
-      </section>
+        </section>
+      </div>
 
     </div>
   );
