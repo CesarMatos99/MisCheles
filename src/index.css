@@ -161,6 +161,29 @@
 .analytics-metric p { overflow-wrap: anywhere; }
 .analytics-tabs { border: 1px solid var(--app-line); padding: .25rem; border-radius: 999px; background: var(--app-surface); margin-top: 1rem; }
 .analytics-tabs [aria-current='page'] { background: var(--app-primary); color: white; border-radius: 999px; }
+.analytics-metric { container-type: inline-size; }
+.chart-scroll-hint {
+  scrollbar-color: color-mix(in srgb, var(--app-primary) 45%, transparent) transparent;
+  scrollbar-width: thin;
+}
+/* Annual evolution stays readable on narrow screens without creating page-level horizontal scroll. */
+[role='list'][aria-label^='Evol'] {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  grid-template-columns: repeat(12, minmax(3.5rem, 1fr));
+  padding-bottom: .25rem;
+  scrollbar-color: color-mix(in srgb, var(--app-primary) 45%, transparent) transparent;
+}
+[role='list'][aria-label^='Evol'] > div { min-width: 3.5rem; }
+[role='list'][aria-label^='Evol'] > div > div:first-child { height: 8rem; }
+[role='img'][aria-label^='Distrib'] { width: 13rem; height: 13rem; }
+@media (min-width: 768px) {
+  [role='list'][aria-label^='Evol'] {
+    overflow-x: visible;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  [role='list'][aria-label^='Evol'] > div { min-width: 0; }
+}
 .app-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .25rem; }
 .app-profile { background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 24px; padding: 1.25rem; box-shadow: var(--app-shadow); }
 .app-profile nav button { padding-inline: .5rem; border-radius: 12px; }
