@@ -131,6 +131,8 @@
 .page-heading { padding-block: .25rem .75rem; }
 .page-heading h1 { letter-spacing: -.04em; }
 .page-tools { min-width: 0; gap: .5rem; }
+.page-period { min-width: 0; }
+.page-actions { min-width: 0; }
 .page-eyebrow { color: var(--app-muted); font-size: .75rem; margin-bottom: .375rem; }
 .balance-panel { background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 24px; padding: 1.25rem; box-shadow: var(--app-shadow); }
 .balance-panel .type-display { font-size: clamp(1.65rem, 5.8vw, 2.5rem); overflow-wrap: anywhere; line-height: 1.25; }
@@ -174,10 +176,12 @@
   .recent-row { flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
-  .page-tools { width: 100%; flex-direction: column; align-items: stretch; }
-  .page-tools > * { width: 100%; }
-  .page-tools .btn-secondary, .page-tools .btn-primary { width: 100%; }
-  .page-tools > .period-selector { width: 100%; }
+  .page-tools { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+  .page-period { flex: 1 1 12rem; min-width: min(100%, 12rem); }
+  .page-actions { flex: 0 1 auto; justify-content: flex-end; }
+  .page-actions > * { width: auto; max-width: 100%; }
+  .page-actions .btn-secondary, .page-actions .btn-primary { width: auto; }
+  .page-period > .period-selector { width: 100%; }
 }
 
 /* Brand color follows the user's selected accent; green/red stay semantic for money states. */

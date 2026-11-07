@@ -29,12 +29,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
               key={tab.id}
               aria-current={isActive ? 'page' : undefined}
               onClick={() => onChangeTab(tab.id)}
-              className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
+                className={`relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
                 isActive
-                  ? 'bg-primary-soft text-primary font-semibold'
+                  ? 'text-primary font-semibold'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium'
               }`}
             >
+              {isActive && <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />}
               <Icon className="h-5 w-5" strokeWidth={isActive ? 2.4 : 1.8} aria-hidden="true" />
               <span className="text-[11px] leading-4 tracking-tight sm:text-xs">{tab.label}</span>
             </button>

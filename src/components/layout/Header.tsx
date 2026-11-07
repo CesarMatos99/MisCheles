@@ -17,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onOpe
     <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <img src="/favicon.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-contain" aria-hidden="true" />
-        <span className="truncate text-lg font-extrabold tracking-tight text-primary">MisCheles<span className="text-[var(--app-action)]">.</span></span>
+        <span className="truncate text-lg font-extrabold tracking-tight text-primary">MisCheles</span>
       </div>
       <div className="flex items-center gap-1">
         <button onClick={onToggleTheme} aria-label={isDarkMode ? t('enableLight') : t('enableDark')} className="btn-icon text-slate-600 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
