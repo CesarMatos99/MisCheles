@@ -17,6 +17,7 @@ import { MonthConfig, UserProfile, SavingsGoal } from '../../types';
 import { MONTH_NAMES_ES } from '../../constants/categories';
 import { getPrevMonthKey } from '../../services/storage';
 import { financeApplication } from '../../application/financeApplication';
+import { normalizeRolloverAction, resolveStartingBudget, type EffectiveRolloverAction } from '../../domain/monthRollover';
 
 interface MonthSetupModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ interface MonthSetupModalProps {
   onSaved: (config: MonthConfig) => void;
 }
 
-type RolloverOption = 'rollover_to_month' | 'transfer_to_savings_general' | 'transfer_to_goal' | 'none';
+type RolloverOption = EffectiveRolloverAction;
 
 export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
   isOpen,
@@ -64,13 +65,11 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
 
       if (existing) {
         setInitialIncome(existing.initialIncome > 0 ? String(existing.initialIncome) : '');
-        setRolloverAction(
-          existing.rolloverAction || (existing.carryoverFromPrev > 0 ? 'rollover_to_month' : 'none')
-        );
+        setRolloverAction(normalizeRolloverAction(existing.rolloverAction));
         setNotes(existing.notes || '');
       } else {
         setInitialIncome(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
-        setRolloverAction(effectivePrevBalance > 0 ? 'rollover_to_month' : 'none');
+        setRolloverAction('rollover_to_month');
         setNotes('');
       }
     }
@@ -79,9 +78,9 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
   if (!isOpen) return null;
 
   const numInitial = parseFloat(initialIncome) || 0;
-  const carryoverAmount =
-    previousBalance > 0 && rolloverAction === 'rollover_to_month' ? previousBalance : 0;
-  const totalStartingBudget = numInitial + carryoverAmount;
+  const startingBudget = resolveStartingBudget(numInitial, previousBalance, rolloverAction);
+  const carryoverAmount = startingBudget.carryover;
+  const totalStartingBudget = startingBudget.available;
   const currentGoal = goals.find((g) => g.id === selectedGoalId);
 
   const handleSave = (e: React.FormEvent) => {
@@ -328,36 +327,16 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
                   )}
                 </label>
 
-                {/* Option 4: No transferir */}
-                <label
-                  onClick={() => setRolloverAction('none')}
-                  className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition ${
-                    rolloverAction === 'none'
-                      ? 'bg-slate-200/60 dark:bg-slate-800 border-slate-400 text-slate-900 dark:text-white'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="rolloverAction"
-                    checked={rolloverAction === 'none'}
-                    onChange={() => setRolloverAction('none')}
-                    className="mt-0.5 text-slate-600 focus:ring-slate-500"
-                  />
-                  <div className="min-w-0">
-                    <span className="font-semibold text-xs">No transferir</span>
-                    <p className="text-xs text-slate-400">
-                      Dejar el remanente en el mes anterior sin transferir a ningún lado.
-                    </p>
-                  </div>
-                </label>
+                <div className="rounded-xl border border-primary/20 bg-primary-soft/50 p-3 text-xs text-primary">
+                  El remanente siempre debe conservar un destino contable: se suma al siguiente mes o se transfiere a ahorro.
+                </div>
               </div>
             )}
           </div>
 
           {/* Resulting Total preview */}
           <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-medium">Presupuesto Inicial del Mes:</span>
+            <span className="text-xs text-slate-300 font-medium">Disponible inicial del mes:</span>
             <div className="text-right">
               <span className="text-lg font-extrabold text-emerald-400">
                 {profile.currency} {totalStartingBudget.toLocaleString()}

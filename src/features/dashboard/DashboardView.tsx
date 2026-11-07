@@ -140,8 +140,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 >
                   <div className='flex items-start justify-between gap-3'>
                     <div className='flex min-w-0 items-center gap-2'><CategoryIcon category={budget.category} size='sm' /><p className='min-w-0 truncate font-semibold text-slate-900 dark:text-white'>{localizeCategoryName(language, budget.category)}</p></div>
-                    <p className={overBudget ? 'shrink-0 text-sm font-semibold text-rose-600 dark:text-rose-400' : 'shrink-0 text-sm font-semibold text-emerald-700 dark:text-emerald-400'}>
-                      {overBudget ? '−' + money(Math.abs(remaining)) : money(remaining)}
+                    <p className={overBudget ? 'shrink-0 text-right text-sm font-semibold text-rose-600 dark:text-rose-400' : 'shrink-0 text-right text-sm font-semibold text-emerald-700 dark:text-emerald-400'}>
+                      {overBudget ? 'Excedido ' + money(Math.abs(remaining)) : 'Restante ' + money(remaining)}
                     </p>
                   </div>
                   <div className='mt-1 flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-300'>
