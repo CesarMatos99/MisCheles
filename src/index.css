@@ -26,20 +26,20 @@
 
 :root {
   color-scheme: light;
-  --app-primary: #002991;
-  --app-action: #0070e0;
-  --app-link: #0066f5;
+  --app-primary: #012677;
+  --app-action: var(--app-primary);
+  --app-link: var(--app-primary);
   --app-sky: #60cdff;
   --app-primary-hover: color-mix(in srgb, var(--app-primary) 82%, black);
   --app-primary-soft: color-mix(in srgb, var(--app-primary) 9%, white);
   --app-primary-ink: #061b49;
-  --app-background: #f1efea;
+  --app-background: #f8f9fc;
   --app-surface: #ffffff;
-  --app-foreground: #000000;
-  --app-muted: #686a6d;
-  --app-line: #cfd3d8;
-  --app-surface-soft: #f8f8f6;
-  --app-shadow: 0 4px 24px rgb(0 41 145 / .04);
+  --app-foreground: #172033;
+  --app-muted: #687386;
+  --app-line: #e3e7ee;
+  --app-surface-soft: #f4f6fa;
+  --app-shadow: 0 4px 24px rgb(1 38 119 / .04);
   --app-positive: #17845d;
   --app-positive-soft: #e9f7f0;
   --app-negative: #c2414b;
@@ -144,6 +144,8 @@
 .recent-row > :last-child { min-width: 0; overflow-wrap: anywhere; }
 .app-surface :where(p, strong), .balance-panel :where(p, strong) { overflow-wrap: anywhere; }
 .movement-icon { display: flex; width: 40px; height: 40px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 50%; background: var(--app-surface-soft); }
+.category-icon { color: var(--category-color); background-color: var(--category-bg); }
+.dark .category-icon { color: color-mix(in srgb, var(--category-color) 72%, white); background-color: var(--category-bg-dark); }
 .app-field { min-height: 46px; width: 100%; border: 1px solid var(--app-line); border-radius: 12px; padding: .625rem .875rem; background: var(--app-surface); color: var(--app-foreground); }
 .app-field:focus { outline: 2px solid var(--app-action); outline-offset: 2px; }
 .app-empty { border: 1px dashed var(--app-line); border-radius: 16px; padding: 1.5rem 1rem; text-align: center; color: var(--app-muted); font-size: .875rem; }
@@ -170,6 +172,12 @@
   .page-tools { gap: .25rem; }
   .page-tools > * { max-width: 100%; }
   .recent-row { flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .page-tools { width: 100%; flex-direction: column; align-items: stretch; }
+  .page-tools > * { width: 100%; }
+  .page-tools .btn-secondary, .page-tools .btn-primary { width: 100%; }
+  .page-tools > .period-selector { width: 100%; }
 }
 
 /* Brand color follows the user's selected accent; green/red stay semantic for money states. */

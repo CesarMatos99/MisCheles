@@ -39,7 +39,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onM
   };
 
   return (
-    <div ref={rootRef} className="relative inline-flex max-w-full items-center gap-0 rounded-full border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
+    <div ref={rootRef} className="period-selector relative inline-flex w-full max-w-full items-center justify-center gap-0 rounded-full border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900 sm:w-auto">
       <button type="button" onClick={() => shiftMonth(-1)} aria-label={language === 'es' ? 'Mes anterior' : 'Previous month'} className={compact ? "flex h-11 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
       </button>

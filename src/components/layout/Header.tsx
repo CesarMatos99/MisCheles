@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, UserRound, Wallet } from 'lucide-react';
+import { Moon, Sun, UserRound } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -16,9 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onOpe
   <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-0 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
     <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white" aria-hidden="true">
-          <Wallet className="h-5 w-5" strokeWidth={2.2} />
-        </span>
+        <img src="/favicon.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-contain" aria-hidden="true" />
         <span className="truncate text-lg font-extrabold tracking-tight text-primary">MisCheles<span className="text-[var(--app-action)]">.</span></span>
       </div>
       <div className="flex items-center gap-1">

@@ -1,6 +1,8 @@
 import React from 'react';
 import { List, BarChart3 } from 'lucide-react';
 import { highestCategoryExpense, sortCategoryExpenses, type CategoryExpenseShare } from '../../domain/analyticsPeriodComparison';
+import { getCategoryPresentation } from '../../domain/categoryPresentation';
+import { CategoryIcon } from '../../components/ui/CategoryIcon';
 
 type View = 'chart' | 'list';
 type Sort = 'high' | 'low' | 'name';
@@ -19,11 +21,11 @@ export function QuickExpenseChart({ rows, view, onViewChange, sort, onSort, fmt,
     </div>
     {!chartRows.length ? <p className="app-empty">Aún no hay gastos registrados en este período.</p> : view === 'chart' ?
       <div className="space-y-4" role="img" aria-label={'Gastos reales por categoría, orden descendente: ' + chartRows.map(row => localize(row.category) + ', ' + fmt(row.amount)).join('; ')}>
-        {chartRows.map((row, index) => <div key={row.category} className="min-w-0">
-          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs"><span className="min-w-0 break-words font-medium">{localize(row.category)}</span><span className="max-w-full break-words font-semibold tabular-nums">{fmt(row.amount)}</span></div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className={'h-full rounded-full ' + (index === 0 ? 'bg-primary' : 'bg-[var(--app-action)]')} style={{ width: Math.max(1, row.amount / maximum * 100) + '%' }} /></div>
+        {chartRows.map((row) => <div key={row.category} className="min-w-0">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs"><span className="flex min-w-0 items-center gap-2 break-words font-medium"><CategoryIcon category={row.category} size="sm" />{localize(row.category)}</span><span className="max-w-full break-words font-semibold tabular-nums">{fmt(row.amount)}</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full" style={{ width: Math.max(1, row.amount / maximum * 100) + '%', backgroundColor: getCategoryPresentation(row.category).color }} /></div>
         </div>)}
-      </div> : <ol className="divide-y divide-slate-200 dark:divide-slate-800">{listRows.map((row, index) => <li key={row.category} className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"><span className="min-w-0 break-words text-sm">{index + 1}. {localize(row.category)}</span><span className="max-w-full break-words text-right text-xs font-semibold tabular-nums">{fmt(row.amount)} <span className="font-normal text-slate-500">· {row.share.toLocaleString('es-DO', { maximumFractionDigits: 1 })}%</span></span></li>)}</ol>}
+      </div> : <ol className="divide-y divide-slate-200 dark:divide-slate-800">{listRows.map((row, index) => <li key={row.category} className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"><span className="flex min-w-0 items-center gap-2 break-words text-sm"><CategoryIcon category={row.category} size="sm" />{index + 1}. {localize(row.category)}</span><span className="max-w-full break-words text-right text-xs font-semibold tabular-nums">{fmt(row.amount)} <span className="font-normal text-slate-500">· {row.share.toLocaleString('es-DO', { maximumFractionDigits: 1 })}%</span></span></li>)}</ol>}
     {highest && <p className="mt-4 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800">Mayor gasto en <strong className="text-app-foreground">{localize(highest.category)}</strong></p>}
   </div>;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Filter,
@@ -7,8 +7,6 @@ import {
   Receipt,
   X,
   PiggyBank,
-  Minus,
-  Plus,
 } from 'lucide-react';
 import { SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
@@ -17,8 +15,10 @@ import { ExportButton } from '../../components/ui/ExportButton';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
 import { FilterPanel } from '../../components/ui/FilterPanel';
+import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { DEFAULT_TRANSACTION_FILTERS, filterTransactionRecords, isTransactionFilterRangeValid, readTransactionFilters, type TransactionFilterCriteria } from '../../domain/transactionFilters';
 import { isSavingsContributionTransaction } from '../../domain/financialClassification';
+import { paginate, TRANSACTION_PAGE_SIZES } from '../../domain/transactionPagination';
 
 interface TransactionsViewProps {
   year: number;
@@ -53,6 +53,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [draftFilters, setDraftFilters] = useState<TransactionFilterCriteria>(filters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   useEffect(() => {
     if (initialCategoryFilter) setFilters(current => ({ ...current, category: initialCategoryFilter }));
@@ -76,9 +78,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   ].filter(Boolean);
   const hasActiveFilters = activeFilterLabels.length > 0;
 
-  const isSavingsTx = (transaction: Transaction) => isSavingsContributionTransaction(transaction);
+  const isSavingsTx = isSavingsContributionTransaction;
 
-  const filtered = filterTransactionRecords(transactions, filters, searchTerm, isSavingsTx, category => localizeCategoryName(language, category));
+  const filtered = useMemo(
+    () => filterTransactionRecords(transactions, filters, searchTerm, isSavingsTx, category => localizeCategoryName(language, category)),
+    [transactions, filters, searchTerm, language],
+  );
 
   const totalExpenses = filtered
     .filter((t) => t.type === 'expense' && !isSavingsTx(t))
@@ -89,11 +94,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const selectedMonthKey = year + '-' + String(month).padStart(2, '0');
-  const savingsMovementIds = new Set(savingsMovements.map((movement) => movement.id));
-  const legacySavingsTransactions = filtered.filter((transaction) =>
-    isSavingsTx(transaction) && (!transaction.relatedSavingsMovementId || !savingsMovementIds.has(transaction.relatedSavingsMovementId)),
-  );
-  const savingsLedger = filters.type === 'savings' ? [
+  const savingsLedger = useMemo(() => {
+    const savingsMovementIds = new Set(savingsMovements.map((movement) => movement.id));
+    const legacySavingsTransactions = filtered.filter((transaction) =>
+      isSavingsTx(transaction) && (!transaction.relatedSavingsMovementId || !savingsMovementIds.has(transaction.relatedSavingsMovementId)),
+    );
+    return filters.type === 'savings' ? [
     ...savingsMovements.filter((movement) => {
       if (movement.monthKey !== selectedMonthKey) return false;
       const category = movement.category || 'Aporte al Ahorro';
@@ -113,7 +119,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       method: movement.type === 'deposit_from_month' ? 'Aporte' : movement.type === 'withdraw_to_month' ? 'Retiro' : movement.type === 'direct_expense' ? 'Gasto desde ahorro' : 'Reasignación interna',
     })),
     ...legacySavingsTransactions.map((transaction) => ({ id: 'legacy-' + transaction.id, date: transaction.date, description: transaction.description, category: transaction.category, amount: transaction.amount, type: 'deposit_from_month' as const, goalTitle: undefined, method: 'Aporte importado' })),
-  ].sort((a, b) => b.date.localeCompare(a.date)) : [];
+    ].sort((a, b) => b.date.localeCompare(a.date)) : [];
+  }, [filtered, filters, isSavingsTx, searchTerm, savingsMovements, selectedMonthKey]);
   const totalSavingsFiltered = filters.type === 'savings'
     ? savingsLedger.filter((movement) => movement.type === 'deposit_from_month').reduce((sum, movement) => sum + movement.amount, 0)
     : filtered.filter(isSavingsTx).reduce((sum, transaction) => sum + transaction.amount, 0);
@@ -123,6 +130,12 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     ...transactions.map((transaction) => transaction.category),
     ...savingsMovements.filter((movement) => movement.monthKey === selectedMonthKey).map((movement) => movement.category || 'Aporte al Ahorro'),
   ]));
+  const savingsPagination = paginate(savingsLedger, page, pageSize);
+  const transactionPagination = paginate(filtered, page, pageSize);
+  const pagination = filters.type === 'savings' ? savingsPagination : transactionPagination;
+  const visibleCount = pagination.totalItems;
+  useEffect(() => { setPage(1); }, [filters.type, filters.category, filters.from, filters.to, searchTerm, pageSize, selectedMonthKey]);
+  useEffect(() => { setPage(current => Math.min(current, pagination.totalPages)); }, [pagination.totalPages]);
   useEffect(() => { try { sessionStorage.setItem('mischeles_transaction_filters_v1', JSON.stringify(filters)); } catch { /* Optional session persistence. */ } }, [filters]);
 
   return (
@@ -198,26 +211,26 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             )}
           </div>
           <span className="text-xs text-slate-400">
-            {filters.type === 'savings' ? savingsLedger.length : filtered.length} registro(s)
+            {visibleCount} registro(s)
           </span>
         </div>
 
         {/* Row 3: Continuous Movements List divided by lines */}
         <div>
-          {(filters.type === 'savings' ? savingsLedger.length : filtered.length) === 0 ? (
+          {visibleCount === 0 ? (
             <div className="py-16 text-center text-slate-400 text-xs">
               No se encontraron movimientos con los filtros seleccionados.
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filters.type === 'savings' ? savingsLedger.map((item) => {
+              {filters.type === 'savings' ? savingsPagination.items.map((item) => {
                 const positive = item.type === 'deposit_from_month';
                 const neutral = item.type === 'goal_to_general';
                 return <div key={item.id} className="flex items-center justify-between gap-3 border-b border-slate-100 py-3 dark:border-slate-800">
                   <div className="flex min-w-0 items-center gap-3"><div className="rounded-2xl bg-teal-50 p-2.5 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><PiggyBank className="h-4 w-4" aria-hidden="true" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{item.description}</p><div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"><span>{item.method}</span><span>·</span><span>{localizeCategoryName(language, item.category)}</span>{item.goalTitle && <><span>·</span><span>Meta: {item.goalTitle}</span></>}<span>·</span><span>{item.date}</span></div></div></div>
                   <span className={'shrink-0 text-sm font-bold ' + (positive ? 'text-emerald-700 dark:text-emerald-300' : neutral ? 'text-slate-500 dark:text-slate-300' : 'text-slate-800 dark:text-slate-100')}>{positive ? '+' : neutral ? '' : '−'}{profile.currency} {item.amount.toLocaleString()}</span>
                 </div>;
-              }) : filtered.map((tx) => {
+              }) : transactionPagination.items.map((tx) => {
                 const isSavings = isSavingsTx(tx);
                 return (
                   <div
@@ -228,23 +241,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       className="flex basis-full items-center gap-3 min-w-0 flex-1 sm:basis-auto"
                       onClick={() => onEditTransaction(tx)}
                     >
-                      <div
-                        className={`p-2.5 rounded-2xl shrink-0 ${
-                          isSavings
-                            ? 'bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400'
-                            : tx.type === 'expense'
-                            ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
-                            : 'bg-emerald-100 dark:bg-emerald-950/60 text-primary'
-                        }`}
-                      >
-                        {isSavings ? (
-                          <PiggyBank className="w-4 h-4" />
-                        ) : tx.type === 'expense' ? (
-                          <Minus className="w-4 h-4" />
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
-                      </div>
+                      <CategoryIcon category={tx.category} />
 
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -309,6 +306,20 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </div>
           )}
         </div>
+        {visibleCount > 0 && <div className="transactions-pagination flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex min-h-11 items-center gap-2 text-xs text-slate-500">
+            Mostrar
+            <select aria-label="Movimientos por página" value={pageSize} onChange={event => setPageSize(Number(event.target.value))} className="app-field h-11 w-auto py-1 text-xs">
+              {TRANSACTION_PAGE_SIZES.map(size => <option key={size} value={size}>{size}</option>)}
+            </select>
+            por página
+          </label>
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <span className="text-xs font-medium text-slate-500" aria-live="polite">Página {pagination.page} de {pagination.totalPages}</span>
+            <button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={pagination.page === 1} aria-label="Página anterior">Anterior</button>
+            <button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={pagination.page === pagination.totalPages} aria-label="Página siguiente">Siguiente</button>
+          </div>
+        </div>}
       </div>
     </div>
   );

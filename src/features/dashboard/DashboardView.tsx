@@ -2,13 +2,15 @@ import { isConsumptionExpenseTransaction, isSavingsContributionTransaction, norm
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { spendingByCategory } from '../../domain/financialQueries';
 import React from 'react';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
+import { ArrowRight, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ExportButton } from '../../components/ui/ExportButton';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
+import { CategoryIcon } from '../../components/ui/CategoryIcon';
+import { getCategoryPresentation } from '../../domain/categoryPresentation';
 
 interface DashboardViewProps {
   year: number;
@@ -123,6 +125,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {categoryBudgets.map((budget) => {
               const isSavings = isSavingsBudgetCategory(budget.category);
+              const presentation = getCategoryPresentation(budget.category);
               const spent = isSavings ? summary.savingsTransfersTo : spendByCategory.get(categoryKey(budget.category)) || 0;
               const remaining = budget.amount - spent;
               const percent = Math.round((spent / budget.amount) * 100);
@@ -136,7 +139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   className='w-full py-3 text-left transition hover:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-900/50'
                 >
                   <div className='flex items-start justify-between gap-3'>
-                    <p className='min-w-0 truncate font-semibold text-slate-900 dark:text-white'>{localizeCategoryName(language, budget.category)}</p>
+                    <div className='flex min-w-0 items-center gap-2'><CategoryIcon category={budget.category} size='sm' /><p className='min-w-0 truncate font-semibold text-slate-900 dark:text-white'>{localizeCategoryName(language, budget.category)}</p></div>
                     <p className={overBudget ? 'shrink-0 text-sm font-semibold text-rose-600 dark:text-rose-400' : 'shrink-0 text-sm font-semibold text-emerald-700 dark:text-emerald-400'}>
                       {overBudget ? '−' + money(Math.abs(remaining)) : money(remaining)}
                     </p>
@@ -146,7 +149,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span>{money(budget.amount)} asignados</span>
                   </div>
                   <div className='mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800' role='progressbar' aria-label={(isSavings ? 'Aportes a ' : 'Consumo de ') + localizeCategoryName(language, budget.category)} aria-valuemin={0} aria-valuemax={budget.amount} aria-valuenow={Math.min(spent, budget.amount)}>
-                    <div className={'h-full rounded-full transition-all ' + (overBudget ? 'bg-rose-500 dark:opacity-80' : percent >= 80 ? 'bg-amber-500 dark:opacity-80' : 'bg-primary dark:opacity-80')} style={{ width: Math.min(percent, 100) + '%' }} />
+                    <div className={'h-full rounded-full transition-all ' + (overBudget ? 'bg-rose-500 dark:opacity-80' : percent >= 80 ? 'bg-amber-500 dark:opacity-80' : '')} style={{ width: Math.min(percent, 100) + '%', backgroundColor: overBudget || percent >= 80 ? undefined : presentation.color }} />
                   </div>
                 </button>
               );
@@ -171,7 +174,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 title="Abrir movimientos en Registro"
                 className="flex w-full items-center justify-between gap-4 py-2 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900/50"
               >
-                <span className="truncate text-sm text-slate-700 dark:text-slate-300">{localizeCategoryName(language, item.category)}</span>
+                <span className="flex min-w-0 items-center gap-2"><CategoryIcon category={item.category} size='sm' /><span className="truncate text-sm text-slate-700 dark:text-slate-300">{localizeCategoryName(language, item.category)}</span></span>
                 <span className="flex shrink-0 items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
                   {money(item.amount)}
                   <ArrowRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -186,9 +189,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="app-section-heading"><h2 id="recent-movements-title" className="type-section-title">{locale.startsWith('en') ? 'Recent activity' : 'Movimientos recientes'}</h2><span className="text-xs text-slate-500">{monthName}</span></div>
         {transactions.length === 0 ? <p className="app-empty mt-3">{locale.startsWith('en') ? 'Your activity will appear here when you record a movement.' : 'Tus movimientos aparecerán aquí cuando registres un ingreso o un gasto.'}</p> : [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt).slice(0, 4).map(transaction => {
           const transfer = isSavingsContributionTransaction(transaction);
-          const Icon = transfer ? ArrowRightLeft : transaction.type === 'income' ? ArrowDownLeft : ArrowUpRight;
           return <button key={transaction.id} type="button" onClick={() => onOpenCategory(transaction.category)} className="recent-row group">
-            <span className={'movement-icon ' + (transfer ? 'text-primary' : transaction.type === 'income' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300')}><Icon className="h-5 w-5" aria-hidden="true" /></span>
+            <CategoryIcon category={transaction.category} size='sm' />
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold group-hover:text-primary">{transaction.description || localizeCategoryName(language, transaction.category)}</span><span className="mt-0.5 block text-xs text-slate-500">{transfer ? (locale.startsWith('en') ? 'Internal transfer' : 'Transferencia interna') : localizeCategoryName(language, transaction.category)} · {transaction.date}</span></span>
             <span className="max-w-full text-right text-sm font-semibold tabular-nums">{transfer ? '' : transaction.type === 'income' ? '+' : '−'}{money(transaction.amount)}</span>
           </button>;
