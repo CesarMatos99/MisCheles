@@ -128,16 +128,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       <div className="dashboard-columns">
         <div className="dashboard-primary-column">
-          <AvailableBalanceChart points={trendPoints} currency={profile.currency} locale={locale} />
+          <div className="dashboard-trend-priority"><AvailableBalanceChart points={trendPoints} currency={profile.currency} locale={locale} /></div>
 
-      <section className="app-surface">
+      <section className="app-surface dashboard-category-panel">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-800">
           <h2 className="font-bold text-slate-900 dark:text-white">{t('myCategories')}</h2>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={onAddCategory} aria-label="Agregar categoría" title="Agregar categoría" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-primary transition hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <Plus className="h-5 w-5" aria-hidden="true" />
             </button>
-            <button type="button" onClick={onManageBudgets} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft">
+            <button type="button" onClick={onManageBudgets} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <Tags className="h-4 w-4" aria-hidden="true" />
               <span>{t('edit')}</span>
             </button>
@@ -155,13 +155,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               const remaining = budget.amount - spent;
               const percent = Math.round((spent / budget.amount) * 100);
               const overBudget = remaining < 0;
+              const statusText = overBudget ? 'excedido ' + money(Math.abs(remaining)) : 'restante ' + money(remaining);
               return (
                 <button
                   key={categoryKey(budget.category)}
                   type='button'
                   onClick={() => onOpenCategory(budget.category)}
-                  aria-label={'Ver movimientos de ' + localizeCategoryName(language, budget.category) + '. Asignado ' + money(budget.amount) + ', ' + (isSavings ? 'aportado ' : 'gastado ') + money(spent) + ', restante ' + money(remaining)}
-                  className='w-full py-3 text-left transition hover:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-900/50'
+                  aria-label={'Ver movimientos de ' + localizeCategoryName(language, budget.category) + '. Asignado ' + money(budget.amount) + ', ' + (isSavings ? 'aportado ' : 'gastado ') + money(spent) + ', ' + statusText}
+                  className='w-full py-3 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary dark:hover:bg-slate-900/50'
                 >
                   <div className='flex items-start justify-between gap-3'>
                     <div className='flex min-w-0 items-center gap-2'><CategoryIcon category={budget.category} size='sm' /><p className='min-w-0 truncate font-semibold text-slate-900 dark:text-white'>{localizeCategoryName(language, budget.category)}</p></div>
@@ -184,7 +185,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       {unbudgeted.length > 0 && (
-        <section className="app-surface">
+        <section className="app-surface dashboard-unbudgeted-panel">
           <div className="flex items-center justify-between gap-4 border-b border-slate-200 py-2 dark:border-slate-800">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('unassigned')}</h2>
             <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">{money(totalUnbudgeted)}</p>

@@ -20,6 +20,7 @@ import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
 import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
 import { localLockCredential } from '../../services/localLockCredential';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { ACCENT_COLORS } from '../../constants/accentColors';
 
 type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
 
@@ -33,16 +34,6 @@ interface ProfileViewProps {
   onOpenInstall: () => void;
   onLockApp: () => void;
 }
-
-const ACCENT_COLORS = [
-  { name: 'Azul MisCheles', value: '#002991' },
-  { name: 'Azul marino', value: '#012677' },
-  { name: 'Azul', value: '#2563eb' },
-  { name: 'Verde azulado', value: '#0f766e' },
-  { name: 'Violeta', value: '#6d28d9' },
-  { name: 'Coral', value: '#b54737' },
-  { name: 'Ámbar', value: '#8a4b08' },
-];
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,

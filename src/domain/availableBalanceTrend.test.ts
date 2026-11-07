@@ -34,9 +34,9 @@ test('available balance trend uses month openings and existing financial calcula
     endDate: new Date(2026, 10, 2),
     days: 3,
   })).toEqual([
-    { date: '2026-10-31', available: 6300 },
-    { date: '2026-11-01', available: 6800 },
-    { date: '2026-11-02', available: 7000 },
+    { date: '2026-10-31', available: 6300, income: 1000, expenses: 300, savingsTransfers: 400, savingsWithdrawals: 0 },
+    { date: '2026-11-01', available: 6800, income: 0, expenses: 0, savingsTransfers: 0, savingsWithdrawals: 0 },
+    { date: '2026-11-02', available: 7000, income: 0, expenses: 50, savingsTransfers: 0, savingsWithdrawals: 200 },
   ]);
 });
 

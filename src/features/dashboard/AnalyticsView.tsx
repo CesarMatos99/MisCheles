@@ -77,6 +77,8 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
   const [localSection, setLocalSection] = useState<Section>('summary');
   const section = activeSection ?? localSection;
   const changeSection = (next: Section) => { setLocalSection(next); onSectionChange?.(next); };
+  const [desktopView, setDesktopView] = useState<'dashboard' | 'analysis'>('dashboard');
+  const isDesktopDashboard = desktopView === 'dashboard' && section === 'summary';
   const [categorySort, setCategorySort] = useState<'high' | 'low' | 'name'>('high');
   const [quickSort, setQuickSort] = useState<'high' | 'low' | 'name'>('high');
   const [quickView, setQuickView] = useState<'chart' | 'list'>('chart');
@@ -213,6 +215,7 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
   ];
   const modes: { id: Mode; label: string }[] = [{ id: 'month', label: 'Mes' }, { id: 'year', label: 'Año' }, { id: '6m', label: '6 meses' }, { id: '12m', label: '12 meses' }, { id: 'custom', label: 'Rango' }];
   const borderSection = 'app-surface space-y-4';
+  const sectionPanelClass = (target: Section, placement = '') => borderSection + ' ' + (section === target ? '' : 'hidden') + (isDesktopDashboard ? ' xl:block ' + placement : section === target ? ' xl:block' : ' xl:hidden');
   const generalCompareRows = expenseCategoryDistribution(visibleTx, visibleSavings);
   const includesToday = (fromValue: string, toValue: string) => isValidAnalyticsRange({ from: fromValue, to: toValue }) && parseDay(fromValue) <= today() && parseDay(toValue) >= today();
   const comparisonHasCurrentDate = compareMode === 'months' ? monthA === keyFor(today()) || monthB === keyFor(today()) : includesToday(rangeAFrom, rangeATo) || includesToday(rangeBFrom, rangeBTo);
@@ -272,11 +275,17 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
       categoriesByType={{ all: [...new Set([...allTransactions.filter(tx => !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), income: [...new Set(allTransactions.filter(tx => tx.type === 'income' && !isSavingsContributionTransaction(tx)).map(tx => tx.category))].sort(), expense: [...new Set([...allTransactions.filter(tx => tx.type === 'expense' && !isSavingsContributionTransaction(tx)).map(tx => tx.category), ...allSavingsMovements.filter(sm => sm.type === 'direct_expense').map(sm => sm.category || 'Otros')])].sort(), savings: [] }}
       onClose={() => setFiltersOpen(false)}
       onApply={(filters: AnalyticsFiltersValue) => { setMode(filters.mode); setY(filters.year); setM(filters.month); if (!trendYearChosen) setTrendYear(filters.year); setFrom(filters.from); setTo(filters.to); setCategory(filters.category); setMovementType(filters.movementType); setFiltersOpen(false); }} />}
-    <nav className="analytics-tabs flex w-full min-w-0 gap-1 overflow-x-auto pb-1 xl:hidden" aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => changeSection(s.id)} aria-current={section === s.id ? "page" : undefined} className={"inline-flex min-h-11 min-w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 text-[11px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-w-fit sm:flex-row sm:gap-1.5 sm:px-3 sm:text-xs " + (section === s.id ? "font-semibold" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800")}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="whitespace-nowrap">{s.label}</span></button>; })}</nav>
+    <div className="hidden justify-end pt-3 xl:flex">
+      <div role="group" aria-label="Vista de estadísticas" className="inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+        <button type="button" aria-pressed={isDesktopDashboard} onClick={() => { setDesktopView('dashboard'); changeSection('summary'); }} className={'min-h-10 rounded-lg px-3 text-sm font-medium ' + (isDesktopDashboard ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>Dashboard</button>
+        <button type="button" aria-pressed={!isDesktopDashboard} onClick={() => { setDesktopView('analysis'); if (section === 'summary') changeSection('categories'); }} className={'min-h-10 rounded-lg px-3 text-sm font-medium ' + (!isDesktopDashboard ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800')}>Análisis</button>
+      </div>
+    </div>
+    <nav className={'analytics-tabs flex w-full min-w-0 gap-1 overflow-x-auto pb-1 ' + (isDesktopDashboard ? 'xl:hidden' : 'xl:flex')} aria-label="Apartados">{sections.map(s => { const Icon = s.icon; return <button key={s.id} onClick={() => changeSection(s.id)} aria-current={section === s.id ? "page" : undefined} className={"inline-flex min-h-11 min-w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 text-[11px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-w-fit sm:flex-row sm:gap-1.5 sm:px-3 sm:text-xs " + (section === s.id ? "font-semibold" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800")}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="whitespace-nowrap">{s.label}</span></button>; })}</nav>
 
-    <div className="analytics-grid grid min-w-0 gap-4 pt-4 xl:grid-cols-2 xl:items-start">
+    <div className={'analytics-grid grid min-w-0 gap-4 pt-4 xl:items-start ' + (isDesktopDashboard ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
       {invalidRange && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300 xl:col-span-2">Introduce fechas válidas y una fecha final igual o posterior al inicio para consultar y exportar resultados.</p>}
-      {!invalidRange && <section aria-label="Resumen financiero" className={'app-surface grid grid-cols-2 gap-x-5 sm:grid-cols-4 xl:col-span-2 xl:row-start-1 ' + (section === 'summary' ? '' : 'hidden xl:grid')}>
+      {!invalidRange && <section aria-label="Resumen financiero" className={'app-surface grid grid-cols-2 gap-x-5 sm:grid-cols-4 ' + (section === 'summary' ? '' : 'hidden') + (isDesktopDashboard ? ' xl:col-span-2 xl:row-start-1' : '')}>
           <Metric featured label="Ingresos" value={fmt(totalIncome)} hint="Dinero inicial del período + ingresos registrados" icon={ArrowUpRight} color="blue" />
           <Metric featured label="Gastos" value={fmt(totalExpenses)} hint="Incluye pagos reales hechos desde ahorros" icon={ReceiptText} color="red" />
           <Metric featured label="Destinado a ahorro" value={category === 'Todas' ? fmt(deposits) : '—'} hint="Aportes internos; no se cuentan como gasto" icon={PiggyBank} color="green" />
@@ -289,11 +298,11 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
           <Metric label="Movimientos" value={movementCount.toLocaleString('es-DO')} hint="Ingresos, gastos y acciones de ahorro" />
       </section>}
       {!invalidRange && section === 'summary' && category !== 'Todas' && <p className="border-b border-slate-200/80 pb-3 text-[11px] text-slate-500 dark:border-slate-800/80 dark:text-slate-400 xl:hidden">El saldo inicial y las transferencias sin categoría no se atribuyen a este filtro.</p>}
-      {!invalidRange && <section aria-label="Consejos de MisCheles" className={borderSection + ' ' + (section === 'summary' ? '' : 'hidden xl:block') + ' xl:col-start-2 xl:row-start-3'}>
+      {!invalidRange && <section aria-label="Consejos de MisCheles" className={sectionPanelClass('summary', 'xl:col-start-2 xl:row-start-3')}>
           <Heading title="Consejos de MisCheles" detail="Recomendaciones generadas con tus movimientos y presupuestos reales." />
           {movementType !== 'all' || category !== 'Todas' ? <p className="py-3 text-xs text-slate-500">Selecciona todos los tipos y categorías para recibir consejos sobre el período completo.</p> : !tips.length ? <p className="py-3 text-xs text-slate-500 dark:text-slate-400">Aún no hay suficientes movimientos para identificar oportunidades.</p> : <div className="divide-y divide-slate-200/70 dark:divide-slate-800/70">{tips.slice(0, 4).map((tip, i) => <article key={i} className="flex gap-3 py-3"><span className={'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ' + (tip.color === 'red' ? 'bg-rose-500/10 text-rose-600' : tip.color === 'amber' ? 'bg-amber-500/10 text-amber-600' : tip.color === 'green' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary')}><Lightbulb className="h-4 w-4" /></span><div className="min-w-0"><h4 className="text-sm font-semibold">{tip.title}</h4><p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{tip.detail}</p>{tip.value && <p className="mt-1 text-xs font-semibold">{tip.value}</p>}</div></article>)}</div>}
       </section>}
-      {!invalidRange && section === 'summary' && <section className={borderSection + ' xl:hidden'} aria-label="Lectura rápida de gastos por categoría">
+      {!invalidRange && section === 'summary' && <section className={borderSection + (isDesktopDashboard ? ' xl:hidden' : ' xl:block')} aria-label="Lectura rápida de gastos por categoría">
           <Heading title="Lectura rápida" detail={'Gastos por categoría · ' + rangeLabel} />
           <QuickExpenseChart rows={expenseCategoryDistribution(visibleTx, visibleSavings)} view={quickView} onViewChange={setQuickView} sort={quickSort} onSort={setQuickSort} fmt={fmt} localize={name => localizeCategoryName(language, name)} />
       </section>}
@@ -304,12 +313,12 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
           savingsMovements.filter(sm => inRange(parseDay(sm.date), previousRange)),
         );
         const budgets = Array.from(budgetByCategory, ([category, amount]) => ({ category, amount }));
-        return <section className={borderSection + ' ' + (section === 'categories' ? '' : 'hidden xl:block') + ' xl:col-start-1 xl:row-start-2'}><Heading title="Gastos por categoría" detail="Distribución, variación y presupuesto frente al gasto real." />
+        return <section className={sectionPanelClass('categories', 'xl:col-start-1 xl:row-start-2')}><Heading title="Gastos por categoría" detail="Distribución, variación y presupuesto frente al gasto real." />
           <CategoryAnalysis rows={expenseCategoryDistribution(visibleTx, visibleSavings)} previousRows={previousRows} history={categoryHistory} budgets={budgets} transactions={visibleTx} savingsMovements={visibleSavings} sort={categorySort} onSort={setCategorySort} selectedCategory={selectedCategoryDetail} onSelect={setSelectedCategoryDetail} fmt={fmt} localize={name => localizeCategoryName(language, name)} periodLabel={rangeLabel} />
         </section>;
       })()}
 
-      {!invalidRange && (movementType === 'income' || movementType === 'savings') && <section className={borderSection + ' ' + (section === 'categories' ? '' : 'hidden xl:block') + ' xl:col-start-1 xl:row-start-2'}>
+      {!invalidRange && (movementType === 'income' || movementType === 'savings') && <section className={sectionPanelClass('categories', 'xl:col-start-1 xl:row-start-2')}>
         <Heading title={movementType === 'income' ? 'Ingresos registrados por categoría' : 'Destinos de los aportes'}
           detail={movementType === 'income' ? 'Incluye ingresos registrados con categoría; el monto inicial se consulta en Resumen.' : 'Incluye aportes a ahorro general y metas. Los retiros no se restan de este ranking de aportes.'} />
         {!focusedRows.length ? <p className="py-4 text-sm text-slate-500">No hay movimientos de este tipo para los filtros seleccionados.</p> :
@@ -319,7 +328,7 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
             <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-800"><div className="h-full rounded-full bg-primary" style={{ width: row.share + '%' }} /></div>
           </article>)}</div>}
       </section>}
-      {!invalidRange && <section className={borderSection + ' ' + (section === 'compare' ? '' : 'hidden xl:block') + ' xl:col-start-1 xl:row-start-3'}>
+      {!invalidRange && <section className={sectionPanelClass('compare', 'xl:col-start-1 xl:row-start-3')}>
         <Heading title="Comparar períodos" detail="Elige A y B y aplica para iniciar la comparación." />
         <div className="mt-3 space-y-3">
           <div role="group" aria-label="Modalidad de comparación" className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
@@ -349,7 +358,7 @@ export const AnalyticsView: React.FC<Props> = ({ activeSection, onSectionChange,
         </div>
       </section>}
 
-      {!invalidRange && <section className={borderSection + ' ' + (section === 'evolution' ? '' : 'hidden xl:block') + ' xl:col-start-2 xl:row-start-2'}>
+      {!invalidRange && <section className={sectionPanelClass('evolution', 'xl:col-start-2 xl:row-start-2')}>
         <Heading title="Evolución financiera" detail={'Ingresos, gastos reales y aportes a ahorro · ' + trendYear} action={<label className="flex items-center gap-2 text-xs text-slate-500">Año<select aria-label="Año de evolución" value={trendYear} onChange={event => { setTrendYear(Number(event.target.value)); setTrendYearChosen(true); }} className="min-h-9 max-w-28 rounded-lg border border-slate-200 bg-transparent px-2 text-sm font-semibold text-app-foreground dark:border-slate-700">{availableYears.map(value => <option key={value} value={value}>{value}</option>)}</select></label>} />
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500"><span><span className="text-primary">●</span> Ingresos</span><span><span className="text-rose-500">●</span> Gastos</span><span><span className="text-emerald-600">●</span> Ahorro</span></div>
         {!monthSeries.length ? <p className="py-5 text-sm text-slate-500">No hay movimientos financieros registrados para {trendYear} con estos filtros.</p> : <>

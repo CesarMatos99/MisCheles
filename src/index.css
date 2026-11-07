@@ -27,6 +27,7 @@
 :root {
   color-scheme: light;
   --app-primary: #012677;
+  --app-focus: var(--app-primary);
   --app-action: var(--app-primary);
   --app-link: var(--app-primary);
   --app-sky: #60cdff;
@@ -64,7 +65,8 @@
   --app-muted: #a8b5c9;
   --app-line: #253247;
   --app-surface-soft: #18263b;
-  --app-link: #60cdff;
+  --app-link: color-mix(in srgb, var(--app-primary) 42%, white);
+  --app-focus: color-mix(in srgb, var(--app-primary) 58%, white);
   --app-shadow: 0 4px 24px rgb(0 0 0 / .12);
   --app-primary-soft: color-mix(in srgb, var(--app-primary) 20%, #0d1422);
   --app-primary-ink: #e4ebfa;
@@ -96,7 +98,7 @@
   input, select, textarea { max-width: 100%; min-width: 0; }
   input[type='date'], input[type='month'] { min-inline-size: 0; }
   option { background: var(--app-surface); color: var(--app-foreground); }
-  :focus-visible { outline: 2px solid var(--app-primary); outline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--app-focus); outline-offset: 3px; }
   ::selection { background: var(--app-primary); color: white; }
 }
 
@@ -118,6 +120,9 @@
 .btn-danger { min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--app-negative); color: white; font-weight: 650; }
 .btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled { cursor: not-allowed; opacity: .5; }
 .btn-quiet { min-height: 40px; padding: 0 10px; border-radius: 10px; color: var(--app-muted); font-weight: 600; }
+.btn-tertiary { min-height: 44px; border-radius: 10px; color: var(--app-muted); font-weight: 600; transition: color .15s, background-color .15s; }
+.btn-tertiary:hover:not(:disabled) { color: var(--app-primary); background: color-mix(in srgb, var(--app-primary) 6%, transparent); }
+.btn-tertiary:focus-visible { outline: 2px solid var(--app-focus); outline-offset: 2px; }
 .btn-icon { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 999px; }
 .safe-area-bottom { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
 .app-shell-bottom-nav-space { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
@@ -130,12 +135,21 @@
   .app-shell-layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
 }
 .dashboard-columns { display: grid; min-width: 0; gap: 1rem; }
-.dashboard-primary-column { display: grid; min-width: 0; align-content: start; gap: 1rem; }
+.dashboard-primary-column { display: grid; min-width: 0; align-content: start; gap: 1rem; order: 2; }
 .dashboard-recent-panel { min-width: 0; align-self: start; }
+.dashboard-trend-priority { min-width: 0; }
+.dashboard-category-panel { order: 1; }
+.dashboard-unbudgeted-panel { order: 3; }
+.dashboard-recent-panel { order: 4; }
 .dashboard-balance-panel { background: linear-gradient(125deg, color-mix(in srgb, var(--app-primary) 8%, var(--app-surface)), var(--app-surface) 64%); }
 .dashboard-balance-panel .type-display { color: var(--app-primary); }
 @media (min-width: 1024px) {
-  .dashboard-columns { grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr); align-items: start; gap: 1.25rem; }
+  .dashboard-columns { grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr); grid-template-areas: 'categories recent' 'trend recent' 'unbudgeted recent'; align-items: start; gap: 1.25rem; }
+  .dashboard-primary-column { display: contents; }
+  .dashboard-category-panel { grid-area: categories; order: 0; }
+  .dashboard-trend-priority { grid-area: trend; }
+  .dashboard-unbudgeted-panel { grid-area: unbudgeted; order: 0; }
+  .dashboard-recent-panel { grid-area: recent; order: 0; }
 }
 
 /* Shared presentation primitives; financial state stays in the existing views. */
@@ -162,7 +176,7 @@
 .category-icon { color: var(--category-color); background-color: var(--category-bg); }
 .dark .category-icon { color: color-mix(in srgb, var(--category-color) 72%, white); background-color: var(--category-bg-dark); }
 .app-field { min-height: 46px; width: 100%; border: 1px solid var(--app-line); border-radius: 12px; padding: .625rem .875rem; background: var(--app-surface); color: var(--app-foreground); }
-.app-field:focus { outline: 2px solid var(--app-action); outline-offset: 2px; }
+.app-field:focus { outline: 2px solid var(--app-focus); outline-offset: 2px; }
 .app-empty { border: 1px dashed var(--app-line); border-radius: 16px; padding: 1.5rem 1rem; text-align: center; color: var(--app-muted); font-size: .875rem; }
 .app-modal-backdrop { padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
 .app-modal-surface { min-width: 0; max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); border-radius: 24px; background: var(--app-surface); border: 1px solid var(--app-line); box-shadow: 0 24px 80px rgb(0 0 0 / .22); }
@@ -240,7 +254,7 @@
 .border-primary\/30 { border-color: color-mix(in srgb, var(--app-primary) 30%, transparent) !important; }
 .border-primary\/40 { border-color: color-mix(in srgb, var(--app-primary) 40%, transparent) !important; }
 .border-primary\/60 { border-color: color-mix(in srgb, var(--app-primary) 60%, transparent) !important; }
-.focus\:ring-primary:focus { --tw-ring-color: var(--app-primary) !important; }
+.focus\:ring-primary:focus { --tw-ring-color: var(--app-focus) !important; }
 .ring-primary { --tw-ring-color: var(--app-primary) !important; }
 .shadow-primary\/50 { --tw-shadow-color: color-mix(in srgb, var(--app-primary) 50%, transparent) !important; }
 .dark .text-primary { color: color-mix(in srgb, var(--app-primary) 65%, white) !important; }

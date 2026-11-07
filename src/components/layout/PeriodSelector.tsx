@@ -39,14 +39,14 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({ year, month, onM
   };
 
   return (
-    <div ref={rootRef} className="period-selector relative inline-flex w-full max-w-full items-center justify-center gap-0 rounded-full border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900 sm:w-auto">
-      <button type="button" onClick={() => shiftMonth(-1)} aria-label={language === 'es' ? 'Mes anterior' : 'Previous month'} className={compact ? "flex h-11 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
+    <div ref={rootRef} className="period-selector relative inline-flex w-full max-w-full items-center justify-center gap-0 sm:w-auto">
+      <button type="button" onClick={() => shiftMonth(-1)} aria-label={language === 'es' ? 'Mes anterior' : 'Previous month'} className="btn-tertiary flex h-11 w-11 items-center justify-center p-0 text-slate-500 dark:text-slate-300">
         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label={language === 'es' ? 'Elegir mes' : 'Choose month'} aria-expanded={isOpen} aria-haspopup="true" className={compact ? "min-h-11 whitespace-nowrap rounded-xl px-1 text-xs font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100" : "min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100"}>
+      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label={language === 'es' ? 'Elegir mes' : 'Choose month'} aria-expanded={isOpen} aria-haspopup="true" className={"btn-tertiary min-h-11 whitespace-nowrap px-2 font-semibold text-app-foreground " + (compact ? 'text-xs' : 'text-sm')}>
         {monthNames[month - 1]} {year}
       </button>
-      <button type="button" onClick={() => shiftMonth(1)} aria-label={language === 'es' ? 'Mes siguiente' : 'Next month'} className={compact ? "flex h-11 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800" : "flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800"}>
+      <button type="button" onClick={() => shiftMonth(1)} aria-label={language === 'es' ? 'Mes siguiente' : 'Next month'} className="btn-tertiary flex h-11 w-11 items-center justify-center p-0 text-slate-500 dark:text-slate-300">
         <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
       {isOpen && (

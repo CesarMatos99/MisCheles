@@ -35,6 +35,7 @@ import { AnalyticsView, type AnalyticsSection } from './features/dashboard/Analy
 import { useLanguage } from './i18n/LanguageContext';
 import { useAppNavigation } from './navigation/useAppNavigation';
 import { localLockCredential } from './services/localLockCredential';
+import { DEFAULT_ACCENT_COLOR, normalizeAccentColor } from './constants/accentColors';
 
 export default function App() {
   const { t } = useLanguage();
@@ -54,7 +55,7 @@ export default function App() {
     }
   });
   const [accentColor, setAccentColor] = useState<string>(() => {
-    try { return localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1') || '#002991'; } catch { return '#002991'; }
+    try { return normalizeAccentColor(localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1')); } catch { return DEFAULT_ACCENT_COLOR; }
   });
 
   // App Lock State
@@ -139,7 +140,7 @@ export default function App() {
       if (detail?.origin !== 'remote') return;
       setProfile(financeApplication.getProfile());
       setIsDarkMode(localStorage.getItem('presucontrol_theme_v1') === 'dark');
-      setAccentColor(localStorage.getItem('mischeles_accent_v2') || '#012677');
+      setAccentColor(normalizeAccentColor(localStorage.getItem('mischeles_accent_v2')));
     };
     window.addEventListener(storageMutationEvent, onRemoteSnapshot);
     return () => window.removeEventListener(storageMutationEvent, onRemoteSnapshot);
