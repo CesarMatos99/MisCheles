@@ -196,9 +196,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">Movimientos filtrados</p>
             <p className="mt-0.5 text-base font-extrabold tracking-tight text-slate-800 dark:text-slate-100">{visibleCount}</p>
           </div>
-          {(filters.type === 'all' || filters.type === 'savings') && totalSavingsFiltered > 0 && (
-            <p className="col-span-2 text-[11px] text-teal-700 dark:text-teal-300 sm:col-span-3">Ahorros transferidos: <strong>{profile.currency} {totalSavingsFiltered.toLocaleString()}</strong> · no se mezclan con ingresos ni gastos.</p>
-          )}
         </div>
 
         {/* Row 3: Continuous Movements List divided by lines */}

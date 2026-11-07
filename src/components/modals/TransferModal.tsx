@@ -12,7 +12,6 @@ import {
   AlertCircle,
   HelpCircle,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import { UserProfile, FinancialSummary, SavingsGoal } from '../../types';
 import { financeApplication } from '../../application/financeApplication';
@@ -246,15 +245,6 @@ export const TransferModal: React.FC<TransferModalProps> = ({
             />
           </div>
 
-          {/* Clarity note */}
-          <div className="p-2.5 rounded-xl bg-primary-soft dark:bg-primary-soft border border-primary/20 text-xs text-primary dark:text-primary flex items-start gap-2">
-            <Sparkles className="w-4 h-4 shrink-0 text-primary mt-0.5" />
-            <span>
-              {destinationType === 'goal'
-                ? `💡 Se transferirá a "${currentGoal?.title || 'la meta'}" y también sumará al balance total de Ahorro General.`
-                : '💡 Se transferirá a Ahorro General. Quedará disponible en tu fondo de ahorro sin asignar a ninguna meta específica.'}
-            </span>
-          </div>
 
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
