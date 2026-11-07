@@ -302,8 +302,8 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
       </section>}
       {!invalidRange && section === 'compare' && <section className={borderSection}>
         <Heading title="Comparar períodos" detail="Elige A y B y aplica para iniciar la comparación." />
-        <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-          <div role="group" aria-label="Modalidad de comparación" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+        <div className="mt-3 space-y-3">
+          <div role="group" aria-label="Modalidad de comparación" className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
             <button type="button" aria-pressed={compareMode === 'months'} onClick={() => { setCompareMode('months'); setComparisonError(''); }} className={'min-h-10 rounded-lg px-2 text-sm font-medium ' + (compareMode === 'months' ? 'bg-white text-primary shadow-sm dark:bg-slate-800' : 'text-slate-500')}>Meses</button>
             <button type="button" aria-pressed={compareMode === 'ranges'} onClick={() => { setCompareMode('ranges'); setComparisonError(''); }} className={'min-h-10 rounded-lg px-2 text-sm font-medium ' + (compareMode === 'ranges' ? 'bg-white text-primary shadow-sm dark:bg-slate-800' : 'text-slate-500')}>Rangos de fechas</button>
           </div>
