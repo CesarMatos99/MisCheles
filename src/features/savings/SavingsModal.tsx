@@ -151,7 +151,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
 
   return (
     <ModalShell title="Gestionar ahorro" onClose={onClose}>
-      <ModalSurface scroll="auto">
+      <ModalSurface scroll="auto" className="app-mobile-sheet">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">

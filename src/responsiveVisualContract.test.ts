@@ -21,4 +21,18 @@ describe('responsive visual contract', () => {
     expect(app).toContain('<DesktopSidebar');
     expect(app).toContain('<BottomNav');
   });
+
+  test('adapts the existing finance forms to mobile sheets without replacing their modal shells', () => {
+    const modalFiles = [
+      'src/features/transactions/TransactionModal.tsx',
+      'src/features/savings/SavingsModal.tsx',
+      'src/components/modals/TransferModal.tsx',
+      'src/components/modals/MonthSetupModal.tsx',
+      'src/features/savings/SavingsView.tsx',
+    ];
+    for (const file of modalFiles) {
+      const source = readFileSync(file, 'utf8');
+      expect(source).toContain('app-mobile-sheet');
+    }
+  });
 });

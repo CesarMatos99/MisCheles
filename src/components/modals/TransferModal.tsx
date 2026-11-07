@@ -105,7 +105,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
   return (
     <ModalShell title="Transferir a ahorro" onClose={onClose} size="md">
-      <ModalSurface scroll="auto">
+      <ModalSurface scroll="auto" className="app-mobile-sheet">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between">
           <div className="flex items-center gap-3">

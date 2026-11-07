@@ -132,7 +132,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
 
   return (
     <ModalShell title="Configurar mes" onClose={onClose} size="lg">
-      <ModalSurface size="lg" scroll="hidden">
+      <ModalSurface size="lg" scroll="hidden" className="app-mobile-sheet">
         {/* Header */}
         <div className="p-5 bg-primary text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
