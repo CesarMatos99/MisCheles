@@ -13,4 +13,17 @@ describe('brand resource contract', () => {
     expect(existsSync('public/app-icon.png')).toBe(true);
     expect(pdf).toContain("path = '/app-icon.png'");
   });
+
+  test('header greets the current first name on desktop and leaves entry actions to the mobile FAB', () => {
+    const header = readFileSync('src/components/layout/Header.tsx', 'utf8');
+    const app = readFileSync('src/App.tsx', 'utf8');
+    const floatingActions = readFileSync('src/components/layout/FloatingActions.tsx', 'utf8');
+    expect(header).toContain('profile.name.trim().split');
+    expect(header).toContain('¡Hola');
+    expect(header).toContain('hidden min-w-0 truncate text-base font-semibold text-app-foreground lg:block');
+    expect(header).not.toContain('Nuevo registro');
+    expect(header).not.toContain('onExpense');
+    expect(app).toContain('<FloatingActions');
+    expect(floatingActions).toContain('lg:hidden');
+  });
 });

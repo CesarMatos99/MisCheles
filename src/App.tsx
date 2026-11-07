@@ -249,9 +249,6 @@ export default function App() {
             isDarkMode={isDarkMode}
             onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
             onOpenProfile={() => navigateToTab('profile')}
-            onExpense={() => handleOpenTransactionModal('expense')}
-            onIncome={() => handleOpenTransactionModal('income')}
-            onTransfer={() => setIsTransferModalOpen(true)}
             profile={profile}
           />
 
