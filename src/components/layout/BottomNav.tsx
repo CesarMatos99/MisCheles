@@ -19,7 +19,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
   ];
 
   return (
-    <nav aria-label={t('home') + ', ' + t('register') + ', ' + t('statistics') + ', ' + t('savings')} className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-300 bg-white/95 px-3 py-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 sm:hidden safe-area-bottom">
+    <nav aria-label={t('home') + ', ' + t('register') + ', ' + t('statistics') + ', ' + t('savings')} className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-300 bg-white/95 px-3 py-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 lg:hidden safe-area-bottom">
       <div className="grid grid-cols-4 gap-0.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;

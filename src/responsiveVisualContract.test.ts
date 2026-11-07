@@ -11,4 +11,14 @@ describe('responsive visual contract', () => {
     expect(css).toContain('--app-primary: #012677');
     expect(css).toContain('--app-background: #f8f9fc');
   });
+
+  test('switches to the sidebar shell at desktop width and keeps mobile sheets in the safe area', () => {
+    const css = readFileSync('src/index.css', 'utf8');
+    const app = readFileSync('src/App.tsx', 'utf8');
+    expect(css).toContain('grid-template-columns: 15rem minmax(0, 1fr)');
+    expect(css).toContain('max-width: 1023px');
+    expect(css).toContain('app-modal-backdrop:has(.app-mobile-sheet)');
+    expect(app).toContain('<DesktopSidebar');
+    expect(app).toContain('<BottomNav');
+  });
 });

@@ -121,9 +121,14 @@
 .btn-icon { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 999px; }
 .safe-area-bottom { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
 .app-shell-bottom-nav-space { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
-@media (min-width: 640px) { .app-shell-bottom-nav-space { padding-bottom: 1.5rem; } }
+@media (min-width: 1024px) { .app-shell-bottom-nav-space { padding-bottom: 1.5rem; } }
 .fab-position { right: max(1rem, env(safe-area-inset-right)); bottom: calc(5.75rem + env(safe-area-inset-bottom)); }
-@media (min-width: 640px) { .fab-position { right: 1.5rem; bottom: 1.5rem; } }
+@media (min-width: 1024px) { .fab-position { right: 1.5rem; bottom: 1.5rem; } }
+.app-shell-layout { min-height: 100dvh; }
+.app-shell-content { display: flex; min-width: 0; flex-direction: column; }
+@media (min-width: 1024px) {
+  .app-shell-layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
+}
 
 /* Shared presentation primitives; financial state stays in the existing views. */
 .app-page { min-width: 0; display: flex; flex-direction: column; gap: 1.25rem; }
@@ -153,6 +158,11 @@
 .app-empty { border: 1px dashed var(--app-line); border-radius: 16px; padding: 1.5rem 1rem; text-align: center; color: var(--app-muted); font-size: .875rem; }
 .app-modal-backdrop { padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
 .app-modal-surface { min-width: 0; max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); border-radius: 24px; background: var(--app-surface); border: 1px solid var(--app-line); box-shadow: 0 24px 80px rgb(0 0 0 / .22); }
+@media (max-width: 1023px) {
+  .app-modal-backdrop:has(.app-mobile-sheet) { align-items: flex-end; padding: max(.5rem, env(safe-area-inset-top)) max(env(safe-area-inset-right)) 0 max(env(safe-area-inset-left)); }
+  .app-modal-backdrop:has(.app-mobile-sheet) > [role='dialog'] { width: 100%; max-width: none; max-height: calc(100dvh - env(safe-area-inset-top)); align-self: flex-end; }
+  .app-modal-backdrop:has(.app-mobile-sheet) .app-mobile-sheet { width: 100%; max-width: none; max-height: calc(100dvh - env(safe-area-inset-top)); border-radius: 24px 24px 0 0; padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
 .app-modal-surface :where(input:not([type='checkbox']):not([type='radio']):not([type='file']), select, textarea) { font-size: 1rem; }
 .app-modal-surface :where(input[class*='border'], select, textarea) { min-height: 44px; background-color: var(--app-surface); border-color: var(--app-line); }
 .app-modal-surface label { text-transform: none; letter-spacing: normal; }

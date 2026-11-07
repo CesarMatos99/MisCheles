@@ -1,6 +1,6 @@
 import { isSavingsBudgetCategory } from './domain/transactionPresentation';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, PiggyBank, PieChart, AlertCircle, X, BarChart3 } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 import {
   Transaction,
   UserProfile,
@@ -12,7 +12,8 @@ import { useFinanceWorkspace } from './application/useFinanceWorkspace';
 import { useAppModals } from './application/useAppModals';
 import { projectCategoryBudget } from './domain/financialQueries';
 import { Header } from './components/layout/Header';
-import { BottomNav, ActiveTab } from './components/layout/BottomNav';
+import { BottomNav, type ActiveTab } from './components/layout/BottomNav';
+import { DesktopSidebar } from './components/layout/DesktopSidebar';
 import { FloatingActions } from './components/layout/FloatingActions';
 import { OfflineIndicator } from './components/layout/OfflineIndicator';
 import { SyncConflictResolver } from './components/sync/SyncConflictResolver';
@@ -30,7 +31,7 @@ import { ExportModal } from './components/modals/ExportModal';
 import { PWAInstallModal } from './components/modals/PWAInstallModal';
 import { BiometricLockScreen } from './components/modals/BiometricLockScreen';
 import { EXPENSE_CATEGORIES, MONTH_NAMES_ES } from './constants/categories';
-import { AnalyticsView } from './features/dashboard/AnalyticsView';
+import { AnalyticsView, type AnalyticsSection } from './features/dashboard/AnalyticsView';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAppNavigation } from './navigation/useAppNavigation';
 import { localLockCredential } from './services/localLockCredential';
@@ -82,6 +83,11 @@ export default function App() {
     setSelectedCategory(null);
   }, [closeModuleModals]);
   const { activeTab, navigateToTab } = useAppNavigation(onModuleChange);
+  const [analyticsSection, setAnalyticsSection] = useState<AnalyticsSection>('summary');
+  const navigateDesktopTab = (tab: ActiveTab) => {
+    if (tab === 'statistics') setAnalyticsSection('summary');
+    navigateToTab(tab);
+  };
 
   useEffect(() => {
     const legacyPin = financeApplication.takeLegacyLockPin();
@@ -216,7 +222,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-app-background text-app-foreground flex flex-col selection:bg-primary selection:text-white app-shell-bottom-nav-space transition-colors duration-200">
+    <div className="min-h-dvh bg-app-background text-app-foreground selection:bg-primary selection:text-white transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
       <SyncConflictResolver />
@@ -231,49 +237,26 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Header */}
-      <Header
-        isDarkMode={isDarkMode}
-        onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
-        onOpenProfile={() => navigateToTab('profile')}
-        profile={profile}
-      />
-
-      {/* Main Navigation Tabs on Desktop */}
-      <div className="hidden sm:block border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2 sm:px-6">
-          <div className="flex gap-2">
-            {[
-              { id: 'dashboard' as ActiveTab, label: t('home'), icon: PieChart },
-              { id: 'transactions' as ActiveTab, label: t('register'), icon: Receipt },
-              { id: 'statistics' as ActiveTab, label: t('statistics'), icon: BarChart3 },
-              { id: 'savings' as ActiveTab, label: t('savings'), icon: PiggyBank },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => navigateToTab(tab.id)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${
-                    isActive
-                      ? 'text-primary after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-primary'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-        </div>
-      </div>
+      <div className="app-shell-layout">
+        <DesktopSidebar
+          activeTab={activeTab}
+          analyticsSection={analyticsSection}
+          onNavigate={navigateDesktopTab}
+          onNavigateAnalytics={(section) => { setAnalyticsSection(section); navigateToTab('statistics'); }}
+        />
+        <div className="app-shell-content">
+          <Header
+            isDarkMode={isDarkMode}
+            onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
+            onOpenProfile={() => navigateToTab('profile')}
+            onExpense={() => handleOpenTransactionModal('expense')}
+            onIncome={() => handleOpenTransactionModal('income')}
+            onTransfer={() => setIsTransferModalOpen(true)}
+            profile={profile}
+          />
 
       {/* Main Body Content Container */}
-      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-6 sm:py-7">
+      <main className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 space-y-6 px-4 py-5 sm:px-6 sm:py-7 xl:px-8 app-shell-bottom-nav-space">
         {movementError && <p role="alert" className="mb-3 text-sm text-rose-600 dark:text-rose-300">{movementError}</p>}
         {activeTab === 'dashboard' && (
           selectedCategory ? (
@@ -335,6 +318,8 @@ export default function App() {
 
         {activeTab === 'statistics' && (
           <AnalyticsView
+            activeSection={analyticsSection}
+            onSectionChange={setAnalyticsSection}
             year={year}
             month={month}
             transactions={allTransactions}
@@ -377,6 +362,8 @@ export default function App() {
           />
         )}
       </main>
+        </div>
+      </div>
 
       {/* Mobile Bottom Navigation */}
       <BottomNav
@@ -384,15 +371,13 @@ export default function App() {
         onChangeTab={navigateToTab}
       />
 
-      {(activeTab === 'dashboard' || activeTab === 'transactions') && (
-        <FloatingActions
-          contextAction={selectedCategory ? () => isSavingsBudgetCategory(selectedCategory) ? handleOpenSavingsModal('deposit_from_month') : handleOpenTransactionModal('expense') : undefined}
-          contextLabel={selectedCategory ? (isSavingsBudgetCategory(selectedCategory) ? 'Registrar aporte a ahorro' : 'Registrar gasto en ' + selectedCategory) : undefined}
-          onExpense={() => handleOpenTransactionModal('expense')}
-          onIncome={() => handleOpenTransactionModal('income')}
-          onTransfer={() => setIsTransferModalOpen(true)}
-        />
-      )}
+      <FloatingActions
+        contextAction={selectedCategory ? () => isSavingsBudgetCategory(selectedCategory) ? handleOpenSavingsModal('deposit_from_month') : handleOpenTransactionModal('expense') : undefined}
+        contextLabel={selectedCategory ? (isSavingsBudgetCategory(selectedCategory) ? 'Registrar aporte a ahorro' : 'Registrar gasto en ' + selectedCategory) : undefined}
+        onExpense={() => handleOpenTransactionModal('expense')}
+        onIncome={() => handleOpenTransactionModal('income')}
+        onTransfer={() => setIsTransferModalOpen(true)}
+      />
 
       {/* Modals */}
       <CategoryBudgetModal

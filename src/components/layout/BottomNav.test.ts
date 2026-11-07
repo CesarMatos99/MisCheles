@@ -15,4 +15,5 @@ test('mobile bottom navigation shows four modules and keeps Profile out of the b
     expect(html).toContain('Ahorro');
     expect(html).not.toContain('Perfil');
     expect(html).toContain('grid-cols-4');
+    expect(html).toContain('lg:hidden');
 });
