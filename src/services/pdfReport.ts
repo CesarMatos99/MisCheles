@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable, { type UserOptions } from 'jspdf-autotable';
 import type { FinancialSummary, SavingsMovement, Transaction, UserProfile } from '../types';
+import type { AnalyticsReport } from '../domain/analyticsReport';
 import { MONTH_NAMES_ES } from '../constants/categories';
 import { transactionTypeLabel } from '../domain/transactionPresentation';
 
@@ -81,7 +82,8 @@ function finishDocument(doc: PdfDocument) {
 
 function sectionTitle(doc: PdfDocument, title: string, y: number, header: { title: string; period: string; profile: UserProfile; options: PdfBrandingOptions }) {
   let nextY = y;
-  if (nextY > PAGE_HEIGHT - BOTTOM_MARGIN - 24) {
+  const minimumSectionSpace = 22;
+  if (nextY > PAGE_HEIGHT - BOTTOM_MARGIN - minimumSectionSpace) {
     doc.addPage();
     drawHeader(doc, header.title, header.period, header.profile, header.options);
     nextY = HEADER_HEIGHT + 8;
@@ -199,26 +201,48 @@ export function buildMonthlyPdf(params: {
   return doc;
 }
 
-export function buildAnalyticsPdf(report: { period: string; category: string; metrics: Array<[string, string]>; transactions: Transaction[]; savingsMovements: SavingsMovement[]; breakdown?: { title: string; rows: Array<[string, string, string]> }; tables?: Array<{ title: string; headers: string[]; rows: Array<Array<string | number>> }> }, profile: UserProfile, options: PdfBrandingOptions = {}) {
+export function buildAnalyticsPdf(report: AnalyticsReport, profile: UserProfile, options: PdfBrandingOptions = {}) {
   const doc = new jsPDF() as PdfDocument;
   const period = report.category && report.category !== 'Todas' ? `${report.period} · ${report.category}` : report.period;
   const header = { title: 'Reporte de estadísticas', period, profile, options };
   drawHeader(doc, header.title, header.period, profile, options);
   let y = HEADER_HEIGHT + 8;
-  if (report.metrics.length) {
+  const hasComparison = report.tables?.some(table => table.title.toLocaleLowerCase('es-DO').includes('comparación de indicadores')) || false;
+  const summaryRows: Array<[string, string]> = report.financialSummary ? [
+    ['Ingresos', money(profile.currency, report.financialSummary.income)],
+    ['Gastos', money(profile.currency, report.financialSummary.expenses)],
+    ['Aportes a ahorro', money(profile.currency, report.financialSummary.savingsContributions)],
+    ...(report.financialSummary.available === undefined ? [] : [['Disponible', money(profile.currency, report.financialSummary.available)] as [string, string]]),
+  ] : hasComparison ? [] : report.metrics;
+  if (summaryRows.length) {
     y = sectionTitle(doc, 'Resumen financiero', y, header);
-    y = renderTable(doc, y, [['Indicador', 'Valor']], report.metrics, header, { 1: { halign: 'right', fontStyle: 'bold' } });
+    y = renderTable(doc, y, [['Indicador', 'Valor']], summaryRows, header, { 1: { halign: 'right', fontStyle: 'bold' } });
   }
-  if (report.breakdown?.rows.length) {
+  const expenseRows = (report.expenseBreakdown || []).filter(row => row.amount > 0 || row.budget !== undefined);
+  if (expenseRows.length) {
+    y = sectionTitle(doc, 'Gastos por categoría', y, header);
+    y = renderTable(doc, y, [['Categoría', 'Gasto real', 'Participación', 'Presupuesto', 'Restante / Excedido']], expenseRows.map(row => [
+      row.category,
+      money(profile.currency, row.amount),
+      `${row.share.toLocaleString('es-DO', { maximumFractionDigits: 1 })}%`,
+      row.budget === undefined ? 'Sin asignación' : money(profile.currency, row.budget),
+      row.remaining === undefined ? '—' : row.remaining < 0 ? `Excedido ${money(profile.currency, Math.abs(row.remaining))}` : money(profile.currency, row.remaining),
+    ]), header, { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } });
+  }
+  const breakdownIsRedundant = (expenseRows.length > 0 || report.reportScope === 'statistics') && report.breakdown?.title.toLocaleLowerCase('es-DO').includes('gastos por categoría');
+  if (report.breakdown?.rows.length && !breakdownIsRedundant) {
     y = sectionTitle(doc, report.breakdown.title, y, header);
     y = renderTable(doc, y, [['Categoría / Destino', 'Monto', 'Participación']], report.breakdown.rows, header, { 1: { halign: 'right' }, 2: { halign: 'right' } });
   }
   for (const table of report.tables || []) {
     if (!table.rows.length) continue;
+    const tableTitle = table.title.toLocaleLowerCase('es-DO');
+    if (report.reportScope === 'statistics' && (tableTitle.includes('meta') || tableTitle.includes('movimientos de ahorro') || tableTitle.includes('operaciones de ahorro') || tableTitle.includes('categorías de gasto') || tableTitle.includes('presupuestos asignados'))) continue;
+    if (expenseRows.length && (tableTitle.includes('categorías de gasto') || tableTitle.includes('presupuestos asignados'))) continue;
     y = sectionTitle(doc, table.title, y, header);
     y = renderTable(doc, y, [table.headers], table.rows, header);
   }
-  const movementRows = [
+  const movementRows = report.reportScope === 'statistics' ? [] : [
     ...report.transactions.map(transaction => [transaction.date, transactionTypeLabel(transaction), transaction.category, transaction.description, money(profile.currency, transaction.amount)]),
     ...report.savingsMovements.map(movement => [movement.date, savingsMovementLabel(movement), movement.goalTitle || movement.category || 'Ahorro general', movement.description, money(profile.currency, movement.amount)]),
   ].sort((a, b) => String(a[0]).localeCompare(String(b[0])));

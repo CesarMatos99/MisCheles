@@ -1,5 +1,6 @@
 import type { AnalyticsReport } from './analyticsReport';
 import { analyticsRangeSummary } from './analyticsQueries';
+import { filterAnalyticsMovements } from './analyticsMovementFilter';
 import { categorySpendingReport } from './financialQueries';
 import { isSavingsContributionTransaction, normalizeFinancialCategory } from './financialClassification';
 import { parseCalendarDay } from './calendarDay';
@@ -21,21 +22,63 @@ export function buildConfiguredReport(input: { period: ExportPeriod; filters: Ex
   const range = configuredExportRange(input.period); if (!range || !input.sections.length) return null;
   const categoryKey = normalizeFinancialCategory(input.filters.category);
   const categoryMatches = (name: string) => input.filters.category === 'all' || input.filters.category === 'Todas' || normalizeFinancialCategory(name) === categoryKey;
-  const selectedTx = input.transactions.filter(tx => inRange(tx.date, range) && !isSavingsContributionTransaction(tx) && categoryMatches(tx.category) && (input.filters.paymentMethod === 'all' || tx.paymentMethod === input.filters.paymentMethod) && (input.filters.type === 'all' || input.filters.type === 'savings' || tx.type === input.filters.type));
-  const selectedSavings = input.savingsMovements.filter(sm => inRange(sm.date, range) && (categoryMatches(sm.category || sm.goalTitle || 'Ahorro general') || (input.filters.category === 'all' || input.filters.category === 'Todas')) && (input.filters.type === 'all' || input.filters.type === 'savings' || (input.filters.type === 'expense' && sm.type === 'direct_expense')));
+  const selectedTx = input.transactions.filter(tx => inRange(tx.date, range) && !isSavingsContributionTransaction(tx) && categoryMatches(tx.category) && (input.filters.paymentMethod === 'all' || tx.paymentMethod === input.filters.paymentMethod) && (input.filters.type === 'all' || tx.type === input.filters.type));
+  const selectedSavings = input.savingsMovements.filter(sm => inRange(sm.date, range) && (categoryMatches(sm.category || sm.goalTitle || 'Ahorro general') || (input.filters.category === 'all' || input.filters.category === 'Todas')) && (input.filters.type === 'all' || (input.filters.type === 'savings' && sm.type !== 'direct_expense') || (input.filters.type === 'expense' && sm.type === 'direct_expense')));
   const totalDays = Math.max(1, Math.floor((range.end.getTime() - range.start.getTime()) / 86400000) + 1);
-  const summary = analyticsRangeSummary({ transactions: input.filters.paymentMethod === 'all' ? input.transactions : input.transactions.filter(tx => tx.paymentMethod === input.filters.paymentMethod), savingsMovements: input.savingsMovements, monthConfigs: input.monthConfigs, range, category: input.filters.category === 'all' ? 'Todas' : input.filters.category, movementType: input.filters.type, includeInitialIncome: true, elapsedDays: totalDays });
+  const methodTransactions = input.filters.paymentMethod === 'all' ? input.transactions : input.transactions.filter(tx => tx.paymentMethod === input.filters.paymentMethod);
+  const filteredMovements = filterAnalyticsMovements(methodTransactions, input.savingsMovements, input.filters.type);
+  const summary = analyticsRangeSummary({ transactions: filteredMovements.transactions, savingsMovements: filteredMovements.savingsMovements, monthConfigs: input.monthConfigs, range, category: input.filters.category === 'all' ? 'Todas' : input.filters.category, movementType: input.filters.type, includeInitialIncome: filteredMovements.includeInitialIncome && input.filters.paymentMethod === 'all', elapsedDays: totalDays });
   const metrics: Array<[string, string]> = []; const fmt = (amount: number) => new Intl.NumberFormat('es-DO', { maximumFractionDigits: 2 }).format(amount);
-  if (include(input.sections, 'summary') || include(input.sections, 'statistics')) { metrics.push(['Ingresos', fmt(summary.totalIncome)], ['Gastos de consumo', fmt(summary.totalExpenses)], ['Aportes a ahorro', fmt(summary.deposits)]); if (input.filters.paymentMethod === 'all' && Number.isFinite(summary.available)) metrics.push(['Disponible del período', fmt(summary.available)]); }
-  const tables: NonNullable<AnalyticsReport['tables']> = []; let breakdown: AnalyticsReport['breakdown'];
+  let financialSummary: AnalyticsReport['financialSummary'];
+  if (include(input.sections, 'summary') || include(input.sections, 'statistics')) {
+    financialSummary = {
+      income: summary.totalIncome,
+      expenses: summary.totalExpenses,
+      savingsContributions: summary.deposits,
+      ...(input.filters.paymentMethod === 'all' && Number.isFinite(summary.available) ? { available: summary.available } : {}),
+    };
+    metrics.push(['Ingresos', fmt(summary.totalIncome)], ['Gastos de consumo', fmt(summary.totalExpenses)], ['Aportes a ahorro', fmt(summary.deposits)]);
+    if (financialSummary.available !== undefined) metrics.push(['Disponible del período', fmt(financialSummary.available)]);
+  }
+  const tables: NonNullable<AnalyticsReport['tables']> = [];
+  let breakdown: AnalyticsReport['breakdown'];
+  let expenseBreakdown: AnalyticsReport['expenseBreakdown'];
   const incomeRows = new Map<string, number>(); selectedTx.filter(tx => tx.type === 'income').forEach(tx => incomeRows.set(tx.category, (incomeRows.get(tx.category) || 0) + tx.amount)); if(summary.initialIncome) incomeRows.set('Dinero inicial del período',(incomeRows.get('Dinero inicial del período')||0)+summary.initialIncome);
   if (include(input.sections, 'income')) { tables.push({ title: 'Ingresos', headers: ['Categoría', 'Importe'], rows: [...incomeRows].map(([name, amount]) => [name, fmt(amount)]) }); }
-  if (include(input.sections, 'expenses') || include(input.sections, 'statistics')) { const budgets = Object.entries(input.budgetsByMonth).filter(([key]) => { const [year, month] = key.split('-').map(Number); const start = new Date(year, month - 1, 1); const end = new Date(year, month, 0, 23, 59, 59, 999); return start <= range.end && end >= range.start; }).flatMap(([, rows]) => rows || []); const summedBudgets = new Map<string, CategoryBudget>(); for (const row of budgets) { const key = normalizeFinancialCategory(row.category); const current = summedBudgets.get(key); summedBudgets.set(key, { category: current?.category || row.category, amount: (current?.amount || 0) + row.amount }); } const rows = categorySpendingReport({ transactions: selectedTx, savingsMovements: selectedSavings, budgets: [...summedBudgets.values()], totalExpenses: summary.totalExpenses }); breakdown = { title: 'Gastos por categoría', rows: rows.map(row => [row.category, fmt(row.amount), fmt(row.share) + '%']) }; tables.push({ title: 'Categorías de gasto', headers: ['Categoría', 'Gastado', 'Presupuesto', 'Disponible'], rows: rows.map(row => [row.category, fmt(row.amount), row.budget === undefined ? 'Sin asignación' : fmt(row.budget), row.remaining === undefined ? '—' : fmt(row.remaining)]) }); }
+  if (include(input.sections, 'expenses') || include(input.sections, 'statistics')) {
+    const budgets = Object.entries(input.budgetsByMonth).filter(([key]) => {
+      const [year, month] = key.split('-').map(Number);
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0, 23, 59, 59, 999);
+      return start <= range.end && end >= range.start;
+    }).flatMap(([, rows]) => rows || []);
+    const summedBudgets = new Map<string, CategoryBudget>();
+    for (const row of budgets) {
+      const key = normalizeFinancialCategory(row.category);
+      const current = summedBudgets.get(key);
+      summedBudgets.set(key, { category: current?.category || row.category, amount: (current?.amount || 0) + row.amount });
+    }
+    const rows = categorySpendingReport({ transactions: selectedTx, savingsMovements: selectedSavings, budgets: [...summedBudgets.values()], totalExpenses: summary.totalExpenses });
+    expenseBreakdown = input.filters.type === 'all' || input.filters.type === 'expense' ? rows : [];
+    breakdown = { title: 'Gastos por categoría', rows: rows.map(row => [row.category, fmt(row.amount), fmt(row.share) + '%']) };
+    tables.push({ title: 'Categorías de gasto', headers: ['Categoría', 'Gastado', 'Presupuesto', 'Disponible'], rows: rows.map(row => [row.category, fmt(row.amount), row.budget === undefined ? 'Sin asignación' : fmt(row.budget), row.remaining === undefined ? '—' : fmt(row.remaining)]) });
+  }
   if (include(input.sections, 'budgets')) { const budgets = Object.entries(input.budgetsByMonth).filter(([key]) => { const [year, month] = key.split('-').map(Number); return new Date(year, month - 1, 1) <= range.end && new Date(year, month, 0, 23, 59, 59, 999) >= range.start; }).flatMap(([key, rows]) => (rows || []).filter(row => categoryMatches(row.category)).map(row => [key, row.category, fmt(row.amount)])); tables.push({ title: 'Presupuestos asignados', headers: ['Mes', 'Categoría', 'Monto'], rows: budgets }); }
   if (include(input.sections, 'goals')) { const goals = input.goals.filter(goal => { const state = goal.targetAmount > 0 && goal.currentAmount >= goal.targetAmount ? 'completed' : goal.targetDate && goal.targetDate < new Date().toISOString().slice(0,10) ? 'overdue' : 'active'; return input.filters.goalStatus === 'all' || state === input.filters.goalStatus; }); tables.push({ title: 'Metas de ahorro · saldo actual', headers: ['Meta', 'Ahorrado', 'Objetivo', 'Fecha objetivo'], rows: goals.map(goal => [goal.title, fmt(goal.currentAmount), fmt(goal.targetAmount), goal.targetDate || 'Sin fecha']) }); }
   if (include(input.sections, 'savings')) tables.push({ title: 'Movimientos de ahorro', headers: ['Fecha', 'Operación', 'Destino', 'Descripción', 'Monto'], rows: selectedSavings.map(sm => [sm.date, sm.type === 'deposit_from_month' ? 'Aporte' : sm.type === 'withdraw_to_month' ? 'Retiro' : sm.type === 'direct_expense' ? 'Gasto desde ahorro' : 'Reasignación', sm.goalTitle || sm.category || 'Ahorro general', sm.description, fmt(sm.amount)]) });
   const includeTransactions = include(input.sections, 'movements') || include(input.sections, 'income') || include(input.sections, 'expenses');
   const includeSavings = include(input.sections, 'movements') || include(input.sections, 'savings') || include(input.sections, 'expenses');
-  const report: AnalyticsReport = { period: range.label, category: input.filters.category === 'all' ? 'Todas' : input.filters.category, metrics, ...(breakdown ? { breakdown } : {}), tables, transactions: includeTransactions ? selectedTx : [], savingsMovements: includeSavings ? selectedSavings : [] };
+  const report: AnalyticsReport = {
+    reportScope: input.sections.length === 1 && include(input.sections, 'statistics') ? 'statistics' : 'configured',
+    period: range.label,
+    category: input.filters.category === 'all' ? 'Todas' : input.filters.category,
+    metrics,
+    ...(financialSummary ? { financialSummary } : {}),
+    ...(expenseBreakdown ? { expenseBreakdown } : {}),
+    ...(breakdown ? { breakdown } : {}),
+    tables,
+    transactions: includeTransactions ? selectedTx : [],
+    savingsMovements: includeSavings ? selectedSavings : [],
+  };
   return report;
 }

@@ -32,6 +32,41 @@ test('custom ranges, category and payment filters apply to real report rows', ()
   expect(report?.period).toBe('2026-11-02 – 2026-11-03');
 });
 
+test('statistics report carries one domain-derived expense breakdown and no automatic history', () => {
+  const report = buildConfiguredReport({ ...base, sections: ['statistics'] })!;
+  expect(report.reportScope).toBe('statistics');
+  expect(report.financialSummary).toEqual({ income: 11000, expenses: 350, savingsContributions: 100, available: 10670 });
+  expect(report.expenseBreakdown).toEqual([{ category: 'Alimentos', amount: 350, budget: 400, remaining: 50, share: 100 }]);
+  expect(report.transactions).toEqual([]);
+  expect(report.savingsMovements).toEqual([]);
+  expect(report.tables?.map(table => table.title)).toEqual(['Categorías de gasto']);
+});
+
+test('statistics breakdown omits unused unbudgeted categories and keeps budget context', () => {
+  const report = buildConfiguredReport({
+    ...base,
+    sections: ['statistics'],
+    transactions: [tx[0]],
+    savingsMovements: savings.filter(item => item.type !== 'direct_expense'),
+    budgetsByMonth: { '2026-11': [{ category: 'Alimentos', amount: 400 }, { category: 'Transporte', amount: 250 }] },
+  })!;
+  expect(report.expenseBreakdown).toEqual([
+    { category: 'Alimentos', amount: 0, budget: 400, remaining: 400, share: 0 },
+    { category: 'Transporte', amount: 0, budget: 250, remaining: 250, share: 0 },
+  ]);
+});
+
+test('statistics summary keeps movement-type filters separated', () => {
+  const summarize = (type: 'income' | 'expense' | 'savings') => buildConfiguredReport({
+    ...base,
+    sections: ['statistics'],
+    filters: { ...base.filters, type },
+  })?.financialSummary;
+  expect(summarize('income')).toEqual({ income: 11000, expenses: 0, savingsContributions: 0 });
+  expect(summarize('expense')).toEqual({ income: 0, expenses: 350, savingsContributions: 0 });
+  expect(summarize('savings')).toEqual({ income: 0, expenses: 0, savingsContributions: 100 });
+});
+
 test('invalid custom period does not generate a report', () => {
   expect(configuredExportRange({ mode: 'range', year: 2026, month: 11, from: '2026-11-20', to: '2026-11-01' })).toBeNull();
   expect(buildConfiguredReport({ ...base, period: { mode: 'range', year: 2026, month: 11, from: '', to: '' } })).toBeNull();

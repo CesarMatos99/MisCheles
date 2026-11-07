@@ -19,7 +19,7 @@ import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { ExportButton } from '../../components/ui/ExportButton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { isSavingsContributionTransaction, normalizeFinancialCategory } from '../../domain/financialClassification';
-import { spendingByCategory } from '../../domain/financialQueries';
+import { categorySpendingReport, spendingByCategory } from '../../domain/financialQueries';
 
 type Mode = 'month' | 'year' | '6m' | '12m' | 'custom';
 type Section = 'summary' | 'categories' | 'compare' | 'evolution';
@@ -215,7 +215,22 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
 
   const makeReport = (): AnalyticsReport => {
     const report: AnalyticsReport = {
+        reportScope: 'statistics',
         query: { mode, year: y, month: m, from: dayKey(safeRange.start), to: dayKey(safeRange.end), category, movementType },
+        financialSummary: {
+          income: totalIncome,
+          expenses: totalExpenses,
+          savingsContributions: deposits,
+          ...(Number.isFinite(available) ? { available } : {}),
+        },
+        ...(movementType === 'all' || movementType === 'expense' ? {
+          expenseBreakdown: categorySpendingReport({
+            transactions: visibleTx,
+            savingsMovements: visibleSavings,
+            budgets: Array.from(budgetByCategory, ([category, amount]) => ({ category, amount })),
+            totalExpenses,
+          }),
+        } : {}),
         breakdown: { title: movementType === 'income' ? 'Ingresos registrados por categoría' : movementType === 'savings' ? 'Destinos de aportes' : 'Gastos por categoría',
           rows: (movementType === 'income' || movementType === 'savings' ? focusedRows : displayCategories).map(row => [row.name, fmt(row.amount), percent(row.share)] as [string, string, string]) },
         period: rangeLabel + ' · ' + filterSummary.movementType, category: filterSummary.category, transactions: visibleTx, savingsMovements: visibleSavings,
@@ -227,6 +242,7 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
     if (section === 'compare' && activeComparison && comparisonA && comparisonB) {
       report.period = comparisonALabel + ' frente a ' + comparisonBLabel;
       report.metrics = [['Período A', comparisonALabel], ['Período B', comparisonBLabel]];
+      report.financialSummary = undefined; report.expenseBreakdown = undefined;
       report.breakdown = undefined; report.transactions = []; report.savingsMovements = [];
       report.tables = [{
         title: 'Comparación de indicadores',
@@ -238,7 +254,8 @@ export const AnalyticsView: React.FC<Props> = ({ year, month, transactions: allT
       }, { title: 'Gastos por categoría', headers: ['Categoría', 'A', 'B', 'Diferencia A − B'], rows: compareCats.map(row => [row.name, fmt(row.a), fmt(row.b), (row.a - row.b > 0 ? '+' : '') + fmt(row.a - row.b)]) }];
     } else if (section === 'evolution') {
       report.period = monthSeries.length ? labelMonth(monthSeries[0].key) + ' – ' + labelMonth(monthSeries[monthSeries.length - 1].key) : rangeLabel;
-      report.metrics = []; report.breakdown = undefined; report.transactions = []; report.savingsMovements = [];
+      report.metrics = []; report.financialSummary = undefined; report.expenseBreakdown = undefined;
+      report.breakdown = undefined; report.transactions = []; report.savingsMovements = [];
       report.tables = [{ title: 'Evolución financiera', headers: ['Mes', 'Ingresos', 'Gastos', 'Aportes'], rows: monthSeries.map(row => [labelMonth(row.key), fmt(row.income), fmt(row.expenses), fmt(row.saved)]) }];
     }
     return report;
