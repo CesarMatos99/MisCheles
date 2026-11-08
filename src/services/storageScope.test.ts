@@ -36,10 +36,15 @@ test('demo, local, and account records are isolated and legacy local data is pre
   storageService.setCloudRevision('transactions', localTx.id, 'time:42');
   assert.equal(JSON.parse(memory.getItem('mischeles_transactions_v3') || '[]')[0]?._cloudRevision, 'time:42');
 
+  const previousDemoKey = 'mischeles_demo_mischeles_transactions_v3';
+  memory.setItem(previousDemoKey, JSON.stringify([{ id: 'previous-demo-record' }]));
   setStorageScope('demo');
   const demoTransactions = storageService.getTransactions();
   assert.ok(demoTransactions.length > 0);
   assert.ok(!demoTransactions.some((item) => item.id === localTx.id));
+  assert.ok(!demoTransactions.some((item) => item.id === 'previous-demo-record'));
+  assert.equal(memory.getItem(previousDemoKey), JSON.stringify([{ id: 'previous-demo-record' }]), 'the prior guest namespace is preserved');
+  assert.ok(memory.getItem('mischeles_demo_v2_mischeles_transactions_v3'), 'fictional demo records use their own versioned namespace');
   assert.ok(storageService.getSavingsGoals().length > 0);
   assert.equal(storageService.getProfile().pinLockEnabled, false);
   storageService.resetAllData();

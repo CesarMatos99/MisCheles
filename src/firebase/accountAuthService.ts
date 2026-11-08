@@ -2,6 +2,8 @@ import type { User } from 'firebase/auth';
 
 export interface AccountAuthAdapter {
   observe(listener: (user: User | null) => void, onError?: (error: Error) => void): () => void;
+  currentUser(): User | null;
+  validateSession(user: User): Promise<void>;
   completeRedirect(): Promise<void>;
   validatePassword(password: string): Promise<boolean>;
   createUser(email: string, password: string): Promise<User>;
@@ -13,6 +15,8 @@ export interface AccountAuthAdapter {
   refreshUser(user: User): Promise<void>;
   changePassword(user: User, currentPassword: string, newPassword: string): Promise<void>;
   deleteAccount(user: User, currentPassword: string): Promise<void>;
+  linkPassword(user: User, email: string, password: string): Promise<User>;
+  linkGoogle(user: User): Promise<User | null>;
   signOut(): Promise<void>;
 }
 
@@ -27,6 +31,8 @@ export function createAccountAuthService(
 
   return {
     observe: adapter.observe,
+    currentUser: adapter.currentUser,
+    validateSession: adapter.validateSession,
     completeRedirect: adapter.completeRedirect,
 
     async create(displayName: string, email: string, password: string): Promise<User> {
@@ -44,7 +50,7 @@ export function createAccountAuthService(
     async signIn(email: string, password: string): Promise<User> {
       const normalizedEmail = email.trim();
       if (!EMAIL_PATTERN.test(normalizedEmail)) throw new Error('INVALID_EMAIL');
-      // An unverified address may still use every local feature. Cloud services remain disabled.
+      // The web gate holds private financial views until password accounts verify their email.
       return adapter.signIn(normalizedEmail, password);
     },
 
@@ -83,6 +89,19 @@ export function createAccountAuthService(
       }
       // The adapter deletes only the Firebase Authentication identity; local data is untouched.
       await adapter.deleteAccount(user, currentPassword);
+    },
+
+    async linkPassword(user: User, password: string, confirmation: string): Promise<User> {
+      if (!user.email) throw new Error('ACCOUNT_EMAIL_REQUIRED');
+      if (user.providerData.some(({ providerId }) => providerId === 'password')) throw new Error('PASSWORD_PROVIDER_ALREADY_LINKED');
+      if (password !== confirmation) throw new Error('PASSWORD_CONFIRMATION_MISMATCH');
+      if (!await adapter.validatePassword(password)) throw new Error('PASSWORD_POLICY_INVALID');
+      return adapter.linkPassword(user, user.email, password);
+    },
+
+    async linkGoogle(user: User): Promise<User | null> {
+      if (user.providerData.some(({ providerId }) => providerId === 'google.com')) throw new Error('GOOGLE_PROVIDER_ALREADY_LINKED');
+      return adapter.linkGoogle(user);
     },
 
     signOut: adapter.signOut,

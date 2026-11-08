@@ -2,6 +2,7 @@ import React from 'react';
 import { Moon, Sun, UserRound } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useAccountAuth } from '../../firebase/AccountAuthProvider';
 
 interface HeaderProps {
   isDarkMode: boolean;
@@ -12,7 +13,9 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onOpenProfile, profile }) => {
   const { t } = useLanguage();
-  const firstName = profile.name.trim().split(/\s+/)[0];
+  const { user } = useAccountAuth();
+  const identityName = user?.displayName?.trim() || profile.name;
+  const firstName = identityName.trim().split(/\s+/)[0];
 
   return (
   <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-0 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
@@ -25,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleTheme, onOpe
         <button onClick={onToggleTheme} aria-label={isDarkMode ? t('enableLight') : t('enableDark')} className="btn-icon text-slate-600 transition hover:bg-slate-100 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800">
           {isDarkMode ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5" />}
         </button>
-        <button onClick={onOpenProfile} aria-label={t('openProfile') + ' ' + profile.name} className="btn-icon overflow-hidden border border-slate-300 bg-slate-50 text-primary transition hover:border-primary dark:border-slate-600 dark:bg-slate-900">
+        <button onClick={onOpenProfile} aria-label={t('openProfile') + ' ' + identityName} className="btn-icon overflow-hidden border border-slate-300 bg-slate-50 text-primary transition hover:border-primary dark:border-slate-600 dark:bg-slate-900">
           <UserRound className="h-4 w-4" />
         </button>
       </div>

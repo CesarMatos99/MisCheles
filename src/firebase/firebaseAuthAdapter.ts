@@ -5,6 +5,9 @@ import {
   EmailAuthProvider,
   getRedirectResult,
   GoogleAuthProvider,
+  linkWithCredential,
+  linkWithPopup,
+  linkWithRedirect,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
   reload,
@@ -28,6 +31,8 @@ import { accountDeletionReauthMethod } from './accountReauthPolicy';
 
 export interface FirebaseAuthAdapter {
   observe(listener: (user: User | null) => void, onError?: (error: Error) => void): () => void;
+  currentUser(): User | null;
+  validateSession(user: User): Promise<void>;
   completeRedirect(): Promise<void>;
   validatePassword(password: string): Promise<boolean>;
   createUser(email: string, password: string): Promise<User>;
@@ -39,6 +44,8 @@ export interface FirebaseAuthAdapter {
   refreshUser(user: User): Promise<void>;
   changePassword(user: User, currentPassword: string, newPassword: string): Promise<void>;
   deleteAccount(user: User, currentPassword: string): Promise<void>;
+  linkPassword(user: User, email: string, password: string): Promise<User>;
+  linkGoogle(user: User): Promise<User | null>;
   signOut(): Promise<void>;
 }
 
@@ -47,11 +54,21 @@ function requireAuth(auth: Auth | null): Auth {
   return auth;
 }
 
+function requireCurrentUser(auth: Auth, user: User): void {
+  if (auth.currentUser?.uid !== user.uid) throw new Error('AUTH_SESSION_MISMATCH');
+}
+
 export function createFirebaseAuthAdapter(auth: Auth | null = firebaseAuth): FirebaseAuthAdapter {
   return {
     observe(listener, onError) {
       if (!auth) { listener(null); return () => undefined; }
       return onAuthStateChanged(auth, listener, onError);
+    },
+    currentUser() { return auth?.currentUser || null; },
+    async validateSession(user) {
+      const activeAuth = requireAuth(auth);
+      requireCurrentUser(activeAuth, user);
+      await user.getIdToken(true);
     },
     async completeRedirect() {
       const activeAuth = requireAuth(auth);
@@ -119,6 +136,24 @@ export function createFirebaseAuthAdapter(auth: Auth | null = firebaseAuth): Fir
         throw new Error('RECENT_LOGIN_REQUIRED');
       }
       await deleteUser(user);
+    },
+    async linkPassword(user, email, password) {
+      const activeAuth = requireAuth(auth);
+      requireCurrentUser(activeAuth, user);
+      const result = await linkWithCredential(user, EmailAuthProvider.credential(email, password));
+      return result.user;
+    },
+    async linkGoogle(user) {
+      const activeAuth = requireAuth(auth);
+      requireCurrentUser(activeAuth, user);
+      await setPersistence(activeAuth, browserSessionPersistence);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      if (typeof window !== 'undefined' && googleSignInStrategy(window.innerWidth) === 'redirect') {
+        await linkWithRedirect(user, provider);
+        return null;
+      }
+      return (await linkWithPopup(user, provider)).user;
     },
     async signOut() {
       await signOut(requireAuth(auth));

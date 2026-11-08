@@ -15,6 +15,8 @@ function createAdapter(user = makeUser()) {
   let validPassword = true;
   const adapter: AccountAuthAdapter = {
     observe: () => () => undefined,
+    currentUser: () => user,
+    validateSession: async () => { calls.push(['validateSession']); },
     completeRedirect: async () => { calls.push(['completeRedirect']); },
     validatePassword: async (password) => { calls.push(['validatePassword', password]); return validPassword; },
     createUser: async (email, password) => { calls.push(['createUser', email, password]); return user; },
@@ -26,6 +28,8 @@ function createAdapter(user = makeUser()) {
     refreshUser: async () => { calls.push(['refreshUser']); user.emailVerified = true; },
     changePassword: async (_user, current, next) => { calls.push(['changePassword', current, next]); },
     deleteAccount: async (_user, password) => { calls.push(['deleteAccount', password]); },
+    linkPassword: async (_user, email, password) => { calls.push(['linkPassword', email, password]); return user; },
+    linkGoogle: async () => { calls.push(['linkGoogle']); return user; },
     signOut: async () => { calls.push(['signOut']); },
   };
   return { adapter, calls, user, rejectPassword: () => { validPassword = false; } };
@@ -53,7 +57,7 @@ test('registration rejects malformed values and passwords outside the remote Fir
   assert.equal(setup.calls.some(([name]) => name === 'createUser'), false);
 });
 
-test('an unverified user can sign in and continue using local features', async () => {
+test('sign-in preserves the unverified status for the web access gate to enforce', async () => {
   const { adapter, calls, user } = createAdapter();
   const auth = createAccountAuthService(adapter);
   assert.equal(await auth.signIn(' user@example.com ', 'password'), user);
@@ -74,6 +78,14 @@ test('restoring auth state completes the pending Google redirect and observes Fi
   await auth.completeRedirect();
   assert.deepEqual(setup.calls, [['completeRedirect']]);
   stop();
+});
+
+test('restored sessions can be explicitly revalidated before exposing an identity namespace', async () => {
+  const setup = createAdapter();
+  const auth = createAccountAuthService(setup.adapter);
+  assert.equal(auth.currentUser(), setup.user);
+  await auth.validateSession(setup.user);
+  assert.deepEqual(setup.calls, [['validateSession']]);
 });
 
 test('sign-in errors propagate to the neutral error translator', async () => {
@@ -127,4 +139,28 @@ test('account deletion requires explicit typed confirmation and leaves storage o
   await auth.deleteAccount(user, 'current', 'ELIMINAR');
   await auth.signOut();
   assert.deepEqual(calls, [['deleteAccount', 'current'], ['signOut']]);
+});
+
+test('adding a password links the existing email identity and enforces confirmation and Firebase policy', async () => {
+  const setup = createAdapter(makeUser({ providerData: [{ providerId: 'google.com' }] }));
+  const auth = createAccountAuthService(setup.adapter);
+  await assert.rejects(auth.linkPassword(setup.user, 'first', 'different'), /PASSWORD_CONFIRMATION_MISMATCH/);
+  setup.rejectPassword();
+  await assert.rejects(auth.linkPassword(setup.user, 'weak', 'weak'), /PASSWORD_POLICY_INVALID/);
+  setup.adapter.validatePassword = async () => true;
+  assert.equal(await auth.linkPassword(setup.user, 'strong-password', 'strong-password'), setup.user);
+  assert.deepEqual(setup.calls, [
+    ['validatePassword', 'weak'],
+    ['linkPassword', 'test@example.com', 'strong-password'],
+  ]);
+});
+
+test('provider linking rejects an already-linked method and never merges identities automatically', async () => {
+  const setup = createAdapter(makeUser({ providerData: [{ providerId: 'password' }, { providerId: 'google.com' }] }));
+  const auth = createAccountAuthService(setup.adapter);
+  await assert.rejects(auth.linkGoogle(setup.user), /GOOGLE_PROVIDER_ALREADY_LINKED/);
+  const googleOnly = makeUser({ providerData: [{ providerId: 'password' }] });
+  setup.adapter.linkGoogle = async () => { setup.calls.push(['linkGoogle']); return googleOnly; };
+  assert.equal(await auth.linkGoogle(googleOnly), googleOnly);
+  assert.deepEqual(setup.calls, [['linkGoogle']]);
 });

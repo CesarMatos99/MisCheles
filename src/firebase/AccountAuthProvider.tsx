@@ -13,9 +13,12 @@ interface AccountState {
   signInWithGoogle: () => Promise<void>;
   createAccount: (displayName: string, email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  retrySession: () => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   refreshEmailVerification: () => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string, confirmation: string) => Promise<void>;
+  linkPassword: (password: string, confirmation: string) => Promise<void>;
+  linkGoogle: () => Promise<void>;
   deleteAccount: (currentPassword: string, confirmation: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -25,6 +28,7 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(!firebaseConfigured);
   const [error, setError] = useState<string | null>(null);
+  const [sessionRevision, setSessionRevision] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -37,14 +41,30 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
     let observerReady = false;
     let redirectReady = false;
     let redirectError: string | null = null;
+    let publication = 0;
     const publishSession = () => {
       if (!active || !observerReady || !redirectReady) return;
-      // Select the identity namespace before exposing the restored account session.
-      stageLegacyPinBeforeScopeChange();
-      setStorageScope(observedUser ? { accountUid: observedUser.uid } : preferredUnauthenticatedScope());
-      setUser(observedUser);
-      setReady(true);
-      setError(redirectError);
+      const version = ++publication;
+      const candidate = observedUser;
+      // Keep the financial workspace unmounted while a restored/new identity is checked.
+      setUser(null);
+      setReady(false);
+      setError(null);
+      void (async () => {
+        let acceptedUser = candidate;
+        let nextError = redirectError;
+        if (candidate) {
+          try { await accountAuth.validateSession(candidate); }
+          catch { acceptedUser = null; nextError = 'AUTH_SESSION_UNAVAILABLE'; }
+        }
+        if (!active || version !== publication) return;
+        // Select the verified UID namespace before exposing the account to the app.
+        stageLegacyPinBeforeScopeChange();
+        setStorageScope(acceptedUser ? { accountUid: acceptedUser.uid } : preferredUnauthenticatedScope());
+        setUser(acceptedUser);
+        setReady(true);
+        setError(nextError);
+      })();
     };
     const stopAccountAuthObserver = accountAuth.observe(
       (nextUser) => {
@@ -54,6 +74,7 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
       },
       (reason) => {
         redirectError = reason.message;
+        observedUser = null;
         observerReady = true;
         publishSession();
       },
@@ -66,6 +87,7 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
     });
     return () => {
       active = false;
+      publication++;
       stopAccountAuthObserver();
     };
   }, []);
@@ -76,6 +98,30 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
     signInWithGoogle: async () => { setError(null); await accountAuth.signInWithGoogle(); },
     createAccount: async (displayName, email, password) => { setError(null); await accountAuth.create(displayName, email, password); },
     sendPasswordReset: async (email) => { setError(null); await accountAuth.sendPasswordReset(email); },
+    retrySession: async () => {
+      const candidate = accountAuth.currentUser();
+      setError(null);
+      if (!candidate) {
+        setUser(null);
+        setStorageScope(preferredUnauthenticatedScope());
+        setReady(true);
+        return;
+      }
+      setUser(null);
+      setReady(false);
+      try {
+        await accountAuth.validateSession(candidate);
+        stageLegacyPinBeforeScopeChange();
+        setStorageScope({ accountUid: candidate.uid });
+        setUser(candidate);
+        setSessionRevision((revision) => revision + 1);
+        setReady(true);
+      } catch {
+        setStorageScope(preferredUnauthenticatedScope());
+        setError('AUTH_SESSION_UNAVAILABLE');
+        setReady(true);
+      }
+    },
     resendVerificationEmail: async () => {
       if (!user) throw new Error('ACCOUNT_REQUIRED');
       setError(null);
@@ -84,20 +130,64 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
     refreshEmailVerification: async () => {
       if (!user) throw new Error('ACCOUNT_REQUIRED');
       setError(null);
-      return accountAuth.refreshVerification(user);
+      const verified = await accountAuth.refreshVerification(user);
+      setSessionRevision((revision) => revision + 1);
+      return verified;
     },
     changePassword: async (currentPassword, newPassword, confirmation) => {
       if (!user) throw new Error('ACCOUNT_REQUIRED');
       setError(null);
       await accountAuth.changePassword(user, currentPassword, newPassword, confirmation);
     },
+    linkPassword: async (password, confirmation) => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      const linkedUser = await accountAuth.linkPassword(user, password, confirmation);
+      setUser(linkedUser);
+      setSessionRevision((revision) => revision + 1);
+    },
+    linkGoogle: async () => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      const linkedUser = await accountAuth.linkGoogle(user);
+      if (linkedUser) {
+        setUser(linkedUser);
+        setSessionRevision((revision) => revision + 1);
+      }
+    },
     deleteAccount: async (currentPassword, confirmation) => {
       if (!user) throw new Error('ACCOUNT_REQUIRED');
       setError(null);
       await accountAuth.deleteAccount(user, currentPassword, confirmation);
     },
-    signOut: async () => { setError(null); await accountAuth.signOut(); },
-  }), [ready, user, error]);
+    signOut: async () => {
+      // Hide the current workspace before Firebase processes the sign-out observer.
+      setUser(null);
+      setReady(false);
+      setError(null);
+      try {
+        await accountAuth.signOut();
+      } catch (signOutError) {
+        const currentUser = accountAuth.currentUser();
+        if (currentUser) {
+          try {
+            await accountAuth.validateSession(currentUser);
+            stageLegacyPinBeforeScopeChange();
+            setStorageScope({ accountUid: currentUser.uid });
+            setUser(currentUser);
+          } catch {
+            setStorageScope(preferredUnauthenticatedScope());
+            setUser(null);
+          }
+        } else {
+          setStorageScope(preferredUnauthenticatedScope());
+          setUser(null);
+        }
+        setReady(true);
+        throw signOutError;
+      }
+    },
+  }), [ready, user, error, sessionRevision]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 };

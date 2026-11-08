@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   Lock,
+  LogOut,
   Moon,
   Palette,
   Shield,
@@ -18,6 +19,8 @@ import { CURRENCY_OPTIONS } from '../../constants/categories';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
 import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
+import { useAccountAuth } from '../../firebase/AccountAuthProvider';
+import { accountAuthMessage } from '../../firebase/accountAuthErrors';
 import { localLockCredential } from '../../services/localLockCredential';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ACCENT_COLORS } from '../../constants/accentColors';
@@ -46,12 +49,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLockApp,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { user, signOut } = useAccountAuth();
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [savedMessage, setSavedMessage] = useState('');
   const [newPin, setNewPin] = useState('');
   const [securityError, setSecurityError] = useState('');
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountError, setAccountError] = useState('');
   const photoInput = useRef<HTMLInputElement>(null);
+
+  const identityName = user?.displayName?.trim() || profile.name || 'Usuario';
+  const identityEmail = user?.email || profile.email || 'Sin correo registrado';
+  const identityPhoto = user?.photoURL || profile.photoUrl;
+  const isSpanish = language === 'es';
+
+  const handleSignOut = async () => {
+    setAccountBusy(true);
+    setAccountError('');
+    try { await signOut(); }
+    catch (error) { setAccountError(accountAuthMessage(error, language)); }
+    finally { setAccountBusy(false); }
+  };
 
   useEffect(() => setDraft(profile), [profile]);
 
@@ -108,14 +127,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <>
           <section className="flex flex-col items-center gap-3 border-b border-slate-200 py-6 text-center dark:border-slate-800 sm:flex-row sm:items-center sm:gap-4 sm:text-left">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
-              {profile.photoUrl ? <img src={profile.photoUrl} alt={profile.name} className="h-full w-full object-cover" /> : profile.name.charAt(0).toUpperCase()}
+              {identityPhoto ? <img src={identityPhoto} alt={identityName} className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
-              <h2 className="type-section-title truncate text-slate-900 dark:text-white">{profile.name}</h2>
-              <p className="type-secondary truncate">{profile.email || 'Sin correo registrado'}</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="type-section-title truncate text-slate-900 dark:text-white">{identityName}</h2>
+              <p className="type-secondary truncate">{identityEmail}</p>
               <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
+              {user && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{isSpanish ? 'Cuenta MisCheles · ' : 'MisCheles account · '}{user.emailVerified ? (isSpanish ? 'correo verificado' : 'email verified') : (isSpanish ? 'verificación pendiente' : 'verification pending')}</p>}
             </div>
+            {user && <button type="button" disabled={accountBusy} onClick={() => void handleSignOut()} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30 sm:w-auto">
+              <LogOut className="h-4 w-4" aria-hidden="true" />{accountBusy ? t('pleaseWait') : t('signOut')}
+            </button>}
           </section>
+          {accountError && <p role="alert" className="mt-3 text-sm text-rose-600 dark:text-rose-300">{accountError}</p>}
           <nav className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-slate-800 lg:grid-cols-2 lg:gap-3 lg:divide-y-0" aria-label="Configuración">
             <button type="button" onClick={() => setSection('profile')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
               <UserRound className="h-5 w-5 text-primary" /><span className="flex-1">{t('profileData')}</span><ChevronRight className="h-4 w-4 text-slate-400" />

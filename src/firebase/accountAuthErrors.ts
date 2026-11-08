@@ -2,7 +2,7 @@ export type AccountAuthLanguage = 'es' | 'en';
 
 const messages = {
   es: {
-    notConfigured: 'La autenticación no está configurada. Puedes seguir usando MisCheles sin cuenta.',
+    notConfigured: 'La autenticación no está configurada. Puedes explorar la demostración.',
     invalidEmail: 'Escribe un correo electrónico válido.',
     credentials: 'No se pudo autenticar con esos datos. Revisa la información e inténtalo de nuevo.',
     passwordPolicy: 'La contraseña no cumple la política de seguridad configurada.',
@@ -20,10 +20,14 @@ const messages = {
     verificationCooldown: 'Espera un minuto antes de solicitar otro correo de verificación.',
     alreadyVerified: 'El correo ya aparece verificado.',
     notVerifiedYet: 'El correo todavía no aparece verificado. Abre el enlace del mensaje y vuelve a comprobarlo.',
+    sessionUnavailable: 'No se pudo confirmar la sesión con Firebase. Comprueba tu conexión e inténtalo de nuevo.',
+    accountEmailRequired: 'Esta cuenta no tiene un correo que pueda vincularse.',
+    passwordAlreadyLinked: 'Esta cuenta ya tiene un acceso por correo y contraseña.',
+    googleAlreadyLinked: 'Esta cuenta ya tiene Google vinculado.',
     generic: 'No se pudo completar la acción. Inténtalo de nuevo.',
   },
   en: {
-    notConfigured: 'Authentication is not configured. You can keep using MisCheles without an account.',
+    notConfigured: 'Authentication is not configured. You can explore the demo.',
     invalidEmail: 'Enter a valid email address.',
     credentials: 'Could not authenticate with those details. Check them and try again.',
     passwordPolicy: 'The password does not meet the configured security policy.',
@@ -41,6 +45,10 @@ const messages = {
     verificationCooldown: 'Wait one minute before requesting another verification email.',
     alreadyVerified: 'The email is already marked as verified.',
     notVerifiedYet: 'The email is not verified yet. Open the link in your message and check again.',
+    sessionUnavailable: 'Could not confirm the Firebase session. Check your connection and try again.',
+    accountEmailRequired: 'This account has no email address that can be linked.',
+    passwordAlreadyLinked: 'This account already has email and password sign-in.',
+    googleAlreadyLinked: 'Google is already linked to this account.',
     generic: 'Could not complete the action. Try again.',
   },
 } as const;
@@ -58,6 +66,10 @@ function errorCode(error: unknown): string {
 export function accountAuthMessageKey(error: unknown): MessageKey {
   const code = errorCode(error);
   if (code === 'FIREBASE_NOT_CONFIGURED') return 'notConfigured';
+  if (code === 'AUTH_SESSION_UNAVAILABLE' || code === 'AUTH_SESSION_MISMATCH') return 'sessionUnavailable';
+  if (code === 'ACCOUNT_EMAIL_REQUIRED') return 'accountEmailRequired';
+  if (code === 'PASSWORD_PROVIDER_ALREADY_LINKED' || code.includes('provider-already-linked')) return 'passwordAlreadyLinked';
+  if (code === 'GOOGLE_PROVIDER_ALREADY_LINKED') return 'googleAlreadyLinked';
   if (code === 'INVALID_EMAIL' || code.includes('auth/invalid-email')) return 'invalidEmail';
   if (code === 'PASSWORD_POLICY_INVALID' || code.includes('auth/weak-password') || code.includes('password-does-not-meet-requirements')) return 'passwordPolicy';
   if (code === 'PASSWORD_CONFIRMATION_MISMATCH') return 'passwordConfirmation';

@@ -33,7 +33,8 @@ function readInitialStorageScope(): string {
 let activeStorageScope = readInitialStorageScope();
 function scopedStorageKey(key: string): string {
   if (activeStorageScope === 'local') return key;
-  if (activeStorageScope === 'demo') return 'mischeles_demo_' + key;
+  // Keep the new fictional demo independent from any records entered in the former guest space.
+  if (activeStorageScope === 'demo') return 'mischeles_demo_v2_' + key;
   return 'mischeles_scope_' + activeStorageScope.slice('account:'.length) + '_' + key;
 }
 function readAppValue(key: string): string | null { return localStorage.getItem(scopedStorageKey(key)); }

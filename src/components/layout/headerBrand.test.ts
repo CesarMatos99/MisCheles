@@ -18,7 +18,8 @@ describe('brand resource contract', () => {
     const header = readFileSync('src/components/layout/Header.tsx', 'utf8');
     const app = readFileSync('src/App.tsx', 'utf8');
     const floatingActions = readFileSync('src/components/layout/FloatingActions.tsx', 'utf8');
-    expect(header).toContain('profile.name.trim().split');
+    expect(header).toContain('user?.displayName?.trim() || profile.name');
+    expect(header).toContain('identityName.trim().split');
     expect(header).toContain('¡Hola');
     expect(header).toContain('hidden min-w-0 truncate text-base font-semibold text-app-foreground lg:block');
     expect(header).not.toContain('Nuevo registro');

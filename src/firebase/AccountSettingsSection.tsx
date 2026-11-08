@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, MailCheck, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Link2, MailCheck, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useAccountAuth } from './AccountAuthProvider';
 import { accountAuthMessage } from './accountAuthErrors';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -7,29 +7,22 @@ import { useLanguage } from '../i18n/LanguageContext';
 const inputClass = 'min-h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 dark:border-slate-700';
 const buttonClass = 'btn-primary min-h-11 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50';
 
-type AuthView = 'signIn' | 'create' | 'reset';
-
 export const AccountSettingsSection: React.FC = () => {
   const {
-    configured, ready, user, error: authError, signIn, createAccount, sendPasswordReset,
-    changePassword, deleteAccount, signInWithGoogle, signOut,
+    configured, ready, user, error: authError,
+    changePassword, deleteAccount, linkPassword, linkGoogle,
     resendVerificationEmail, refreshEmailVerification,
   } = useAccountAuth();
   const { language, t } = useLanguage();
   const isSpanish = language === 'es';
-  const [view, setView] = useState<AuthView>('signIn');
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [linkedPassword, setLinkedPassword] = useState('');
+  const [confirmLinkedPassword, setConfirmLinkedPassword] = useState('');
   const [verified, setVerified] = useState(Boolean(user?.emailVerified));
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -70,32 +63,6 @@ export const AccountSettingsSection: React.FC = () => {
     }
   };
 
-  const submitAuth = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (view === 'create' && password !== confirmPassword) {
-      setFeedback(accountAuthMessage(new Error('PASSWORD_CONFIRMATION_MISMATCH'), language));
-      setFailed(true);
-      return;
-    }
-    if (view === 'reset') {
-      await run(() => sendPasswordReset(email), isSpanish
-        ? 'Si la cuenta existe, recibirás instrucciones para restablecer la contraseña.'
-        : 'If the account exists, password reset instructions will be sent.');
-      return;
-    }
-    if (view === 'create') {
-      await run(() => createAccount(displayName, email, password), isSpanish
-        ? 'Cuenta creada. Revisa tu correo para verificar la dirección. Tus datos financieros locales no se han subido.'
-        : 'Account created. Check your email to verify the address. Your local financial data was not uploaded.');
-      setPassword('');
-      setConfirmPassword('');
-      return;
-    }
-    await run(() => signIn(email, password), isSpanish
-      ? 'Sesión iniciada. Esta acción no sincroniza ni respalda datos financieros.'
-      : 'Signed in. This does not sync or back up financial data.');
-  };
-
   const submitChangePassword = async (event: React.FormEvent) => {
     event.preventDefault();
     await run(() => changePassword(currentPassword, newPassword, confirmNewPassword), isSpanish
@@ -103,6 +70,14 @@ export const AccountSettingsSection: React.FC = () => {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
+  };
+
+  const submitLinkPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const linked = await run(() => linkPassword(linkedPassword, confirmLinkedPassword), isSpanish
+      ? 'Correo y contraseña quedaron vinculados a esta misma cuenta.'
+      : 'Email and password were linked to this same account.');
+    if (linked) { setLinkedPassword(''); setConfirmLinkedPassword(''); }
   };
 
   const submitDeleteAccount = async (event: React.FormEvent) => {
@@ -136,6 +111,8 @@ export const AccountSettingsSection: React.FC = () => {
     }, isSpanish ? 'Correo verificado.' : 'Email verified.');
   };
 
+  const hasPasswordProvider = Boolean(user?.providerData.some(({ providerId }) => providerId === 'password'));
+  const hasGoogleProvider = Boolean(user?.providerData.some(({ providerId }) => providerId === 'google.com'));
   const providerNames = user?.providerData.map(({ providerId }) => {
     if (providerId === 'password') return isSpanish ? 'Correo y contraseña' : 'Email and password';
     if (providerId === 'google.com') return 'Google';
@@ -147,8 +124,8 @@ export const AccountSettingsSection: React.FC = () => {
     <header className='space-y-1'>
       <h2 id='account-settings-title' className='text-lg font-bold text-slate-950 dark:text-white'>{isSpanish ? 'Cuenta' : 'Account'}</h2>
       <p className='text-sm leading-6 text-slate-500 dark:text-slate-400'>{isSpanish
-        ? 'La cuenta solo identifica tu sesión. Los datos financieros sin cuenta permanecen en su espacio local y no se trasladan; cada identidad usa un espacio local separado. Nada se sincroniza ni se respalda en la nube.'
-        : 'The account identifies your session only. Financial data from before sign-in stays in its local space and is not moved; each identity uses a separate local space. Nothing is synced or backed up to the cloud.'}</p>
+        ? 'La cuenta identifica tu sesión y mantiene separado su espacio local. Los movimientos se guardan en este navegador, no están cifrados por la aplicación y no se sincronizan; la sincronización aún no está disponible.'
+        : 'Your account identifies this session and uses a separate local namespace. Financial records stay in this browser, are not encrypted by the app, and are not synced; syncing is not available yet.'}</p>
     </header>
 
     {!ready ? <p role='status' className='text-sm text-slate-500'>{t('loadingAccount')}</p> : user ? <div className='space-y-5'>
@@ -177,11 +154,29 @@ export const AccountSettingsSection: React.FC = () => {
         </div>}
       </div>}
 
-      {user.providerData.some(({ providerId }) => providerId === 'password') && <form onSubmit={(event) => void submitChangePassword(event)} className='space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800'>
+      <section className='space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800' aria-labelledby='account-methods-title'>
+        <div><h3 id='account-methods-title' className='font-semibold'>{isSpanish ? 'Métodos de acceso' : 'Sign-in methods'}</h3><p className='mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400'>{isSpanish
+          ? 'Los proveedores vinculados comparten este mismo UID y espacio local. No se crea una segunda cuenta.'
+          : 'Linked providers share this same UID and local namespace. A second account is not created.'}</p></div>
+        <ul className='flex flex-wrap gap-2' aria-label={isSpanish ? 'Métodos vinculados' : 'Linked methods'}>
+          {user.providerData.map(({ providerId }) => <li key={providerId} className='rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary'>{providerId === 'password' ? (isSpanish ? 'Correo y contraseña' : 'Email and password') : providerId === 'google.com' ? 'Google' : providerId}</li>)}
+        </ul>
+        {!hasPasswordProvider && user.email && <form onSubmit={(event) => void submitLinkPassword(event)} className='space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700'>
+          <p className='text-sm font-medium'>{isSpanish ? `Agregar contraseña a ${user.email}` : `Add a password to ${user.email}`}</p>
+          <label className='block space-y-1.5'><span className='text-sm'>{isSpanish ? 'Nueva contraseña (mínimo 12 caracteres)' : 'New password (at least 12 characters)'}</span><input required minLength={12} type='password' autoComplete='new-password' value={linkedPassword} onChange={(event) => setLinkedPassword(event.target.value)} className={inputClass} /></label>
+          <label className='block space-y-1.5'><span className='text-sm'>{isSpanish ? 'Confirmar contraseña' : 'Confirm password'}</span><input required minLength={12} type='password' autoComplete='new-password' value={confirmLinkedPassword} onChange={(event) => setConfirmLinkedPassword(event.target.value)} className={inputClass} /></label>
+          <button type='submit' disabled={busy || !configured} className={buttonClass}>{busy ? t('pleaseWait') : (isSpanish ? 'Vincular contraseña' : 'Link password')}</button>
+        </form>}
+        {!hasGoogleProvider && <button type='button' disabled={busy || !configured} onClick={() => void run(linkGoogle, isSpanish ? 'Google quedó vinculado a esta misma cuenta.' : 'Google was linked to this same account.')} className='inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-primary hover:bg-primary/5 disabled:opacity-50 dark:border-slate-700'>
+          <Link2 size={16} aria-hidden='true' />{isSpanish ? 'Vincular Google' : 'Link Google'}
+        </button>}
+      </section>
+
+      {hasPasswordProvider && <form onSubmit={(event) => void submitChangePassword(event)} className='space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800'>
         <h3 className='font-semibold'>{isSpanish ? 'Cambiar contraseña' : 'Change password'}</h3>
         <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Contraseña actual' : 'Current password'}</span><input required type='password' autoComplete='current-password' value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className={inputClass} /></label>
-        <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Nueva contraseña' : 'New password'}</span><span className='relative block'><input required type={showNewPassword ? 'text' : 'password'} autoComplete='new-password' value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className={inputClass + ' pr-12'} /><button type='button' aria-label={showNewPassword ? (isSpanish ? 'Ocultar contraseña' : 'Hide password') : (isSpanish ? 'Mostrar contraseña' : 'Show password')} onClick={() => setShowNewPassword((value) => !value)} className='absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-500'><EyeIcon visible={showNewPassword} /></button></span></label>
-        <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Confirmar nueva contraseña' : 'Confirm new password'}</span><input required type={showNewPassword ? 'text' : 'password'} autoComplete='new-password' value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} className={inputClass} /></label>
+        <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Nueva contraseña (mínimo 12 caracteres)' : 'New password (at least 12 characters)'}</span><span className='relative block'><input required minLength={12} type={showNewPassword ? 'text' : 'password'} autoComplete='new-password' value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className={inputClass + ' pr-12'} /><button type='button' aria-label={showNewPassword ? (isSpanish ? 'Ocultar contraseña' : 'Hide password') : (isSpanish ? 'Mostrar contraseña' : 'Show password')} onClick={() => setShowNewPassword((value) => !value)} className='absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-500'><EyeIcon visible={showNewPassword} /></button></span></label>
+        <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Confirmar nueva contraseña' : 'Confirm new password'}</span><input required minLength={12} type={showNewPassword ? 'text' : 'password'} autoComplete='new-password' value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} className={inputClass} /></label>
         <button type='submit' disabled={busy} className={buttonClass}>{busy ? t('pleaseWait') : (isSpanish ? 'Actualizar contraseña' : 'Update password')}</button>
       </form>}
 
@@ -189,34 +184,11 @@ export const AccountSettingsSection: React.FC = () => {
         <div><h3 className='font-semibold text-rose-700 dark:text-rose-400'>{isSpanish ? 'Eliminar cuenta' : 'Delete account'}</h3><p className='mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400'>{isSpanish
           ? 'Esto elimina la identidad de Firebase Authentication. Los datos financieros locales no se eliminan automáticamente ni se suben a la nube. Si quedaron datos de una sincronización anterior en otros servicios, esta fase no los elimina.'
           : 'This removes the Firebase Authentication identity. Local financial data is not automatically deleted or uploaded. Any data from an older sync in other services is outside this phase.'}</p></div>
-        {user.providerData.some(({ providerId }) => providerId === 'password') && <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Contraseña actual' : 'Current password'}</span><input required type='password' autoComplete='current-password' value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} className={inputClass} /></label>}
+        {hasPasswordProvider && <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Contraseña actual' : 'Current password'}</span><input required type='password' autoComplete='current-password' value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} className={inputClass} /></label>}
         <label className='block space-y-1.5'><span className='text-sm font-medium'>{isSpanish ? 'Escribe ELIMINAR para continuar' : 'Type DELETE to continue'}</span><input required value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} className={inputClass + ' border-rose-200 focus:border-rose-500 dark:border-rose-900'} /></label>
         <button type='submit' disabled={busy} className='min-h-11 rounded-xl border border-rose-300 px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30'>{isSpanish ? 'Eliminar mi cuenta' : 'Delete my account'}</button>
       </form>
-      <button type='button' disabled={busy} className='min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800' onClick={() => void run(signOut, t('signedOut'))}>{t('signOut')}</button>
-    </div> : <div className='space-y-4'>
-      {!configured && <p role='status' className='rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300'>{accountAuthMessage(new Error('FIREBASE_NOT_CONFIGURED'), language)}</p>}
-      <div className='flex flex-wrap gap-2'>
-        <button type='button' aria-pressed={view === 'signIn'} onClick={() => { setView('signIn'); setFeedback(''); }} className={'min-h-10 rounded-lg px-3 text-sm font-semibold ' + (view === 'signIn' ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-300')}>{isSpanish ? 'Iniciar sesión' : 'Sign in'}</button>
-        <button type='button' aria-pressed={view === 'create'} onClick={() => { setView('create'); setFeedback(''); }} className={'min-h-10 rounded-lg px-3 text-sm font-semibold ' + (view === 'create' ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-300')}>{isSpanish ? 'Crear cuenta' : 'Create account'}</button>
-      </div>
-      <form onSubmit={(event) => void submitAuth(event)} className='space-y-3'>
-        {view === 'create' && <label className='block space-y-1.5'><span className='text-sm font-semibold'>{t('accountName')}</span><input required maxLength={80} autoComplete='name' value={displayName} onChange={(event) => setDisplayName(event.target.value)} className={inputClass} /></label>}
-        <label className='block space-y-1.5'><span className='text-sm font-semibold'>{t('accountEmail')}</span><input required type='email' autoComplete='email' value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
-        {view !== 'reset' && <label className='block space-y-1.5'><span className='text-sm font-semibold'>{t('accountPassword')}</span><span className='relative block'><input required type={showPassword ? 'text' : 'password'} autoComplete={view === 'create' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass + ' pr-12'} /><button type='button' aria-label={showPassword ? (isSpanish ? 'Ocultar contraseña' : 'Hide password') : (isSpanish ? 'Mostrar contraseña' : 'Show password')} onClick={() => setShowPassword((value) => !value)} className='absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-500'><EyeIcon visible={showPassword} /></button></span></label>}
-        {view === 'create' && <label className='block space-y-1.5'><span className='text-sm font-semibold'>{isSpanish ? 'Confirmar contraseña' : 'Confirm password'}</span><span className='relative block'><input required type={showConfirmPassword ? 'text' : 'password'} autoComplete='new-password' value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className={inputClass + ' pr-12'} /><button type='button' aria-label={showConfirmPassword ? (isSpanish ? 'Ocultar confirmación' : 'Hide confirmation') : (isSpanish ? 'Mostrar confirmación' : 'Show confirmation')} onClick={() => setShowConfirmPassword((value) => !value)} className='absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-500'><EyeIcon visible={showConfirmPassword} /></button></span></label>}
-        <button type='submit' disabled={busy || !configured} className={buttonClass}>{busy ? t('pleaseWait') : view === 'create' ? t('createAccount') : view === 'reset' ? (isSpanish ? 'Enviar instrucciones' : 'Send instructions') : t('signIn')}</button>
-      </form>
-      {view === 'signIn' && <div className='flex flex-wrap items-center gap-3'>
-        <button type='button' disabled={busy || !configured} onClick={() => { setView('reset'); setFeedback(''); }} className='min-h-10 text-sm font-semibold text-primary'>{t('forgotPassword')}</button>
-        <button type='button' disabled={busy || !configured} onClick={() => void run(signInWithGoogle, isSpanish ? 'Sesión iniciada. No se sincronizaron datos financieros.' : 'Signed in. No financial data was synced.')} className='min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold dark:border-slate-700'>{t('continueGoogle')}</button>
-      </div>}
-      {view === 'reset' && <button type='button' onClick={() => setView('signIn')} className='min-h-10 text-sm font-semibold text-primary'>{isSpanish ? 'Volver a iniciar sesión' : 'Back to sign in'}</button>}
-      {view !== 'signIn' && view !== 'reset' && <button type='button' onClick={() => setView('signIn')} className='min-h-10 text-sm font-semibold text-primary'>{t('alreadyHaveAccount')}</button>}
-      <p className='border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400'>{isSpanish
-        ? 'Puedes seguir usando MisCheles sin cuenta. Iniciar sesión utiliza otro espacio local: tus datos actuales no se mueven ni se suben y volverán a mostrarse al cerrar sesión.'
-        : 'You can keep using MisCheles without an account. Signing in uses another local space: existing data is not moved or uploaded and will appear again after sign-out.'}</p>
-    </div>}
+    </div> : <p role='alert' className='text-sm text-amber-700 dark:text-amber-300'>{isSpanish ? 'No hay una sesión autenticada. Vuelve a la pantalla de acceso.' : 'No authenticated session. Return to the access screen.'}</p>}
     {(feedback || accountError) && <p role={failed ? 'alert' : 'status'} className={'text-sm leading-5 ' + (failed || accountError ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400')}>{feedback || accountError}</p>}
   </section>;
 };
