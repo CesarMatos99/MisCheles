@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clearAccountScope, preferredUnauthenticatedScope, setStorageScope, storageService } from './storage.ts';
+import { clearAccountScope, preferredUnauthenticatedScope, setStorageScope, stageLegacyPinBeforeScopeChange, storageService } from './storage.ts';
 
 class MemoryStorage {
   private values = new Map<string, string>();
+  get length() { return this.values.size; }
+  key(index: number) { return [...this.values.keys()][index] ?? null; }
   getItem(key: string) { return this.values.get(key) ?? null; }
   setItem(key: string, value: string) { this.values.set(key, String(value)); }
   removeItem(key: string) { this.values.delete(key); }
@@ -264,4 +266,39 @@ test('legacy local PIN is removed from profile storage and exposed once for secu
   assert.equal(JSON.parse(memory.getItem('mischeles_user_profile_v2') || '{}').pinCode, undefined);
   assert.equal(storageService.takeLegacyLockPin(), '7391');
   assert.equal(storageService.takeLegacyLockPin(), null);
+});
+
+test('an enabled local PIN still protects the app after switching to an account storage namespace', () => {
+  const memory = new MemoryStorage();
+  const session = new MemoryStorage();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: memory });
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: session });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } });
+  setStorageScope('local');
+  memory.setItem('mischeles_user_profile_v2', JSON.stringify({ pinLockEnabled: true, biometricsEnabled: false }));
+  memory.setItem('mischeles_transactions_v3', JSON.stringify([{ id: 'private-local-record' }]));
+  session.setItem('mischeles_locked_v2', 'unlocked');
+
+  setStorageScope({ accountUid: 'pin-test-user' });
+
+  assert.equal(session.getItem('mischeles_locked_v2'), null, 'unlock state is not carried across identities');
+  assert.equal(storageService.isAppLocked(), true);
+  assert.equal(memory.getItem('mischeles_transactions_v3'), JSON.stringify([{ id: 'private-local-record' }]));
+  assert.equal(memory.getItem('mischeles_scope_pin-test-user_mischeles_transactions_v3'), null);
+});
+
+test('a legacy local PIN is staged before authentication changes the active storage scope', () => {
+  const memory = new MemoryStorage();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: memory });
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: new MemoryStorage() });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } });
+  setStorageScope('local');
+  memory.setItem('mischeles_user_profile_v2', JSON.stringify({ pinCode: '7391', pinLockEnabled: true, biometricsEnabled: true }));
+
+  stageLegacyPinBeforeScopeChange();
+  setStorageScope({ accountUid: 'legacy-pin-user' });
+
+  assert.equal(storageService.takeLegacyLockPin(), '7391');
+  assert.equal(JSON.parse(memory.getItem('mischeles_user_profile_v2') || '{}').pinCode, undefined);
+  assert.equal(storageService.isAppLocked(), true);
 });

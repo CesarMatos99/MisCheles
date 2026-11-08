@@ -16,7 +16,6 @@ import { BottomNav, type ActiveTab } from './components/layout/BottomNav';
 import { DesktopSidebar } from './components/layout/DesktopSidebar';
 import { FloatingActions } from './components/layout/FloatingActions';
 import { OfflineIndicator } from './components/layout/OfflineIndicator';
-import { SyncConflictResolver } from './components/sync/SyncConflictResolver';
 import { DashboardView } from './features/dashboard/DashboardView';
 import { CategoryDetailView } from './features/dashboard/CategoryDetailView';
 import { TransactionsView } from './features/transactions/TransactionsView';
@@ -139,6 +138,7 @@ export default function App() {
       const detail = (event as CustomEvent<StorageMutation>).detail;
       if (detail?.origin !== 'remote') return;
       setProfile(financeApplication.getProfile());
+      setIsLocked(financeApplication.isAppLocked());
       setIsDarkMode(localStorage.getItem('presucontrol_theme_v1') === 'dark');
       setAccentColor(normalizeAccentColor(localStorage.getItem('mischeles_accent_v2')));
     };
@@ -226,7 +226,6 @@ export default function App() {
     <div className="min-h-dvh bg-app-background text-app-foreground selection:bg-primary selection:text-white transition-colors duration-200">
       {/* Offline Status Toast */}
       <OfflineIndicator />
-      <SyncConflictResolver />
       {budgetNotice && (
         <div role={budgetNotice.kind === 'over' ? 'alert' : 'status'} aria-live={budgetNotice.kind === 'over' ? 'assertive' : 'polite'} className={'fixed left-3 right-3 top-20 z-[60] flex items-start gap-3 rounded-xl border p-3 shadow-lg sm:left-auto sm:right-6 sm:top-24 sm:w-96 ' + (budgetNotice.kind === 'over' ? 'border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/65 dark:text-rose-100' : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/65 dark:text-amber-100')}>
           <AlertCircle className='mt-0.5 h-5 w-5 shrink-0' aria-hidden='true' />

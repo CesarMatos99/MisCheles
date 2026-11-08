@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { accountAuth } from './accountAuth';
-import { firebaseConfigured } from './client';
-import { accountSyncService } from './accountSyncService';
-import { preferredUnauthenticatedScope, setStorageScope } from '../services/storage';
+import { firebaseConfigured } from './firebaseApp';
+import { preferredUnauthenticatedScope, setStorageScope, stageLegacyPinBeforeScopeChange } from '../services/storage';
 
 interface AccountState {
   configured: boolean;
@@ -14,7 +13,9 @@ interface AccountState {
   signInWithGoogle: () => Promise<void>;
   createAccount: (displayName: string, email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  refreshEmailVerification: () => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string, confirmation: string) => Promise<void>;
   deleteAccount: (currentPassword: string, confirmation: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -26,20 +27,46 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const stopSyncAuthObserver = accountSyncService.initializeAuthObserver();
-    if (!firebaseConfigured) return stopSyncAuthObserver;
+    let active = true;
+    if (!firebaseConfigured) {
+      setStorageScope(preferredUnauthenticatedScope());
+      setReady(true);
+      return undefined;
+    }
+    let observedUser: User | null = null;
+    let observerReady = false;
+    let redirectReady = false;
+    let redirectError: string | null = null;
+    const publishSession = () => {
+      if (!active || !observerReady || !redirectReady) return;
+      // Select the identity namespace before exposing the restored account session.
+      stageLegacyPinBeforeScopeChange();
+      setStorageScope(observedUser ? { accountUid: observedUser.uid } : preferredUnauthenticatedScope());
+      setUser(observedUser);
+      setReady(true);
+      setError(redirectError);
+    };
     const stopAccountAuthObserver = accountAuth.observe(
       (nextUser) => {
-        // Switch data namespaces before rendering the authenticated tree, so the first
-        // frame after sign-in/out cannot expose the previous local or account ledger.
-        setStorageScope(nextUser ? { accountUid: nextUser.uid } : preferredUnauthenticatedScope());
-        setUser(nextUser); setReady(true); setError(null);
+        observedUser = nextUser;
+        observerReady = true;
+        publishSession();
       },
-      (reason) => { setError(reason.message); setReady(true); },
+      (reason) => {
+        redirectError = reason.message;
+        observerReady = true;
+        publishSession();
+      },
     );
+    void accountAuth.completeRedirect().catch((reason: unknown) => {
+      redirectError = reason instanceof Error ? reason.message : 'AUTH_REDIRECT_FAILED';
+    }).finally(() => {
+      redirectReady = true;
+      publishSession();
+    });
     return () => {
+      active = false;
       stopAccountAuthObserver();
-      stopSyncAuthObserver();
     };
   }, []);
 
@@ -49,8 +76,26 @@ export const AccountAuthProvider: React.FC<React.PropsWithChildren> = ({ childre
     signInWithGoogle: async () => { setError(null); await accountAuth.signInWithGoogle(); },
     createAccount: async (displayName, email, password) => { setError(null); await accountAuth.create(displayName, email, password); },
     sendPasswordReset: async (email) => { setError(null); await accountAuth.sendPasswordReset(email); },
-    changePassword: async (currentPassword, newPassword) => { setError(null); await accountAuth.changePassword(currentPassword, newPassword); },
-    deleteAccount: async (currentPassword, confirmation) => { setError(null); await accountAuth.deleteAccount(currentPassword, confirmation); },
+    resendVerificationEmail: async () => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      await accountAuth.resendVerification(user);
+    },
+    refreshEmailVerification: async () => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      return accountAuth.refreshVerification(user);
+    },
+    changePassword: async (currentPassword, newPassword, confirmation) => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      await accountAuth.changePassword(user, currentPassword, newPassword, confirmation);
+    },
+    deleteAccount: async (currentPassword, confirmation) => {
+      if (!user) throw new Error('ACCOUNT_REQUIRED');
+      setError(null);
+      await accountAuth.deleteAccount(user, currentPassword, confirmation);
+    },
     signOut: async () => { setError(null); await accountAuth.signOut(); },
   }), [ready, user, error]);
 

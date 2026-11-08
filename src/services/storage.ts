@@ -38,10 +38,24 @@ function scopedStorageKey(key: string): string {
 }
 function readAppValue(key: string): string | null { return localStorage.getItem(scopedStorageKey(key)); }
 function writeAppValue(key: string, value: string): void { localStorage.setItem(scopedStorageKey(key), value); }
+function hasPinLockInActiveOrLocalScope(): boolean {
+  try {
+    const profileKeys = new Set([STORAGE_KEYS.USER_PROFILE, scopedStorageKey(STORAGE_KEYS.USER_PROFILE)]);
+    for (const key of profileKeys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const profile = JSON.parse(raw) as { pinLockEnabled?: unknown } | null;
+      if (profile?.pinLockEnabled === true) return true;
+    }
+  } catch { /* The active profile below remains the fallback when storage enumeration is unavailable. */ }
+  return false;
+}
 export function setStorageScope(scope: 'local' | 'demo' | { accountUid: string }): void {
   const next = scope === 'local' || scope === 'demo' ? scope : 'account:' + scope.accountUid;
   if (next === activeStorageScope) return;
   activeStorageScope = next;
+  // An unlock belongs to the identity/storage namespace that was active when it was granted.
+  try { sessionStorage.removeItem(STORAGE_KEYS.APP_LOCKED); } catch { /* A new scope must not inherit an old unlock. */ }
   try { localStorage.removeItem(ACTIVE_ACCOUNT_SCOPE_KEY); } catch { /* Scope remains valid for this session if storage is unavailable. */ }
   notifyStorageMutation('userSettings', 'storage-scope', 'upsert', 'remote');
 }
@@ -61,6 +75,20 @@ export function clearAccountScope(uid: string): void {
 export function preferredUnauthenticatedScope(): 'local' | 'demo' {
   try { return localStorage.getItem('mischeles_web_mode_v1') === 'demo' ? 'demo' : 'local'; }
   catch { return 'local'; }
+}
+
+/** Preserve the one-time legacy PIN migration before an auth scope hides its profile. */
+export function stageLegacyPinBeforeScopeChange(): void {
+  try {
+    const raw = readAppValue(STORAGE_KEYS.USER_PROFILE);
+    if (!raw) return;
+    const stored = JSON.parse(raw) as UserProfile & { pinCode?: string };
+    if (!stored.pinCode) return;
+    pendingLegacyLockPin = stored.pinCode;
+    const safe = { ...stored, biometricsEnabled: false } as UserProfile & { pinCode?: string };
+    delete safe.pinCode;
+    writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(safe));
+  } catch { /* Preserve the current scope when the browser storage cannot be read. */ }
 }
 
 
@@ -879,8 +907,8 @@ export const storageService = {
 
   // Security Lock
   isAppLocked(): boolean {
-    const profile = this.getProfile();
-    if (!profile.pinLockEnabled && !profile.biometricsEnabled) return false;
+    const currentProfile = this.getProfile();
+    if (!currentProfile.pinLockEnabled && !currentProfile.biometricsEnabled && !hasPinLockInActiveOrLocalScope()) return false;
     return sessionStorage.getItem(STORAGE_KEYS.APP_LOCKED) !== 'unlocked';
   },
 
