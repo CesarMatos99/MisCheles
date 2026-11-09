@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, Cloud, Eye, EyeOff, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, FlaskConical } from 'lucide-react';
 import { useAccountAuth } from '../firebase/AccountAuthProvider';
 import { accountAuthMessage } from '../firebase/accountAuthErrors';
 import { setStorageScope } from '../services/storage';
@@ -40,9 +40,9 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
   const access = resolveWebAccessState(ready, user, demoActive);
   const copy = isEnglish ? {
     title: 'Your money, made clearer.', subtitle: 'Organize income, spending, and savings in one place.',
-    accountRequired: 'Sign in or create an account to open your financial space.',
+    signInHelp: 'Access your MisCheles account.', createHelp: 'Create your MisCheles account.', resetHelp: 'We will send password reset instructions by email.',
     signIn: 'Sign in', create: 'Create account', google: 'Continue with Google',
-    demo: 'Explore the demo', demoHelp: 'Want to get to know MisCheles? Explore the demo with fictional data.',
+    demo: 'Explore the demo',
     firebaseUnavailable: 'Firebase Authentication is not configured here. Configure it to use an account, or explore the isolated demo.',
     fullName: 'Name', email: 'Email', password: 'Password', confirmPassword: 'Confirm password (minimum 12 characters)',
     reset: 'Send reset instructions', resetSent: 'If the account exists, reset instructions will be sent by email.',
@@ -53,9 +53,9 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
     signOut: 'Sign out',
   } : {
     title: 'Tu dinero, más claro.', subtitle: 'Organiza tus ingresos, gastos y ahorros en un solo lugar.',
-    accountRequired: 'Inicia sesión o crea una cuenta para entrar a tu espacio financiero.',
+    signInHelp: 'Entra a tu cuenta de MisCheles.', createHelp: 'Crea tu cuenta de MisCheles.', resetHelp: 'Te enviaremos instrucciones para recuperar tu contraseña.',
     signIn: 'Iniciar sesión', create: 'Crear cuenta', google: 'Continuar con Google',
-    demo: 'Explorar demostración', demoHelp: '¿Quieres conocer MisCheles? Explora la demostración con datos ficticios.',
+    demo: 'Explorar demostración',
     firebaseUnavailable: 'Firebase Authentication no está configurado aquí. Configúralo para usar una cuenta o explora la demostración aislada.',
     fullName: 'Nombre', email: 'Correo electrónico', password: 'Contraseña', confirmPassword: 'Confirmar contraseña (mínimo 12 caracteres)',
     reset: 'Enviar instrucciones', resetSent: 'Si la cuenta existe, recibirás instrucciones por correo.',
@@ -189,6 +189,7 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
   const providerError = authError ? accountAuthMessage(authError, language) : '';
   const activeError = error || providerError;
   const formTitle = authView === 'create' ? copy.create : authView === 'reset' ? copy.reset : copy.signIn;
+  const formHelp = authView === 'create' ? copy.createHelp : authView === 'reset' ? copy.resetHelp : copy.signInHelp;
   const showForm = authView !== 'welcome';
   const passwordFields = authView === 'reset' ? null : <>
     <label className='block space-y-1.5 text-sm font-medium'>{copy.password}<span className='relative mt-1 block'><input required type={showPassword ? 'text' : 'password'} autoComplete={authView === 'create' ? 'new-password' : 'current-password'} minLength={authView === 'create' ? 12 : undefined} value={password} onChange={(event) => setPassword(event.target.value)} className='h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3 pr-12 dark:border-slate-700' /><button type='button' aria-label={showPassword ? (isEnglish ? 'Hide password' : 'Ocultar contraseña') : (isEnglish ? 'Show password' : 'Mostrar contraseña')} onClick={() => setShowPassword((value) => !value)} className='absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-500'>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span>{authView === 'create' && <span className='block text-xs font-normal text-slate-500'>{isEnglish ? 'At least 12 characters and Firebase password rules.' : 'Mínimo 12 caracteres y requisitos de Firebase.'}</span>}</label>
@@ -196,12 +197,12 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
   </>;
 
   return <main className='grid min-h-screen place-items-center bg-app-background px-4 py-8 text-app-foreground'>
-    <section className='w-full max-w-lg space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8'>
+    <section className='w-full max-w-md space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7'>
       <Brand language={language} setLanguage={setLanguage} />
-      <header><h1 className='text-2xl font-bold tracking-tight'>{showForm ? formTitle : copy.title}</h1><p className='mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400'>{showForm ? copy.accountRequired : copy.subtitle}</p></header>
+      <header><h1 className='text-2xl font-bold tracking-tight'>{showForm ? formTitle : copy.title}</h1><p className='mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400'>{showForm ? formHelp : copy.subtitle}</p></header>
       {!configured && <div role='alert' className='space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'><p>{copy.firebaseUnavailable}</p>{authError === 'AUTH_SESSION_UNAVAILABLE' && <button type='button' disabled={busy} onClick={() => void retrySession().catch(() => undefined)} className='min-h-10 rounded-lg border border-amber-500 px-3 font-semibold disabled:opacity-50'>{copy.retry}</button>}</div>}
       {configured && authError && <div role='alert' className='space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'><p>{accountAuthMessage(authError, language)}</p>{authError === 'AUTH_SESSION_UNAVAILABLE' && <button type='button' disabled={busy} onClick={() => void retrySession().catch(() => undefined)} className='min-h-10 rounded-lg border border-amber-500 px-3 font-semibold disabled:opacity-50'>{copy.retry}</button>}</div>}
-      {showForm ? <div className='space-y-4 border-y border-slate-200 py-5 dark:border-slate-800'>
+      {showForm ? <div className='space-y-4'>
         <button type='button' onClick={() => { setAuthView('welcome'); setError(''); setMessage(''); }} className='inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-primary'><ArrowLeft size={16} />{copy.back}</button>
         <form onSubmit={(event) => void submitAccount(event)} className='space-y-4'>
           {authView === 'create' && <label className='block space-y-1.5 text-sm font-medium'>{copy.fullName}<input required maxLength={80} autoComplete='name' value={name} onChange={(event) => setName(event.target.value)} className='mt-1 h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-700' /></label>}
@@ -211,16 +212,18 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
           {message && <p role='status' className='text-sm text-emerald-700 dark:text-emerald-400'>{message}</p>}
           <button disabled={busy || !configured} className='min-h-11 w-full rounded-xl bg-primary px-4 font-semibold text-white disabled:opacity-60'>{busy ? copy.pending : authView === 'create' ? copy.create : authView === 'reset' ? copy.reset : copy.signIn}</button>
         </form>
-        {authView === 'signIn' && <button type='button' disabled={busy || !configured} onClick={() => { setAuthView('reset'); setError(''); setMessage(''); }} className='min-h-10 text-sm text-primary'>{t('forgotPassword')}</button>}
-        {authView === 'reset' && <button type='button' onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='min-h-10 text-sm text-primary'>{isEnglish ? 'Back to sign in' : 'Volver a iniciar sesión'}</button>}
-        {authView === 'signIn' && <><button type='button' disabled={busy || !configured} onClick={() => { setAuthView('create'); setError(''); setMessage(''); }} className='block min-h-10 text-sm text-primary'>{copy.create}</button><button type='button' disabled={busy || !configured} onClick={() => void useGoogle()} className='min-h-11 w-full rounded-xl border border-slate-200 font-semibold disabled:opacity-50 dark:border-slate-700'>{copy.google}</button></>}
-        {authView === 'create' && <button type='button' disabled={busy} onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='min-h-10 text-sm text-primary'>{isEnglish ? 'I already have an account' : 'Ya tengo una cuenta'}</button>}
-      </div> : <div className='space-y-3'>
-        <button type='button' disabled={!configured || busy} onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='flex min-h-14 w-full items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700'><span className='grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary'><Cloud size={20} /></span><span className='font-semibold'>{copy.signIn}</span></button>
-        <button type='button' disabled={!configured || busy} onClick={() => { setAuthView('create'); setError(''); setMessage(''); }} className='min-h-12 w-full rounded-xl bg-primary px-4 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50'>{copy.create}</button>
-        <button type='button' disabled={!configured || busy} onClick={() => void useGoogle()} className='min-h-12 w-full rounded-xl border border-slate-200 px-4 font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800'>{copy.google}</button>
-        <div className='flex items-center gap-3 py-1 text-xs text-slate-400'><span className='h-px flex-1 bg-slate-200 dark:bg-slate-700' /><span>{isEnglish ? 'or' : 'o'}</span><span className='h-px flex-1 bg-slate-200 dark:bg-slate-700' /></div>
-        <button type='button' onClick={chooseDemo} className='flex min-h-14 w-full items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary dark:border-slate-700'><span className='grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary'><FlaskConical size={20} /></span><span><span className='block font-semibold'>{copy.demo}</span><span className='mt-1 block text-sm leading-5 text-slate-500 dark:text-slate-400'>{copy.demoHelp}</span></span></button>
+        {authView === 'signIn' && <div className='space-y-3'>
+          <button type='button' disabled={busy || !configured} onClick={() => { setAuthView('reset'); setError(''); setMessage(''); }} className='min-h-10 text-sm font-medium text-primary'>{t('forgotPassword')}</button>
+          <button type='button' disabled={busy || !configured} onClick={() => void useGoogle()} className='min-h-12 w-full rounded-xl border border-slate-200 px-4 font-semibold transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800'>{copy.google}</button>
+          <p className='text-center text-sm text-slate-500 dark:text-slate-400'>{isEnglish ? "Don't have an account?" : '¿Todavía no tienes cuenta?'} <button type='button' disabled={busy || !configured} onClick={() => { setAuthView('create'); setError(''); setMessage(''); }} className='font-semibold text-primary'>{copy.create}</button></p>
+        </div>}
+        {authView === 'create' && <p className='text-center text-sm text-slate-500 dark:text-slate-400'>{isEnglish ? 'Already have an account?' : '¿Ya tienes una cuenta?'} <button type='button' disabled={busy} onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='font-semibold text-primary'>{copy.signIn}</button></p>}
+        {authView === 'reset' && <button type='button' onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='min-h-10 text-sm font-semibold text-primary'>{isEnglish ? 'Back to sign in' : 'Volver a iniciar sesión'}</button>}
+      </div> : <div className='space-y-2.5'>
+        <button type='button' disabled={!configured || busy} onClick={() => { setAuthView('signIn'); setError(''); setMessage(''); }} className='min-h-12 w-full rounded-xl bg-primary px-4 font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50'>{copy.signIn}</button>
+        <button type='button' disabled={!configured || busy} onClick={() => void useGoogle()} className='min-h-12 w-full rounded-xl border border-slate-200 px-4 font-semibold transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800'>{copy.google}</button>
+        <button type='button' disabled={!configured || busy} onClick={() => { setAuthView('create'); setError(''); setMessage(''); }} className='min-h-11 w-full rounded-xl border border-slate-200 px-4 font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'>{copy.create}</button>
+        <button type='button' onClick={chooseDemo} className='mx-auto flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-500 transition hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary dark:text-slate-400'><FlaskConical size={15} aria-hidden='true' />{copy.demo}</button>
       </div>}
     </section>
   </main>;

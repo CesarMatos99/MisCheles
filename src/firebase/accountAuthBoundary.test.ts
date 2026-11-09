@@ -88,7 +88,7 @@ test('sign-out hides the current workspace before Firebase completes and does no
   assert.match(adapter, /await signOut\(requireAuth\(auth\)\)/);
 });
 
-test('profile uses the active Firebase identity, exposes sign-out, and keeps guest auth forms outside Profile', () => {
+test('profile shares the active identity and exposes sign-out only in the header menu', () => {
   const profile = source('../features/profile/ProfileView.tsx');
   const header = source('../components/layout/Header.tsx');
   const dashboard = source('../features/dashboard/DashboardView.tsx');
@@ -96,9 +96,17 @@ test('profile uses the active Firebase identity, exposes sign-out, and keeps gue
   const adapter = source('./firebaseAuthAdapter.ts');
   assert.match(profile, /useAccountAuth\(\)/);
   assert.match(profile, /resolveVisibleIdentity/);
-  assert.match(profile, /Correo de la cuenta/);
   assert.match(profile, /Correo de contacto/);
-  assert.match(profile, /onClick=\{\(\) => void handleSignOut\(\)\}/);
+  assert.match(profile, /AccountSettingsSection identity=\{identity\}/);
+  assert.match(profile, /identityPhoto/);
+  assert.match(profile, /financeApplication\.saveProfile\(updated\)/);
+  assert.match(profile, /onProfileUpdated\(updated\)/);
+  assert.match(profile, /max-w-5xl/);
+  assert.doesNotMatch(profile, /handleSignOut|LogOut|<LogOut/);
+  const homeSection = profile.match(/\{section === 'home' && \([\s\S]*?\{section === 'profile'/)?.[0] || '';
+  assert.doesNotMatch(homeSection, /onLockApp|signOut|Cerrar sesión/);
+  for (const section of ['profile', 'account', 'appearance', 'security']) assert.match(profile, new RegExp(`setSection\\('${section}'\\)`));
+  assert.match(profile, /onOpenInstall/);
   assert.match(header, /aria-haspopup="menu"/);
   assert.match(header, /role="menu"/);
   assert.match(header, /document.addEventListener\('pointerdown'/);
@@ -108,7 +116,35 @@ test('profile uses the active Firebase identity, exposes sign-out, and keeps gue
   assert.match(header, /onOpenSettings/);
   assert.doesNotMatch(header, /Nuevo registro|New record/);
   assert.match(dashboard, /resolveVisibleIdentity/);
+  assert.match(account, /identity: VisibleIdentity/);
+  assert.match(account, /identity\.photoUrl/);
+  assert.match(account, /identity\.name/);
+  assert.doesNotMatch(account, /rounded-2xl border border-slate-200 bg-white/);
+  assert.doesNotMatch(account, /user\.displayName/);
   assert.doesNotMatch(account, /submitAuth|signInWithGoogle|createAccount/);
   assert.match(adapter, /linkWithCredential\(user/);
   assert.match(adapter, /linkWithPopup\(user/);
+});
+
+test('profile security confirms a local PIN before enabling the lock and keeps PBKDF2 storage', () => {
+  const profile = source('../features/profile/ProfileView.tsx');
+  const credential = source('../services/localLockCredential.ts');
+  assert.match(profile, /role="switch"/);
+  assert.match(profile, /disabled=\{pinStatusLoading \|\| \(!hasLocalPin && !draft\.pinLockEnabled\)\}/);
+  assert.match(profile, /confirmPin/);
+  assert.match(profile, /newPin !== confirmPin/);
+  assert.match(profile, /localLockCredential\.hasPin\(\)/);
+  assert.match(profile, /localLockCredential\.setPin\(newPin\)/);
+  assert.match(profile, /onClick=\{onLockApp\}/);
+  assert.match(credential, /PBKDF2/);
+});
+
+test('welcome and sign-in keep one compact hierarchy with sign-in as the primary action', () => {
+  const onboarding = source('../onboarding/WebModeGate.tsx');
+  assert.match(onboarding, /title: 'Tu dinero, más claro\.'/);
+  assert.match(onboarding, /copy\.signIn[\s\S]*?bg-primary/);
+  assert.match(onboarding, /copy\.google/);
+  assert.match(onboarding, /¿Todavía no tienes cuenta\?/);
+  assert.match(onboarding, /copy\.demo/);
+  assert.doesNotMatch(onboarding, /<Cloud/);
 });

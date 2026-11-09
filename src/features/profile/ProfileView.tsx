@@ -5,7 +5,6 @@ import {
   Check,
   ChevronRight,
   Lock,
-  LogOut,
   Moon,
   Palette,
   Shield,
@@ -20,7 +19,6 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { LANGUAGE_OPTIONS } from '../../i18n/catalog';
 import { AccountSettingsSection } from '../../firebase/AccountSettingsSection';
 import { useAccountAuth } from '../../firebase/AccountAuthProvider';
-import { accountAuthMessage } from '../../firebase/accountAuthErrors';
 import { localLockCredential } from '../../services/localLockCredential';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ACCENT_COLORS } from '../../constants/accentColors';
@@ -56,36 +54,65 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onNavigationRequestHandled,
 }) => {
   const { language, setLanguage, t } = useLanguage();
-  const { user, signOut } = useAccountAuth();
+  const { user } = useAccountAuth();
   const { mode } = useWebAccess();
   const isDemo = mode === 'demo';
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
+  const [editingName, setEditingName] = useState(false);
   const [monthlyTargetIncomeText, setMonthlyTargetIncomeText] = useState(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
   const [savedMessage, setSavedMessage] = useState('');
   const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [hasLocalPin, setHasLocalPin] = useState(false);
+  const [pinStatusLoading, setPinStatusLoading] = useState(false);
+  const [editingPin, setEditingPin] = useState(false);
   const [securityError, setSecurityError] = useState('');
-  const [accountBusy, setAccountBusy] = useState(false);
-  const [accountError, setAccountError] = useState('');
   const photoInput = useRef<HTMLInputElement>(null);
 
   const identity = resolveVisibleIdentity(profile, user, isDemo);
   const identityName = identity.name;
   const identityPhoto = identity.photoUrl;
   const isSpanish = language === 'es';
-
-  const handleSignOut = async () => {
-    setAccountBusy(true);
-    setAccountError('');
-    try { await signOut(); }
-    catch (error) { setAccountError(accountAuthMessage(error, language)); }
-    finally { setAccountBusy(false); }
+  const securityCopy = isSpanish ? {
+    lockTitle: 'Bloqueo al salir', lockDescription: 'Al volver a MisCheles se solicita tu PIN local. Esto no cierra la sesión de tu cuenta.',
+    lockLabel: 'Bloquear la aplicación al salir', configureBefore: 'Configura un PIN antes de activar el bloqueo al salir.', lockNow: 'Bloquear aplicación ahora',
+    pinTitle: 'PIN de privacidad', checkingPin: 'Comprobando PIN local…', pinSet: 'PIN configurado en este dispositivo.', pinMissing: 'Aún no hay un PIN configurado.',
+    cancel: 'Cancelar', changePin: 'Cambiar PIN', configurePin: 'Configurar PIN', newPin: 'Nuevo PIN (4 dígitos)', setupPin: 'Configurar PIN (4 dígitos)', confirmPin: 'Confirmar PIN',
+    pinHelp: 'El PIN usa PBKDF2 y se guarda solo en este dispositivo; es independiente de tu inicio de sesión.',
+    pinLengthError: 'El PIN debe tener exactamente 4 dígitos.', pinMismatch: 'Los PIN no coinciden.', pinRequired: 'Configura un PIN antes de activar el bloqueo al salir.',
+  } : {
+    lockTitle: 'Lock when leaving', lockDescription: 'MisCheles will ask for your local PIN when you return. This does not sign you out.',
+    lockLabel: 'Lock the app when leaving', configureBefore: 'Set a PIN before enabling the lock.', lockNow: 'Lock app now',
+    pinTitle: 'Privacy PIN', checkingPin: 'Checking local PIN…', pinSet: 'PIN is set on this device.', pinMissing: 'No PIN is set yet.',
+    cancel: 'Cancel', changePin: 'Change PIN', configurePin: 'Set up PIN', newPin: 'New PIN (4 digits)', setupPin: 'Set up PIN (4 digits)', confirmPin: 'Confirm PIN',
+    pinHelp: 'The PIN uses PBKDF2 and stays on this device; it is separate from your sign-in.',
+    pinLengthError: 'The PIN must be exactly 4 digits.', pinMismatch: 'The PINs do not match.', pinRequired: 'Set a PIN before enabling the lock.',
   };
 
   useEffect(() => {
     setDraft(profile);
+    setEditingName(false);
     setMonthlyTargetIncomeText(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
   }, [profile]);
+
+  useEffect(() => {
+    if (section !== 'security') return undefined;
+    let active = true;
+    setPinStatusLoading(true);
+    setSecurityError('');
+    void localLockCredential.hasPin()
+      .then((exists) => {
+        if (!active) return;
+        setHasLocalPin(exists);
+        setEditingPin(!exists);
+      })
+      .catch((error: unknown) => {
+        if (active) setSecurityError(error instanceof Error ? error.message : 'No se pudo consultar el PIN local.');
+      })
+      .finally(() => { if (active) setPinStatusLoading(false); });
+    return () => { active = false; };
+  }, [section]);
 
   useEffect(() => {
     if (!navigationRequest) return;
@@ -98,8 +125,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setSecurityError('');
     if (section === 'security') {
       try {
-        if (newPin) await localLockCredential.setPin(newPin);
-        if (draft.pinLockEnabled && !newPin && !(await localLockCredential.hasPin())) { setSecurityError('Configura un PIN de 4 dígitos antes de activar el bloqueo.'); return; }
+        const pinWasEntered = newPin.length > 0 || confirmPin.length > 0;
+        if (pinWasEntered) {
+          if (!/^\d{4}$/.test(newPin)) { setSecurityError(securityCopy.pinLengthError); setEditingPin(true); return; }
+          if (newPin !== confirmPin) { setSecurityError(securityCopy.pinMismatch); setEditingPin(true); return; }
+          await localLockCredential.setPin(newPin);
+          setHasLocalPin(true);
+          setEditingPin(false);
+          setNewPin('');
+          setConfirmPin('');
+        }
+        if (draft.pinLockEnabled && !newPin && !(await localLockCredential.hasPin())) {
+          setHasLocalPin(false);
+          setEditingPin(true);
+          setSecurityError(securityCopy.pinRequired);
+          return;
+        }
       } catch (error) { setSecurityError(error instanceof Error ? error.message : 'No se pudo guardar el PIN.'); return; }
     }
     const updated: UserProfile = {
@@ -114,6 +155,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
     setDraft(updated);
+    setEditingName(false);
     setNewPin('');
     setSavedMessage('Cambios guardados');
     window.setTimeout(() => setSavedMessage(''), 2200);
@@ -123,10 +165,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setDraft((current) => ({ ...current, photoUrl: String(reader.result || '') }));
+    reader.onload = () => {
+      const updated = { ...profile, photoUrl: String(reader.result || '') };
+      financeApplication.saveProfile(updated);
+      onProfileUpdated(updated);
+      setDraft(updated);
+    };
     reader.readAsDataURL(file);
+    event.target.value = '';
   };
 
+  const accountAccessLabel = isSpanish ? 'Cuenta y acceso' : 'Account & access';
   const title = section === 'profile'
     ? t('profileData')
     : section === 'appearance'
@@ -134,13 +183,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     : section === 'security'
     ? t('security')
     : section === 'account'
-    ? t('accountSync')
+    ? accountAccessLabel
     : t('profile');
 
   const fieldClass = 'app-field';
 
   return (
     <div className="app-profile mx-auto w-full max-w-5xl animate-in fade-in duration-200">
+      <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" disabled={isDemo} aria-label="Seleccionar foto de perfil" />
       <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
         {section !== 'home' && (
           <button type="button" onClick={() => setSection('home')} className="mb-3 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary">
@@ -152,42 +202,36 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {section === 'home' && (
         <>
-          <section className="flex flex-col items-center gap-3 border-b border-slate-200 py-6 text-center dark:border-slate-800 sm:flex-row sm:items-center sm:gap-4 sm:text-left">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
+          <section className="flex flex-col items-center gap-3 border-b border-slate-200 py-7 text-center dark:border-slate-800">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-3xl font-bold text-white">
               {isDemo ? <UserRound className="h-6 w-6" aria-hidden="true" /> : identityPhoto ? <img src={identityPhoto} alt={identityName} className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 w-full">
               <h2 className="type-section-title truncate text-slate-900 dark:text-white">{identityName}</h2>
-              {isDemo ? <p className="type-secondary truncate">Modo demostración · datos ficticios</p> : <>
-                <p className="type-secondary truncate"><span className="font-medium">Correo de la cuenta:</span> {identity.accountEmail || 'Sin correo registrado'}</p>
-                {identity.contactEmail && identity.contactEmail.toLowerCase() !== identity.accountEmail.toLowerCase() && <p className="type-secondary truncate"><span className="font-medium">Correo de contacto:</span> {identity.contactEmail}</p>}
-              </>}
-              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
-              {user && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{isSpanish ? 'Cuenta MisCheles · ' : 'MisCheles account · '}{user.emailVerified ? (isSpanish ? 'correo verificado' : 'email verified') : (isSpanish ? 'verificación pendiente' : 'verification pending')}</p>}
+              {isDemo ? <p className="type-secondary truncate">Modo demostración · datos ficticios</p> : identity.accountEmail && <p className="type-secondary truncate">{identity.accountEmail}</p>}
             </div>
-            {user && <button type="button" disabled={accountBusy} onClick={() => void handleSignOut()} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30 sm:w-auto">
-              <LogOut className="h-4 w-4" aria-hidden="true" />{accountBusy ? t('pleaseWait') : t('signOut')}
-            </button>}
+            {user && <p className={'text-xs font-semibold ' + (user.emailVerified ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-300')}>
+              {user.emailVerified ? (isSpanish ? 'Correo verificado' : 'Email verified') : (isSpanish ? 'Verificación pendiente' : 'Verification pending')}
+            </p>}
+            <button type="button" disabled={isDemo} onClick={() => photoInput.current?.click()} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-primary transition hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-70">
+              <Camera className="h-4 w-4" aria-hidden="true" />{isSpanish ? 'Cambiar foto' : 'Change photo'}
+            </button>
           </section>
-          {accountError && <p role="alert" className="mt-3 text-sm text-rose-600 dark:text-rose-300">{accountError}</p>}
-          <nav className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-slate-800 lg:grid-cols-2 lg:gap-3 lg:divide-y-0" aria-label="Configuración">
-            <button type="button" onClick={() => setSection('profile')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <UserRound className="h-5 w-5 text-primary" /><span className="flex-1">{t('profileData')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
+          <nav className="divide-y divide-slate-200 dark:divide-slate-800" aria-label={isSpanish ? 'Opciones de perfil' : 'Profile settings'}>
+            <button type="button" onClick={() => setSection('profile')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <UserRound className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('profileData')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Nombre, foto y preferencias personales' : 'Name, photo, and personal preferences'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('appearance')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <Palette className="h-5 w-5 text-primary" /><span className="flex-1">{t('appearance')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
+            <button type="button" onClick={() => setSection('account')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Shield className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{accountAccessLabel}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Correo, proveedores y contraseña' : 'Email, providers, and password'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('account')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('accountSync')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
+            <button type="button" onClick={() => setSection('appearance')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Palette className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('appearance')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Idioma, tema y color' : 'Language, theme, and color'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={() => setSection('security')} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <Shield className="h-5 w-5 text-primary" /><span className="flex-1">{t('security')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
+            <button type="button" onClick={() => setSection('security')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Lock className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('security')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Bloqueo local y PIN' : 'Local lock and PIN'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
-            <button type="button" onClick={onOpenInstall} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-primary dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <Smartphone className="h-5 w-5 text-primary" /><span className="flex-1">{t('installApp')}</span><ChevronRight className="h-4 w-4 text-slate-400" />
-            </button>
-            <button type="button" onClick={onLockApp} className="flex min-h-14 w-full items-center gap-3 py-3 text-left text-sm font-semibold text-slate-800 transition hover:text-rose-600 dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:rounded-xl lg:border lg:border-slate-200 lg:px-4 lg:hover:bg-slate-50 lg:dark:border-slate-800 lg:dark:hover:bg-slate-900">
-              <Lock className="h-5 w-5 text-slate-500 dark:text-slate-400" /><span className="flex-1">{t('lockApp')}</span>
+            <button type="button" onClick={onOpenInstall} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Smartphone className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('installApp')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Añade MisCheles a este dispositivo' : 'Add MisCheles to this device'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
           </nav>
         </>
@@ -197,19 +241,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <form onSubmit={saveProfile} className="space-y-5 py-5">
           <section className="flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-2xl font-bold text-white">
-              {draft.photoUrl ? <img src={draft.photoUrl} alt={draft.name} className="h-full w-full object-cover" /> : draft.name.charAt(0).toUpperCase()}
+              {isDemo ? <UserRound className="h-6 w-6" aria-hidden="true" /> : identityPhoto ? <img src={identityPhoto} alt="" className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" disabled={isDemo} />
-              <button type="button" disabled={isDemo} onClick={() => photoInput.current?.click()} className="min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                <Camera className="mr-2 inline h-4 w-4" />Cambiar foto
-              </button>
-              <p className="mt-1 text-xs text-slate-500">La foto se guarda en este dispositivo.</p>
-            </div>
+            <div className="min-w-0"><p className="truncate font-semibold text-slate-900 dark:text-white">{identityName}</p><p className="text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Identidad compartida en MisCheles' : 'Shared MisCheles identity'}</p></div>
           </section>
           <label className="block space-y-1.5">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre</span>
-            <input disabled={isDemo} value={isDemo ? identityName : draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={fieldClass} />
+            <input disabled={isDemo} value={isDemo ? identityName : editingName ? draft.name : (draft.name.trim() && draft.name.trim().toLocaleLowerCase('es') !== 'usuario' ? draft.name : identityName)} onFocus={() => {
+              if (!editingName) setDraft((current) => ({ ...current, name: current.name.trim() && current.name.trim().toLocaleLowerCase('es') !== 'usuario' ? current.name : identityName }));
+              setEditingName(true);
+            }} onChange={(e) => { setEditingName(true); setDraft({ ...draft, name: e.target.value }); }} className={fieldClass} />
           </label>
           {!isDemo && <label className="block space-y-1.5">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Correo de contacto</span>
@@ -271,31 +312,42 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {section === 'account' && <AccountSettingsSection />}
+      {section === 'account' && <AccountSettingsSection identity={identity} />}
 
       {section === 'security' && (
-        <form onSubmit={saveProfile} className="space-y-5 py-5">
-          <label className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
-            <span><span className="block text-sm font-semibold text-slate-900 dark:text-white">Bloquear la aplicación al salir</span><span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">Al volver después de enviarla al fondo, solicita tu PIN. No cierra tu sesión ni sustituye el acceso a tu cuenta.</span></span>
-            <input type="checkbox" checked={draft.pinLockEnabled} onChange={(e) => setDraft({ ...draft, pinLockEnabled: e.target.checked })} className="mt-1 h-4 w-4 accent-primary" />
-          </label>
-          <div className="rounded-xl border border-slate-200 p-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:text-slate-300"><strong>Desbloqueo biométrico</strong><p className="mt-1">No está disponible en esta versión web. El acceso biométrico no se simula ni reemplaza la verificación del PIN.</p></div>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">PIN de privacidad (4 dígitos)</span>
-            <input type="password" autoComplete="new-password" inputMode="numeric" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Deja vacío para conservarlo" className={fieldClass + ' max-w-64 tracking-[0.25em]'} />
-            <span className="block text-xs text-slate-500 dark:text-slate-400">Se guarda solo en este dispositivo y no se sincroniza con tu cuenta.</span>
-          </label>
+        <form onSubmit={saveProfile} className="space-y-6 py-5">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0"><h2 className="text-sm font-semibold text-slate-900 dark:text-white">{securityCopy.lockTitle}</h2><p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">{securityCopy.lockDescription}</p></div>
+              <button type="button" role="switch" aria-checked={draft.pinLockEnabled} aria-label={securityCopy.lockLabel} disabled={pinStatusLoading || (!hasLocalPin && !draft.pinLockEnabled)} onClick={() => setDraft({ ...draft, pinLockEnabled: !draft.pinLockEnabled })} className={'relative inline-flex h-11 w-14 shrink-0 items-center rounded-full p-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 ' + (draft.pinLockEnabled ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700')}>
+                <span aria-hidden="true" className={'h-9 w-9 rounded-full bg-white shadow transition-transform ' + (draft.pinLockEnabled ? 'translate-x-3' : 'translate-x-0')} />
+              </button>
+            </div>
+            {!hasLocalPin && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">{securityCopy.configureBefore}</p>}
+            <button type="button" disabled={!hasLocalPin} onClick={onLockApp} className="min-h-10 rounded-lg px-3 text-sm font-semibold text-primary hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50">{securityCopy.lockNow}</button>
+          </section>
+          <section className="space-y-3 border-t border-slate-200 pt-5 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><h2 className="text-sm font-semibold text-slate-900 dark:text-white">{securityCopy.pinTitle}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{pinStatusLoading ? securityCopy.checkingPin : hasLocalPin ? securityCopy.pinSet : securityCopy.pinMissing}</p></div>
+              <button type="button" onClick={() => { setEditingPin((editing) => !editing); setNewPin(''); setConfirmPin(''); setSecurityError(''); }} className="min-h-10 rounded-lg px-3 text-sm font-semibold text-primary hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{editingPin ? securityCopy.cancel : hasLocalPin ? securityCopy.changePin : securityCopy.configurePin}</button>
+            </div>
+            {editingPin && <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-1.5"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">{hasLocalPin ? securityCopy.newPin : securityCopy.setupPin}</span><input required={draft.pinLockEnabled || newPin.length > 0 || confirmPin.length > 0} inputMode="numeric" pattern="[0-9]{4}" autoComplete="new-password" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))} className={fieldClass + ' tracking-[0.35em]'} /></label>
+              <label className="block space-y-1.5"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">{securityCopy.confirmPin}</span><input required={draft.pinLockEnabled || newPin.length > 0 || confirmPin.length > 0} inputMode="numeric" pattern="[0-9]{4}" autoComplete="new-password" maxLength={4} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))} className={fieldClass + ' tracking-[0.35em]'} /></label>
+            </div>}
+            <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{securityCopy.pinHelp}</p>
+          </section>
           {securityError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{securityError}</p>}
-          <SaveActions savedMessage={savedMessage} />
+          <SaveActions savedMessage={savedMessage} label={isSpanish ? 'Guardar seguridad' : 'Save security'} />
         </form>
       )}
     </div>
   );
 };
 
-const SaveActions: React.FC<{ savedMessage: string }> = ({ savedMessage }) => (
+const SaveActions: React.FC<{ savedMessage: string; label?: string }> = ({ savedMessage, label = 'Guardar cambios' }) => (
   <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
     <p role="status" className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{savedMessage}</p>
-    <button type="submit" className="btn-primary text-sm">Guardar cambios</button>
+    <button type="submit" className="btn-primary text-sm">{label}</button>
   </div>
 );

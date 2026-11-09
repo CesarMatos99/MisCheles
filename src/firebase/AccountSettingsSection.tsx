@@ -1,13 +1,14 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, Link2, MailCheck, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Link2, MailCheck, RefreshCw } from 'lucide-react';
 import { useAccountAuth } from './AccountAuthProvider';
 import { accountAuthMessage } from './accountAuthErrors';
 import { useLanguage } from '../i18n/LanguageContext';
+import type { VisibleIdentity } from '../domain/visibleIdentity';
 
 const inputClass = 'min-h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 dark:border-slate-700';
 const buttonClass = 'btn-primary min-h-11 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50';
 
-export const AccountSettingsSection: React.FC = () => {
+export const AccountSettingsSection: React.FC<{ identity: VisibleIdentity }> = ({ identity }) => {
   const {
     configured, ready, user, error: authError,
     changePassword, deleteAccount, linkPassword, linkGoogle,
@@ -120,25 +121,25 @@ export const AccountSettingsSection: React.FC = () => {
   }).filter(Boolean).join(', ');
   const accountError = authError ? accountAuthMessage(authError, language) : '';
 
-  return <section className='space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6' aria-labelledby='account-settings-title'>
-    <header className='space-y-1'>
-      <h2 id='account-settings-title' className='text-lg font-bold text-slate-950 dark:text-white'>{isSpanish ? 'Cuenta' : 'Account'}</h2>
-      <p className='text-sm leading-6 text-slate-500 dark:text-slate-400'>{isSpanish
-        ? 'La cuenta identifica tu sesión y mantiene separado su espacio local. Los movimientos se guardan en este navegador, no están cifrados por la aplicación y no se sincronizan; la sincronización aún no está disponible.'
-        : 'Your account identifies this session and uses a separate local namespace. Financial records stay in this browser, are not encrypted by the app, and are not synced; syncing is not available yet.'}</p>
-    </header>
+  return <section className='space-y-6' aria-labelledby='account-settings-title'>
+    <h2 id='account-settings-title' className='sr-only'>{isSpanish ? 'Cuenta y acceso' : 'Account and access'}</h2>
+    <p className='text-sm leading-6 text-slate-500 dark:text-slate-400'>{isSpanish
+      ? 'Tu cuenta mantiene separado su espacio local. Los movimientos permanecen en este navegador, no están cifrados por la aplicación y no se sincronizan.'
+      : 'Your account keeps its local workspace separate. Financial records stay in this browser, are not encrypted by the app, and are not synced.'}</p>
 
     {!ready ? <p role='status' className='text-sm text-slate-500'>{t('loadingAccount')}</p> : user ? <div className='space-y-5'>
-      <div className='flex min-w-0 items-start gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70'>
-        <span className='grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary'><ShieldCheck size={20} aria-hidden='true' /></span>
+      <div className='flex min-w-0 items-center gap-3'>
+        <span className='grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary'>
+          {identity.photoUrl ? <img src={identity.photoUrl} alt='' className='h-full w-full object-cover' /> : <span aria-hidden='true' className='text-lg font-bold'>{identity.name.charAt(0).toUpperCase()}</span>}
+        </span>
         <div className='min-w-0 flex-1'>
-          <p className='truncate font-semibold text-slate-900 dark:text-white'>{user.displayName || user.email || (isSpanish ? 'Cuenta de MisCheles' : 'MisCheles account')}</p>
+          <p className='truncate font-semibold text-slate-900 dark:text-white'>{identity.name}</p>
           {user.email && <p className='truncate text-sm text-slate-600 dark:text-slate-300'>{user.email}</p>}
           <p className='mt-1 text-xs text-slate-500 dark:text-slate-400'>{isSpanish ? 'Acceso mediante' : 'Signed in with'}: {providerNames || (isSpanish ? 'proveedor de cuenta' : 'account provider')}</p>
         </div>
       </div>
 
-      {user.email && <div className='flex flex-col gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between'>
+      {user.email && <div className='flex flex-col gap-3 border-y border-slate-200 py-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between'>
         <div className='flex items-center gap-2 text-sm'>
           <MailCheck size={18} className={verified ? 'text-emerald-600' : 'text-amber-600'} aria-hidden='true' />
           <span>{isSpanish ? 'Correo electrónico:' : 'Email address:'}</span>
@@ -161,7 +162,7 @@ export const AccountSettingsSection: React.FC = () => {
         <ul className='flex flex-wrap gap-2' aria-label={isSpanish ? 'Métodos vinculados' : 'Linked methods'}>
           {user.providerData.map(({ providerId }) => <li key={providerId} className='rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary'>{providerId === 'password' ? (isSpanish ? 'Correo y contraseña' : 'Email and password') : providerId === 'google.com' ? 'Google' : providerId}</li>)}
         </ul>
-        {!hasPasswordProvider && user.email && <form onSubmit={(event) => void submitLinkPassword(event)} className='space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700'>
+        {!hasPasswordProvider && user.email && <form onSubmit={(event) => void submitLinkPassword(event)} className='space-y-3 border-l-2 border-primary/30 pl-4'>
           <p className='text-sm font-medium'>{isSpanish ? `Agregar contraseña a ${user.email}` : `Add a password to ${user.email}`}</p>
           <label className='block space-y-1.5'><span className='text-sm'>{isSpanish ? 'Nueva contraseña (mínimo 12 caracteres)' : 'New password (at least 12 characters)'}</span><input required minLength={12} type='password' autoComplete='new-password' value={linkedPassword} onChange={(event) => setLinkedPassword(event.target.value)} className={inputClass} /></label>
           <label className='block space-y-1.5'><span className='text-sm'>{isSpanish ? 'Confirmar contraseña' : 'Confirm password'}</span><input required minLength={12} type='password' autoComplete='new-password' value={confirmLinkedPassword} onChange={(event) => setConfirmLinkedPassword(event.target.value)} className={inputClass} /></label>
