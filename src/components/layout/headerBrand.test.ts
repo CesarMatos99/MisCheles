@@ -7,7 +7,7 @@ describe('brand resource contract', () => {
     const html = readFileSync('index.html', 'utf8');
     const pdf = readFileSync('src/services/pdfReport.ts', 'utf8');
     expect(header).toContain('>MisCheles</span>');
-    expect(header).not.toContain('<img');
+    expect(header).not.toContain("src='/app-icon.png'");
     expect(html).toContain('href="/favicon.png"');
     expect(existsSync('public/favicon.png')).toBe(true);
     expect(existsSync('public/app-icon.png')).toBe(true);
@@ -18,9 +18,8 @@ describe('brand resource contract', () => {
     const header = readFileSync('src/components/layout/Header.tsx', 'utf8');
     const app = readFileSync('src/App.tsx', 'utf8');
     const floatingActions = readFileSync('src/components/layout/FloatingActions.tsx', 'utf8');
-    expect(header).toContain('user?.displayName?.trim() || profile.name');
-    expect(header).toContain('identityName.trim().split');
-    expect(header).toContain('¡Hola');
+    expect(header).toContain('resolveVisibleIdentity');
+    expect(header).toContain('identity.firstName');
     expect(header).toContain('hidden min-w-0 truncate text-base font-semibold text-app-foreground lg:block');
     expect(header).not.toContain('Nuevo registro');
     expect(header).not.toContain('onExpense');

@@ -24,6 +24,9 @@ import { accountAuthMessage } from '../../firebase/accountAuthErrors';
 import { localLockCredential } from '../../services/localLockCredential';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { ACCENT_COLORS } from '../../constants/accentColors';
+import { resolveVisibleIdentity } from '../../domain/visibleIdentity';
+import { useWebAccess } from '../../onboarding/WebAccessContext';
+import { FormattedAmountInput } from '../../components/ui/FormattedAmountInput';
 
 type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
 
@@ -36,6 +39,8 @@ interface ProfileViewProps {
   onProfileUpdated: (profile: UserProfile) => void;
   onOpenInstall: () => void;
   onLockApp: () => void;
+  navigationRequest: { id: number; section: 'home' | 'appearance' } | null;
+  onNavigationRequestHandled: (id: number) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -47,11 +52,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onProfileUpdated,
   onOpenInstall,
   onLockApp,
+  navigationRequest,
+  onNavigationRequestHandled,
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const { user, signOut } = useAccountAuth();
+  const { mode } = useWebAccess();
+  const isDemo = mode === 'demo';
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
+  const [monthlyTargetIncomeText, setMonthlyTargetIncomeText] = useState(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
   const [savedMessage, setSavedMessage] = useState('');
   const [newPin, setNewPin] = useState('');
   const [securityError, setSecurityError] = useState('');
@@ -59,9 +69,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [accountError, setAccountError] = useState('');
   const photoInput = useRef<HTMLInputElement>(null);
 
-  const identityName = user?.displayName?.trim() || profile.name || 'Usuario';
-  const identityEmail = user?.email || profile.email || 'Sin correo registrado';
-  const identityPhoto = user?.photoURL || profile.photoUrl;
+  const identity = resolveVisibleIdentity(profile, user, isDemo);
+  const identityName = identity.name;
+  const identityPhoto = identity.photoUrl;
   const isSpanish = language === 'es';
 
   const handleSignOut = async () => {
@@ -72,7 +82,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     finally { setAccountBusy(false); }
   };
 
-  useEffect(() => setDraft(profile), [profile]);
+  useEffect(() => {
+    setDraft(profile);
+    setMonthlyTargetIncomeText(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
+  }, [profile]);
+
+  useEffect(() => {
+    if (!navigationRequest) return;
+    setSection(navigationRequest.section);
+    onNavigationRequestHandled(navigationRequest.id);
+  }, [navigationRequest?.id]);
 
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -83,7 +102,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         if (draft.pinLockEnabled && !newPin && !(await localLockCredential.hasPin())) { setSecurityError('Configura un PIN de 4 dígitos antes de activar el bloqueo.'); return; }
       } catch (error) { setSecurityError(error instanceof Error ? error.message : 'No se pudo guardar el PIN.'); return; }
     }
-    const updated: UserProfile = { ...draft, name: draft.name.trim() || 'Usuario', email: draft.email.trim(), biometricsEnabled: false, monthlyTargetIncome: Number(draft.monthlyTargetIncome) || 0 };
+    const updated: UserProfile = {
+      ...draft,
+      name: isDemo ? identityName : draft.name.trim(),
+      email: isDemo ? '' : draft.email.trim(),
+      photoUrl: isDemo ? '' : draft.photoUrl,
+      currency: isDemo ? 'RD$' : draft.currency,
+      biometricsEnabled: false,
+      monthlyTargetIncome: Number(monthlyTargetIncomeText) || 0,
+    };
     financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
     setDraft(updated);
@@ -127,11 +154,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <>
           <section className="flex flex-col items-center gap-3 border-b border-slate-200 py-6 text-center dark:border-slate-800 sm:flex-row sm:items-center sm:gap-4 sm:text-left">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-white">
-              {identityPhoto ? <img src={identityPhoto} alt={identityName} className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
+              {isDemo ? <UserRound className="h-6 w-6" aria-hidden="true" /> : identityPhoto ? <img src={identityPhoto} alt={identityName} className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="type-section-title truncate text-slate-900 dark:text-white">{identityName}</h2>
-              <p className="type-secondary truncate">{identityEmail}</p>
+              {isDemo ? <p className="type-secondary truncate">Modo demostración · datos ficticios</p> : <>
+                <p className="type-secondary truncate"><span className="font-medium">Correo de la cuenta:</span> {identity.accountEmail || 'Sin correo registrado'}</p>
+                {identity.contactEmail && identity.contactEmail.toLowerCase() !== identity.accountEmail.toLowerCase() && <p className="type-secondary truncate"><span className="font-medium">Correo de contacto:</span> {identity.contactEmail}</p>}
+              </>}
               <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Moneda: {profile.currency}</p>
               {user && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{isSpanish ? 'Cuenta MisCheles · ' : 'MisCheles account · '}{user.emailVerified ? (isSpanish ? 'correo verificado' : 'email verified') : (isSpanish ? 'verificación pendiente' : 'verification pending')}</p>}
             </div>
@@ -170,8 +200,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {draft.photoUrl ? <img src={draft.photoUrl} alt={draft.name} className="h-full w-full object-cover" /> : draft.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-              <button type="button" onClick={() => photoInput.current?.click()} className="min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+              <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" disabled={isDemo} />
+              <button type="button" disabled={isDemo} onClick={() => photoInput.current?.click()} className="min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
                 <Camera className="mr-2 inline h-4 w-4" />Cambiar foto
               </button>
               <p className="mt-1 text-xs text-slate-500">La foto se guarda en este dispositivo.</p>
@@ -179,23 +209,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </section>
           <label className="block space-y-1.5">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre</span>
-            <input required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={fieldClass} />
+            <input disabled={isDemo} value={isDemo ? identityName : draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={fieldClass} />
           </label>
-          <label className="block space-y-1.5">
+          {!isDemo && <label className="block space-y-1.5">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Correo de contacto</span>
             <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} className={fieldClass} />
-            <span className="text-xs text-slate-500">Este correo de perfil no activa una cuenta ni sincroniza copias de seguridad.</span>
-          </label>
+            <span className="text-xs text-slate-500">Es independiente del correo usado para iniciar sesión.</span>
+          </label>}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block space-y-1.5">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Moneda</span>
-              <select value={draft.currency} onChange={(e) => setDraft({ ...draft, currency: e.target.value })} className={fieldClass}>
+              <select disabled={isDemo} value={draft.currency} onChange={(e) => setDraft({ ...draft, currency: e.target.value })} className={fieldClass}>
                 {CURRENCY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
             <label className="block space-y-1.5">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Ingreso base mensual</span>
-              <input type="number" min="0" value={draft.monthlyTargetIncome} onChange={(e) => setDraft({ ...draft, monthlyTargetIncome: Number(e.target.value) })} className={fieldClass} />
+              <FormattedAmountInput value={monthlyTargetIncomeText} onValueChange={setMonthlyTargetIncomeText} min="0" placeholder="" className={fieldClass} />
             </label>
           </div>
           <SaveActions savedMessage={savedMessage} />

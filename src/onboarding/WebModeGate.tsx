@@ -1,22 +1,18 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, Cloud, Eye, EyeOff, FlaskConical, WalletCards } from 'lucide-react';
+import { ArrowLeft, Cloud, Eye, EyeOff, FlaskConical } from 'lucide-react';
 import { useAccountAuth } from '../firebase/AccountAuthProvider';
 import { accountAuthMessage } from '../firebase/accountAuthErrors';
 import { setStorageScope } from '../services/storage';
 import { LANGUAGE_OPTIONS } from '../i18n/catalog';
 import { useLanguage } from '../i18n/LanguageContext';
-import { hasLegacyLocalFinancialData, resolveWebAccessState } from './webModePolicy';
+import { resolveWebAccessState } from './webModePolicy';
+import { WebAccessProvider } from './WebAccessContext';
 
 type AuthView = 'welcome' | 'signIn' | 'create' | 'reset';
 
 function navigateHome(): void {
   if (window.location.pathname !== '/') window.history.replaceState({}, '', '/');
   window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-function legacyFinancialDataExists(): boolean {
-  try { return hasLegacyLocalFinancialData(window.localStorage); }
-  catch { return false; }
 }
 
 export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -42,44 +38,33 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
 
   const isEnglish = language === 'en';
   const access = resolveWebAccessState(ready, user, demoActive);
-  const legacyLocalData = legacyFinancialDataExists();
   const copy = isEnglish ? {
-    title: 'Welcome to MisCheles', subtitle: 'A clear view of your money, savings, and spending.',
-    accountRequired: 'Sign in or create an account to open your private financial space.',
+    title: 'Your money, made clearer.', subtitle: 'Organize income, spending, and savings in one place.',
+    accountRequired: 'Sign in or create an account to open your financial space.',
     signIn: 'Sign in', create: 'Create account', google: 'Continue with Google',
-    demo: 'Explore the demo', demoHelp: 'Try the app with fictional records in a separate demo space.',
-    privacy: 'Your financial records stay in this browser. They are not encrypted by the app and are not backed up or synced to Firebase.',
-    legacy: 'Older guest financial records were found in this browser. They have been preserved and are not shown here or in the demo. Recovery or import is not available yet.',
+    demo: 'Explore the demo', demoHelp: 'Want to get to know MisCheles? Explore the demo with fictional data.',
     firebaseUnavailable: 'Firebase Authentication is not configured here. Configure it to use an account, or explore the isolated demo.',
     fullName: 'Name', email: 'Email', password: 'Password', confirmPassword: 'Confirm password (minimum 12 characters)',
     reset: 'Send reset instructions', resetSent: 'If the account exists, reset instructions will be sent by email.',
     registrationSent: 'Account created. Check your email and verify it before opening your financial space.',
     verificationTitle: 'Verify your email', verificationHelp: 'Confirm the email address for this account before opening its financial records. You can resend the message or check again after following its link.',
     resend: 'Resend verification email', checkVerified: 'I verified my email', retry: 'Retry connection', back: 'Back', pending: 'Sending…',
-    demoLabel: 'Demo mode · fictional data only', exitDemo: 'Exit demo',
-    signOut: 'Sign out', demoInfo: 'The demo uses a separate sample-data space. It does not read or change account or older local records.',
+    demoLabel: 'Demo mode · fictional data only', exitDemo: 'Exit the demo',
+    signOut: 'Sign out',
   } : {
-    title: 'Te damos la bienvenida a MisCheles', subtitle: 'Una forma clara de organizar tu dinero, tus ahorros y tus gastos.',
-    accountRequired: 'Inicia sesión o crea una cuenta para abrir tu espacio financiero privado.',
+    title: 'Tu dinero, más claro.', subtitle: 'Organiza tus ingresos, gastos y ahorros en un solo lugar.',
+    accountRequired: 'Inicia sesión o crea una cuenta para entrar a tu espacio financiero.',
     signIn: 'Iniciar sesión', create: 'Crear cuenta', google: 'Continuar con Google',
-    demo: 'Explorar demostración', demoHelp: 'Prueba la aplicación con registros ficticios en un espacio de demostración separado.',
-    privacy: 'Tus registros financieros permanecen en este navegador. La aplicación no los cifra ni los respalda o sincroniza con Firebase.',
-    legacy: 'Hay registros financieros anteriores de una sesión de invitado en este navegador. Se conservaron y no se muestran aquí ni en la demostración. La recuperación o importación aún no está disponible.',
+    demo: 'Explorar demostración', demoHelp: '¿Quieres conocer MisCheles? Explora la demostración con datos ficticios.',
     firebaseUnavailable: 'Firebase Authentication no está configurado aquí. Configúralo para usar una cuenta o explora la demostración aislada.',
     fullName: 'Nombre', email: 'Correo electrónico', password: 'Contraseña', confirmPassword: 'Confirmar contraseña (mínimo 12 caracteres)',
     reset: 'Enviar instrucciones', resetSent: 'Si la cuenta existe, recibirás instrucciones por correo.',
     registrationSent: 'Cuenta creada. Revisa tu correo y verifícalo antes de abrir tu espacio financiero.',
     verificationTitle: 'Verifica tu correo', verificationHelp: 'Confirma el correo de esta cuenta antes de abrir sus registros financieros. Puedes reenviar el mensaje o comprobarlo después de abrir el enlace.',
     resend: 'Reenviar correo de verificación', checkVerified: 'Ya verifiqué mi correo', retry: 'Reintentar conexión', back: 'Volver', pending: 'Enviando…',
-    demoLabel: 'Modo demostración · solo datos ficticios', exitDemo: 'Salir de la demo',
-    signOut: 'Cerrar sesión', demoInfo: 'La demo usa un espacio separado de datos de ejemplo. No lee ni modifica datos de cuentas ni registros locales anteriores.',
+    demoLabel: 'Modo demostración · solo datos ficticios', exitDemo: 'Salir de la demostración',
+    signOut: 'Cerrar sesión',
   };
-  const legacyNotice = legacyLocalData && <p role='note' className='rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm leading-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'>{copy.legacy}</p>;
-
-  useEffect(() => {
-    // Do not restore the former persistent guest/demo choice: every demo entry is explicit.
-    try { localStorage.removeItem('mischeles_web_mode_v1'); } catch { /* The financial app stays gated. */ }
-  }, []);
 
   useEffect(() => {
     // Scope switches to local only after the private/demo view has been unmounted.
@@ -176,20 +161,19 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
   };
 
   if (access === 'restoring') return <main className='grid min-h-screen place-items-center bg-app-background px-5 text-app-foreground'><p role='status' className='text-sm text-slate-500 dark:text-slate-400'>{t('loadingAccount')}</p></main>;
-  if (access === 'account') return <>{legacyNotice}{children}</>;
+  if (access === 'account') return <WebAccessProvider mode='account' exitDemo={() => undefined}>{children}</WebAccessProvider>;
 
-  if (access === 'demo') return <div className='min-h-screen bg-app-background text-app-foreground'>
+  if (access === 'demo') return <WebAccessProvider mode='demo' exitDemo={exitDemo}><div className='min-h-screen bg-app-background text-app-foreground'>
     <div className='flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-950 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100' role='status'>
-      <span>{copy.demoLabel}</span><span className='hidden font-normal sm:inline'>{copy.demoInfo}</span>
+      <span>{copy.demoLabel}</span>
       <button type='button' onClick={exitDemo} className='min-h-9 rounded-lg px-3 underline underline-offset-2 hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary dark:hover:bg-amber-900'>{copy.exitDemo}</button>
     </div>
     {children}
-  </div>;
+  </div></WebAccessProvider>;
 
   if (access === 'verification') return <main className='grid min-h-screen place-items-center bg-app-background px-4 py-8 text-app-foreground'>
     <section className='w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8'>
       <Brand language={language} setLanguage={setLanguage} />
-      {legacyNotice}
       <div><h1 className='text-2xl font-bold'>{copy.verificationTitle}</h1><p className='mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400'>{copy.verificationHelp}</p></div>
       <div className='rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800'><strong>{user?.displayName || (isEnglish ? 'Account' : 'Cuenta')}</strong><span className='mt-1 block break-all text-slate-600 dark:text-slate-300'>{user?.email}</span></div>
       {(error || authError) && <p role='alert' className='text-sm text-rose-600 dark:text-rose-400'>{error || accountAuthMessage(authError, language)}</p>}
@@ -214,9 +198,7 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
   return <main className='grid min-h-screen place-items-center bg-app-background px-4 py-8 text-app-foreground'>
     <section className='w-full max-w-lg space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8'>
       <Brand language={language} setLanguage={setLanguage} />
-      <header><p className='text-sm text-slate-500 dark:text-slate-400'>{t('monthlySummary')}</p><h1 className='mt-1 text-2xl font-bold tracking-tight'>{showForm ? formTitle : copy.title}</h1><p className='mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400'>{showForm ? copy.accountRequired : copy.subtitle}</p></header>
-      {legacyNotice}
-      <p className='text-xs leading-5 text-slate-500 dark:text-slate-400'>{copy.privacy}</p>
+      <header><h1 className='text-2xl font-bold tracking-tight'>{showForm ? formTitle : copy.title}</h1><p className='mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400'>{showForm ? copy.accountRequired : copy.subtitle}</p></header>
       {!configured && <div role='alert' className='space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'><p>{copy.firebaseUnavailable}</p>{authError === 'AUTH_SESSION_UNAVAILABLE' && <button type='button' disabled={busy} onClick={() => void retrySession().catch(() => undefined)} className='min-h-10 rounded-lg border border-amber-500 px-3 font-semibold disabled:opacity-50'>{copy.retry}</button>}</div>}
       {configured && authError && <div role='alert' className='space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'><p>{accountAuthMessage(authError, language)}</p>{authError === 'AUTH_SESSION_UNAVAILABLE' && <button type='button' disabled={busy} onClick={() => void retrySession().catch(() => undefined)} className='min-h-10 rounded-lg border border-amber-500 px-3 font-semibold disabled:opacity-50'>{copy.retry}</button>}</div>}
       {showForm ? <div className='space-y-4 border-y border-slate-200 py-5 dark:border-slate-800'>
@@ -246,7 +228,7 @@ export const WebModeGate: React.FC<React.PropsWithChildren> = ({ children }) => 
 
 const Brand: React.FC<{ language: string; setLanguage: (language: 'es' | 'en') => void }> = ({ language, setLanguage }) => (
   <div className='flex items-center justify-between gap-3'>
-    <div className='flex min-w-0 items-center gap-3'><span className='grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-white'><WalletCards size={22} aria-hidden='true' /></span><span className='truncate text-lg font-bold'>MisCheles</span></div>
+    <div className='flex min-w-0 items-center gap-3'><img src='/app-icon.png' alt='' className='h-11 w-11 shrink-0 object-contain' /><span className='truncate text-lg font-bold'>MisCheles</span></div>
     <label className='flex shrink-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400'><span className='sr-only'>{language === 'en' ? 'Display language' : 'Idioma de visualización'}</span><select aria-label={language === 'en' ? 'Display language' : 'Idioma de visualización'} value={language} onChange={(event) => setLanguage(event.target.value as 'es' | 'en')} className='rounded-lg border border-slate-200 bg-white px-2 py-2 text-app-foreground dark:border-slate-700 dark:bg-slate-900'>{LANGUAGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.nativeLabel}</option>)}</select></label>
   </div>
 );

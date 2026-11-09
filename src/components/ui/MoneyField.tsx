@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { FormattedAmountInput } from './FormattedAmountInput';
 
 interface MoneyFieldProps {
   label: string;
@@ -19,7 +20,7 @@ export function MoneyField({ label, currency, value, onValueChange, required = t
     <label htmlFor={id} className="block text-sm font-medium text-slate-600 dark:text-slate-300">{label} ({currency})</label>
     <div className="flex min-h-14 items-center overflow-hidden rounded-xl border border-slate-300 bg-transparent transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:border-slate-700">
       <span aria-hidden="true" className="shrink-0 pl-4 pr-2 text-base font-semibold text-slate-500 dark:text-slate-300">{currency}</span>
-      <input id={id} type="number" inputMode="decimal" step={step} required={required} min={min} max={max} autoFocus={autoFocus} value={value} onChange={event => onValueChange(event.target.value)} placeholder="0.00" className="type-money h-14 min-w-0 w-full bg-transparent px-2 pr-4 text-right text-xl font-bold text-app-foreground outline-none placeholder:text-slate-400" />
+      <FormattedAmountInput id={id} className="type-money h-14 min-w-0 w-full bg-transparent px-2 pr-4 text-right text-xl font-bold text-app-foreground outline-none placeholder:text-slate-400" min={min} max={max} step={step} required={required} autoFocus={autoFocus} value={value} onValueChange={onValueChange} />
     </div>
   </div>;
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clearAccountScope, preferredUnauthenticatedScope, setStorageScope, stageLegacyPinBeforeScopeChange, storageService } from './storage.ts';
+import { clearAccountScope, getScopedPreference, preferredUnauthenticatedScope, setScopedPreference, setStorageScope, stageLegacyPinBeforeScopeChange, storageService } from './storage.ts';
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -12,7 +12,7 @@ class MemoryStorage {
   clear() { this.values.clear(); }
 }
 
-test('demo, local, and account records are isolated and legacy local data is preserved', () => {
+test('demo, local, and account records are isolated without touching unrelated local data', () => {
   const memory = new MemoryStorage();
   memory.setItem('unrelated_application_key', 'preserve-me');
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: memory });
@@ -22,8 +22,7 @@ test('demo, local, and account records are isolated and legacy local data is pre
   setStorageScope('local');
   assert.equal(preferredUnauthenticatedScope(), 'local');
   memory.setItem('mischeles_web_mode_v1', 'demo');
-  assert.equal(preferredUnauthenticatedScope(), 'demo');
-  memory.setItem('mischeles_web_mode_v1', 'local');
+  assert.equal(preferredUnauthenticatedScope(), 'local', 'old persisted guest choices do not activate a workspace');
   assert.deepEqual(storageService.getTransactions(), []);
   assert.deepEqual(storageService.getSavingsMovements(), []);
   assert.deepEqual(storageService.getSavingsGoals(), []);
@@ -36,22 +35,50 @@ test('demo, local, and account records are isolated and legacy local data is pre
   storageService.setCloudRevision('transactions', localTx.id, 'time:42');
   assert.equal(JSON.parse(memory.getItem('mischeles_transactions_v3') || '[]')[0]?._cloudRevision, 'time:42');
 
-  const previousDemoKey = 'mischeles_demo_mischeles_transactions_v3';
-  memory.setItem(previousDemoKey, JSON.stringify([{ id: 'previous-demo-record' }]));
+  memory.setItem('mischeles_demo_v2_mischeles_user_profile_v2', JSON.stringify({
+    name: 'Cuenta anterior', email: 'private@example.com', photoUrl: '/private-photo.png', currency: 'USD',
+    biometricsEnabled: false, pinLockEnabled: true, monthlyTargetIncome: 98765,
+  }));
   setStorageScope('demo');
   const demoTransactions = storageService.getTransactions();
   assert.ok(demoTransactions.length > 0);
   assert.ok(!demoTransactions.some((item) => item.id === localTx.id));
-  assert.ok(!demoTransactions.some((item) => item.id === 'previous-demo-record'));
-  assert.equal(memory.getItem(previousDemoKey), JSON.stringify([{ id: 'previous-demo-record' }]), 'the prior guest namespace is preserved');
   assert.ok(memory.getItem('mischeles_demo_v2_mischeles_transactions_v3'), 'fictional demo records use their own versioned namespace');
   assert.ok(storageService.getSavingsGoals().length > 0);
+  const demoProfile = storageService.getProfile();
+  assert.equal(demoProfile.name, 'Usuario de demostración');
+  assert.equal(demoProfile.email, '');
+  assert.equal(demoProfile.photoUrl, '');
+  assert.equal(demoProfile.currency, 'RD$');
+  assert.equal(demoProfile.monthlyTargetIncome, 0);
   assert.equal(storageService.getProfile().pinLockEnabled, false);
+  storageService.saveProfile({ ...demoProfile, name: 'Cuenta real', email: 'private@example.com', photoUrl: '/private.png', currency: 'USD', monthlyTargetIncome: 4000 });
+  const savedDemoProfile = storageService.getProfile();
+  assert.equal(savedDemoProfile.name, 'Usuario de demostración');
+  assert.equal(savedDemoProfile.email, '');
+  assert.equal(savedDemoProfile.photoUrl, '');
+  assert.equal(savedDemoProfile.currency, 'RD$');
+  assert.equal(savedDemoProfile.monthlyTargetIncome, 4000, 'demo-only profile settings remain in the demo scope');
+  setScopedPreference('mischeles_accent_v2', '#00875A');
+  assert.equal(getScopedPreference('mischeles_accent_v2'), '#00875A');
+  setStorageScope('local');
+  assert.equal(getScopedPreference('mischeles_accent_v2'), null, 'demo preferences are not exposed in the local scope');
+  assert.equal(storageService.getProfile().monthlyTargetIncome, 0, 'demo profile settings do not leak into the local scope');
+  setStorageScope('demo');
+  assert.equal(getScopedPreference('mischeles_accent_v2'), '#00875A', 'demo preferences persist in their own namespace');
   storageService.resetAllData();
   assert.ok(storageService.getTransactions().length > 0, 'demo examples are restored on the next read');
   assert.equal(memory.getItem('unrelated_application_key'), 'preserve-me', 'reset only removes Mis Cheles keys');
 
   setStorageScope({ accountUid: 'uid-one' });
+  assert.equal(getScopedPreference('mischeles_accent_v2'), null, 'demo preferences are not shared with an account');
+  setScopedPreference('mischeles_accent_v2', '#6633CC');
+  storageService.applyCloudSnapshot('userSettings', [{
+    displayName: 'Cuenta UID uno', preferredCurrency: 'DOP', theme: 'dark', accentColor: '#00875A', language: 'en',
+  }], new Set());
+  assert.equal(getScopedPreference('presucontrol_theme_v1'), 'dark');
+  assert.equal(getScopedPreference('mischeles_accent_v2'), '#00875A');
+  assert.equal(getScopedPreference('mischeles_language_v1'), 'en');
   assert.deepEqual(storageService.getTransactions(), []);
   assert.equal(storageService.getMonthConfig('2026-09'), null);
   assert.deepEqual(storageService.getSavingsMovements(), []);
@@ -88,6 +115,8 @@ test('demo, local, and account records are isolated and legacy local data is pre
   setStorageScope('local');
   assert.deepEqual(storageService.getTransactions().map((item) => item.id), [localTx.id]);
   setStorageScope({ accountUid: 'uid-two' });
+  assert.equal(getScopedPreference('presucontrol_theme_v1'), null, 'UID two receives no theme preference from UID one');
+  assert.equal(getScopedPreference('mischeles_language_v1'), null, 'UID two receives no language preference from UID one');
   assert.deepEqual(storageService.getTransactions(), []);
   const secondAccountTx = storageService.addTransaction({
     monthKey: '2026-10', type: 'expense', amount: 500, category: 'Otro',
@@ -98,6 +127,8 @@ test('demo, local, and account records are isolated and legacy local data is pre
   setStorageScope({ accountUid: 'uid-one' });
   assert.ok(storageService.getTransactions().some((item) => item.id === accountTx.id));
   assert.ok(!storageService.getTransactions().some((item) => item.id === secondAccountTx.id));
+  assert.equal(getScopedPreference('presucontrol_theme_v1'), 'dark', 'UID one keeps its own persisted appearance');
+  assert.equal(getScopedPreference('mischeles_language_v1'), 'en', 'UID one keeps its own persisted language');
   setStorageScope({ accountUid: 'uid-two' });
   assert.ok(storageService.getTransactions().some((item) => item.id === secondAccountTx.id));
   setStorageScope('local');

@@ -3,6 +3,7 @@ import { currencyDisplayFromCode } from '../domain/currency.ts';
 import { calculateSavingsVaultBalance } from '../domain/financialSummary.ts';
 import { deriveSavingsGoalBalance, savingsGoalOpeningBalance } from '../domain/savingsBalance';
 import { savingsGoalDeletionKeys } from '../../shared/savingsGoalDeletion.ts';
+import { DEMO_IDENTITY_NAME } from '../domain/visibleIdentity';
 import type {
   Transaction,
   SavingsMovement,
@@ -24,7 +25,14 @@ const STORAGE_KEYS = {
 };
 
 const ACTIVE_ACCOUNT_SCOPE_KEY = 'mischeles_active_account_scope_v1';
-const SCOPED_STORAGE_KEYS = new Set<string>(Object.values(STORAGE_KEYS));
+const APP_PREFERENCE_KEYS = {
+  theme: 'presucontrol_theme_v1',
+  accentColor: 'mischeles_accent_v2',
+  language: 'mischeles_language_v1',
+  demoProfileVersion: 'mischeles_demo_profile_version_v1',
+} as const;
+export type ScopedPreferenceKey = typeof APP_PREFERENCE_KEYS.theme | typeof APP_PREFERENCE_KEYS.accentColor | typeof APP_PREFERENCE_KEYS.language;
+const SCOPED_STORAGE_KEYS = new Set<string>([...Object.values(STORAGE_KEYS), ...Object.values(APP_PREFERENCE_KEYS)]);
 function readInitialStorageScope(): string {
   // Never trust a persisted account selector before Firebase confirms the signed-in UID.
   try { localStorage.removeItem(ACTIVE_ACCOUNT_SCOPE_KEY); } catch { /* Storage can be unavailable. */ }
@@ -33,12 +41,31 @@ function readInitialStorageScope(): string {
 let activeStorageScope = readInitialStorageScope();
 function scopedStorageKey(key: string): string {
   if (activeStorageScope === 'local') return key;
-  // Keep the new fictional demo independent from any records entered in the former guest space.
+  // Store fictional demo records in a namespace separate from account and local records.
   if (activeStorageScope === 'demo') return 'mischeles_demo_v2_' + key;
   return 'mischeles_scope_' + activeStorageScope.slice('account:'.length) + '_' + key;
 }
 function readAppValue(key: string): string | null { return localStorage.getItem(scopedStorageKey(key)); }
 function writeAppValue(key: string, value: string): void { localStorage.setItem(scopedStorageKey(key), value); }
+export function getScopedPreference(key: ScopedPreferenceKey): string | null {
+  try { return readAppValue(key); } catch { return null; }
+}
+export function setScopedPreference(key: ScopedPreferenceKey, value: string): void {
+  try { writeAppValue(key, value); } catch { /* Preferences remain usable for the current session. */ }
+}
+function demoProfile(profile?: Partial<UserProfile>): UserProfile {
+  return {
+    ...defaultProfile,
+    ...profile,
+    name: DEMO_IDENTITY_NAME,
+    email: '',
+    photoUrl: '',
+    currency: 'RD$',
+    biometricsEnabled: false,
+    pinLockEnabled: false,
+    monthlyTargetIncome: Number.isFinite(profile?.monthlyTargetIncome) ? Number(profile?.monthlyTargetIncome) : 0,
+  };
+}
 function hasPinLockInActiveOrLocalScope(): boolean {
   try {
     const profileKeys = new Set([STORAGE_KEYS.USER_PROFILE, scopedStorageKey(STORAGE_KEYS.USER_PROFILE)]);
@@ -74,8 +101,7 @@ export function clearAccountScope(uid: string): void {
 }
 
 export function preferredUnauthenticatedScope(): 'local' | 'demo' {
-  try { return localStorage.getItem('mischeles_web_mode_v1') === 'demo' ? 'demo' : 'local'; }
-  catch { return 'local'; }
+  return 'local';
 }
 
 /** Preserve the one-time legacy PIN migration before an auth scope hides its profile. */
@@ -438,6 +464,14 @@ export const storageService = {
       const data = readAppValue(STORAGE_KEYS.USER_PROFILE);
       if (data) {
         const stored = JSON.parse(data) as UserProfile & { pinCode?: string };
+        if (activeStorageScope === 'demo') {
+          const version = readAppValue(APP_PREFERENCE_KEYS.demoProfileVersion);
+          const sanitized = demoProfile(version === '1' ? stored : undefined);
+          const serialized = JSON.stringify(sanitized);
+          if (serialized !== data) writeAppValue(STORAGE_KEYS.USER_PROFILE, serialized);
+          writeAppValue(APP_PREFERENCE_KEYS.demoProfileVersion, '1');
+          return sanitized;
+        }
         if (stored.pinCode) pendingLegacyLockPin = stored.pinCode;
         const safe = { ...stored, biometricsEnabled: false } as UserProfile & { pinCode?: string };
         delete safe.pinCode;
@@ -448,14 +482,19 @@ export const storageService = {
     } catch (e) {
       console.error(e);
     }
-    if (activeStorageScope === 'demo') return { ...defaultProfile, biometricsEnabled: false, pinLockEnabled: false };
+    if (activeStorageScope === 'demo') {
+      const fresh = demoProfile();
+      writeAppValue(APP_PREFERENCE_KEYS.demoProfileVersion, '1');
+      return fresh;
+    }
     return { ...defaultProfile, name: '', email: '', photoUrl: '', biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0 };
   },
 
   saveProfile(profile: UserProfile): void {
-    const safe = { ...profile, biometricsEnabled: false } as UserProfile & { pinCode?: string };
+    const safe = (activeStorageScope === 'demo' ? demoProfile(profile) : { ...profile, biometricsEnabled: false }) as UserProfile & { pinCode?: string };
     delete safe.pinCode;
     writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(safe));
+    if (activeStorageScope === 'demo') writeAppValue(APP_PREFERENCE_KEYS.demoProfileVersion, '1');
     notifyStorageMutation('userSettings', 'profile');
   },
 
@@ -878,9 +917,9 @@ export const storageService = {
         const current = this.getProfile();
         const updated = { ...current, name: String(settings.displayName || current.name), currency: currencyDisplayFromCode(settings.preferredCurrency, current.currency) };
         writeAppValue(STORAGE_KEYS.USER_PROFILE, JSON.stringify(updated));
-        if (typeof settings.theme === 'string') localStorage.setItem('presucontrol_theme_v1', settings.theme);
-        if (typeof settings.accentColor === 'string') localStorage.setItem('mischeles_accent_v2', settings.accentColor);
-        if (settings.language === 'es' || settings.language === 'en') localStorage.setItem('mischeles_language_v1', settings.language);
+        if (typeof settings.theme === 'string') writeAppValue(APP_PREFERENCE_KEYS.theme, settings.theme);
+        if (typeof settings.accentColor === 'string') writeAppValue(APP_PREFERENCE_KEYS.accentColor, settings.accentColor);
+        if (settings.language === 'es' || settings.language === 'en') writeAppValue(APP_PREFERENCE_KEYS.language, settings.language);
       }
     }
     notifyStorageMutation(collection, '*', 'upsert', 'remote');

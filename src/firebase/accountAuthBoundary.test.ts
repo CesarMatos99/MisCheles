@@ -48,15 +48,36 @@ test('web startup gates private routes and restores only an explicit demo or ver
   const onboarding = source('../onboarding/WebModeGate.tsx');
   const policy = source('../onboarding/webModePolicy.ts');
   assert.match(onboarding, /resolveWebAccessState\(ready, user, demoActive\)/);
-  assert.match(onboarding, /if \(access === 'account'\) return <\>\{legacyNotice\}\{children\}<\/>/);
+  assert.match(onboarding, /if \(access === 'account'\) return <WebAccessProvider mode='account'/);
   assert.match(onboarding, /if \(access === 'demo'\)/);
   assert.doesNotMatch(onboarding, /mode === 'local'|mode === 'legacyLocal'/);
-  assert.match(onboarding, /removeItem\('mischeles_web_mode_v1'\)/);
+  assert.doesNotMatch(onboarding, /legacyNotice|hasLegacyLocalFinancialData|mischeles_web_mode_v1/);
+  assert.doesNotMatch(onboarding, /Tus registros financieros permanecen|recuperación o importación/);
   assert.match(onboarding, /disabled=\{!configured \|\| busy\}/);
   assert.match(onboarding, /onClick=\{chooseDemo\}/);
+  assert.match(onboarding, /mode='demo' exitDemo=\{exitDemo\}/);
   assert.match(onboarding, /firebaseUnavailable/);
   assert.match(policy, /providerId === 'password'\) && !user\.emailVerified/);
   assert.match(onboarding, /navigateHome\(\)/);
+});
+
+test('welcome uses the original transparent MisCheles symbol and existing favicon asset', () => {
+  const onboarding = source('../onboarding/WebModeGate.tsx');
+  const index = source('../../index.html');
+  assert.match(onboarding, /src='\/app-icon\.png'/);
+  assert.doesNotMatch(onboarding, /WalletCards/);
+  assert.match(index, /href="\/favicon\.png"/);
+});
+
+test('profile and financial forms use editable grouped decimal amount inputs', () => {
+  const profile = source('../features/profile/ProfileView.tsx');
+  const moneyField = source('../components/ui/MoneyField.tsx');
+  const amountField = source('../components/ui/FormattedAmountInput.tsx');
+  assert.match(profile, /FormattedAmountInput/);
+  assert.match(moneyField, /FormattedAmountInput/);
+  assert.match(amountField, /type="text"/);
+  assert.match(amountField, /normalizeMoneyInput/);
+  assert.match(amountField, /validate\(event\.currentTarget, raw\)/);
 });
 
 test('sign-out hides the current workspace before Firebase completes and does not clear local records', () => {
@@ -69,11 +90,24 @@ test('sign-out hides the current workspace before Firebase completes and does no
 
 test('profile uses the active Firebase identity, exposes sign-out, and keeps guest auth forms outside Profile', () => {
   const profile = source('../features/profile/ProfileView.tsx');
+  const header = source('../components/layout/Header.tsx');
+  const dashboard = source('../features/dashboard/DashboardView.tsx');
   const account = source('./AccountSettingsSection.tsx');
   const adapter = source('./firebaseAuthAdapter.ts');
   assert.match(profile, /useAccountAuth\(\)/);
-  assert.match(profile, /user\?\.displayName/);
+  assert.match(profile, /resolveVisibleIdentity/);
+  assert.match(profile, /Correo de la cuenta/);
+  assert.match(profile, /Correo de contacto/);
   assert.match(profile, /onClick=\{\(\) => void handleSignOut\(\)\}/);
+  assert.match(header, /aria-haspopup="menu"/);
+  assert.match(header, /role="menu"/);
+  assert.match(header, /document.addEventListener\('pointerdown'/);
+  assert.match(header, /event.key === 'Escape'/);
+  assert.match(header, /onClick=\{\(\) => void handleSignOut\(\)\}/);
+  assert.match(header, /Salir de la demostración|Salir de la demo/);
+  assert.match(header, /onOpenSettings/);
+  assert.doesNotMatch(header, /Nuevo registro|New record/);
+  assert.match(dashboard, /resolveVisibleIdentity/);
   assert.doesNotMatch(account, /submitAuth|signInWithGoogle|createAccount/);
   assert.match(adapter, /linkWithCredential\(user/);
   assert.match(adapter, /linkWithPopup\(user/);

@@ -1,12 +1,12 @@
 import { isSavingsBudgetCategory } from './domain/transactionPresentation';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import {
   Transaction,
   UserProfile,
   SavingsMovementType,
 } from './types';
-import { getMonthKey, notifyStorageMutation, storageMutationEvent, type StorageMutation } from './services/storage';
+import { getMonthKey, getScopedPreference, notifyStorageMutation, setScopedPreference, storageMutationEvent, type StorageMutation } from './services/storage';
 import { financeApplication } from './application/financeApplication';
 import { useFinanceWorkspace } from './application/useFinanceWorkspace';
 import { useAppModals } from './application/useAppModals';
@@ -46,7 +46,7 @@ export default function App() {
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('presucontrol_theme_v1');
+      const saved = getScopedPreference('presucontrol_theme_v1');
       if (saved) return saved === 'dark';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     } catch {
@@ -54,7 +54,7 @@ export default function App() {
     }
   });
   const [accentColor, setAccentColor] = useState<string>(() => {
-    try { return normalizeAccentColor(localStorage.getItem('mischeles_accent_v2') || localStorage.getItem('mischeles_accent_v1')); } catch { return DEFAULT_ACCENT_COLOR; }
+    return normalizeAccentColor(getScopedPreference('mischeles_accent_v2'));
   });
 
   // App Lock State
@@ -84,9 +84,16 @@ export default function App() {
   }, [closeModuleModals]);
   const { activeTab, navigateToTab } = useAppNavigation(onModuleChange);
   const [analyticsSection, setAnalyticsSection] = useState<AnalyticsSection>('summary');
+  const [profileNavigationRequest, setProfileNavigationRequest] = useState<{ id: number; section: 'home' | 'appearance' } | null>(null);
+  const profileNavigationSequence = useRef(0);
   const navigateDesktopTab = (tab: ActiveTab) => {
     if (tab === 'statistics') setAnalyticsSection('summary');
     navigateToTab(tab);
+  };
+  const openProfileSection = (section: 'home' | 'appearance') => {
+    const id = ++profileNavigationSequence.current;
+    setProfileNavigationRequest({ id, section });
+    navigateToTab('profile');
   };
 
   useEffect(() => {
@@ -120,17 +127,17 @@ export default function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('presucontrol_theme_v1', 'dark');
+      setScopedPreference('presucontrol_theme_v1', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('presucontrol_theme_v1', 'light');
+      setScopedPreference('presucontrol_theme_v1', 'light');
     }
   }, [isDarkMode]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--app-primary', accentColor);
     document.documentElement.style.setProperty('--app-accent', accentColor);
-    try { localStorage.setItem('mischeles_accent_v2', accentColor); } catch { /* Storage may be unavailable in private browsing. */ }
+    setScopedPreference('mischeles_accent_v2', accentColor);
   }, [accentColor]);
 
   useEffect(() => {
@@ -139,8 +146,8 @@ export default function App() {
       if (detail?.origin !== 'remote') return;
       setProfile(financeApplication.getProfile());
       setIsLocked(financeApplication.isAppLocked());
-      setIsDarkMode(localStorage.getItem('presucontrol_theme_v1') === 'dark');
-      setAccentColor(normalizeAccentColor(localStorage.getItem('mischeles_accent_v2')));
+      setIsDarkMode(getScopedPreference('presucontrol_theme_v1') === 'dark');
+      setAccentColor(normalizeAccentColor(getScopedPreference('mischeles_accent_v2')));
     };
     window.addEventListener(storageMutationEvent, onRemoteSnapshot);
     return () => window.removeEventListener(storageMutationEvent, onRemoteSnapshot);
@@ -248,7 +255,8 @@ export default function App() {
           <Header
             isDarkMode={isDarkMode}
             onToggleTheme={() => { setIsDarkMode(!isDarkMode); notifyStorageMutation('userSettings', 'theme'); }}
-            onOpenProfile={() => navigateToTab('profile')}
+            onOpenProfile={() => openProfileSection('home')}
+            onOpenSettings={() => openProfileSection('appearance')}
             profile={profile}
           />
 
@@ -360,6 +368,8 @@ export default function App() {
             }}
             onOpenInstall={() => setIsInstallModalOpen(true)}
             onLockApp={handleLockApp}
+            navigationRequest={profileNavigationRequest}
+            onNavigationRequestHandled={(id) => setProfileNavigationRequest((current) => current?.id === id ? null : current)}
           />
         )}
       </main>

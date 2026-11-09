@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hasLegacyLocalFinancialData, resolveWebAccessState } from './webModePolicy.ts';
+import { resolveWebAccessState } from './webModePolicy.ts';
+import { resolveVisibleIdentity } from '../domain/visibleIdentity.ts';
 
 test('web access stays private until authentication or an explicit demo choice', () => {
   assert.equal(resolveWebAccessState(false, null, false), 'restoring');
@@ -16,10 +17,36 @@ test('password accounts require verified email while Google identity does not re
   assert.equal(resolveWebAccessState(true, { emailVerified: false, providerData: [{ providerId: 'google.com' }] }, false), 'account');
 });
 
-test('legacy local data detection checks only unscoped financial keys', () => {
-  const values = new Map<string, string>([['mischeles_transactions_v3', '[private data]']]);
-  assert.equal(hasLegacyLocalFinancialData({ getItem: (key) => values.get(key) ?? null }), true);
-  assert.equal(hasLegacyLocalFinancialData({ getItem: (key) => key === 'mischeles_demo_mischeles_transactions_v3' ? '[]' : null }), true);
-  assert.equal(hasLegacyLocalFinancialData({ getItem: () => null }), false);
-  assert.equal(hasLegacyLocalFinancialData({ getItem: () => { throw new Error('storage unavailable'); } }), false);
+test('demo identity never reads Firebase or a previously saved profile identity', () => {
+  const identity = resolveVisibleIdentity({
+    name: 'Cuenta anterior', email: 'private@example.com', photoUrl: '/private-photo.png', currency: 'USD',
+    biometricsEnabled: false, pinLockEnabled: true, monthlyTargetIncome: 98765,
+  }, { displayName: 'Cuenta real', email: 'real@example.com', photoURL: '/real-photo.png' }, true);
+  assert.equal(identity.name, 'Usuario de demostración');
+  assert.equal(identity.accountEmail, '');
+  assert.equal(identity.contactEmail, '');
+  assert.equal(identity.photoUrl, '');
+  assert.equal(identity.isDemo, true);
+});
+
+test('custom profile name is the visible identity and Firebase account email stays separate', () => {
+  const identity = resolveVisibleIdentity({
+    name: 'Nombre personalizado', email: 'contacto@example.com', photoUrl: '', currency: 'RD$',
+    biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0,
+  }, { displayName: 'Nombre de Google', email: 'cuenta@example.com' }, false);
+  assert.equal(identity.name, 'Nombre personalizado');
+  assert.equal(identity.firstName, 'Nombre');
+  assert.equal(identity.accountEmail, 'cuenta@example.com');
+  assert.equal(identity.contactEmail, 'contacto@example.com');
+});
+
+test('an empty or generic profile name falls back to Firebase before the generic greeting', () => {
+  const profile = {
+    name: 'Usuario', email: '', photoUrl: '', currency: 'RD$',
+    biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0,
+  };
+  assert.equal(resolveVisibleIdentity(profile, { displayName: 'Ana Pérez' }, false).name, 'Ana Pérez');
+  const generic = resolveVisibleIdentity({ ...profile, name: '' }, null, false);
+  assert.equal(generic.name, 'Usuario');
+  assert.equal(generic.firstName, '');
 });

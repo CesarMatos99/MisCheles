@@ -5,7 +5,7 @@ import { firebaseAuth, firestore } from './client';
 import { migrationDocumentId, previewLegacyMigration, type LegacyCollection } from '../services/localMigrationService';
 import { currencyCodeFromDisplay } from '../domain/currency';
 import { cloudRevision, CloudRevisionConflictError, isStaleCloudWrite } from './syncRevision';
-import { getScopedStorageReader, preferredUnauthenticatedScope, setStorageScope, storageMutationEvent, storageService, type StorageMutation, type SyncCollection } from '../services/storage';
+import { getScopedPreference, getScopedStorageReader, preferredUnauthenticatedScope, setStorageScope, storageMutationEvent, storageService, type StorageMutation, type SyncCollection } from '../services/storage';
 
 const INCLUDED_SAMPLES_KEY = 'mischeles_sync_included_samples_v1';
 let activeUid: string | null = null;
@@ -88,9 +88,9 @@ function reportSyncError(error: unknown) {
 
 function userSettingsPayload(uid: string) {
   const profile = storageService.getProfile();
-  const theme = localStorage.getItem('presucontrol_theme_v1') || 'light';
-  const language = localStorage.getItem('mischeles_language_v1') || 'es';
-  const accentColor = localStorage.getItem('mischeles_accent_v2') || '#012677';
+  const theme = getScopedPreference('presucontrol_theme_v1') || 'light';
+  const language = getScopedPreference('mischeles_language_v1') || 'es';
+  const accentColor = getScopedPreference('mischeles_accent_v2') || '#012677';
   return { ownerUid: uid, schemaVersion: 1, updatedAt: serverTimestamp(), displayName: profile.name, preferredCurrency: currencyCodeFromDisplay(profile.currency), language, theme, accentColor };
 }
 

@@ -1,25 +1,23 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppLanguage, getLanguageLocale, translate, TranslationKey } from './catalog';
-import { notifyStorageMutation, storageMutationEvent, type StorageMutation } from '../services/storage';
+import { getScopedPreference, notifyStorageMutation, setScopedPreference, storageMutationEvent, type StorageMutation } from '../services/storage';
 
 const LANGUAGE_KEY = 'mischeles_language_v1';
 interface LanguageContextValue { language: AppLanguage; locale: string; setLanguage: (language: AppLanguage) => void; t: (key: TranslationKey) => string; }
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readLanguage(): AppLanguage {
-  try { return localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'es'; } catch { return 'es'; }
-}
+function readLanguage(): AppLanguage { return getScopedPreference(LANGUAGE_KEY) === 'en' ? 'en' : 'es'; }
 
 export const LanguageProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [language, setLanguageState] = useState<AppLanguage>(readLanguage);
   const setLanguage = (value: AppLanguage) => {
     // Persist before dispatching the sync event so account sync reads the new value immediately.
-    try { localStorage.setItem(LANGUAGE_KEY, value); } catch { /* Storage can be unavailable in private browsing. */ }
+    setScopedPreference(LANGUAGE_KEY, value);
     setLanguageState(value);
     notifyStorageMutation('userSettings', 'language');
   };
   useEffect(() => {
-    try { localStorage.setItem(LANGUAGE_KEY, language); } catch { /* Storage can be unavailable in private browsing. */ }
+    setScopedPreference(LANGUAGE_KEY, language);
     document.documentElement.lang = language;
   }, [language]);
   useEffect(() => {

@@ -13,6 +13,9 @@ import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { getCategoryPresentation } from '../../domain/categoryPresentation';
 import { availableBalanceTrend } from '../../domain/availableBalanceTrend';
 import { AvailableBalanceChart } from './AvailableBalanceChart';
+import { resolveVisibleIdentity } from '../../domain/visibleIdentity';
+import { useAccountAuth } from '../../firebase/AccountAuthProvider';
+import { useWebAccess } from '../../onboarding/WebAccessContext';
 
 interface DashboardViewProps {
   year: number;
@@ -58,8 +61,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenTransactions,
 }) => {
   const { t, locale, language } = useLanguage();
+  const { user } = useAccountAuth();
+  const { mode } = useWebAccess();
   const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(year, month - 1, 1));
-  const firstName = profile.name.trim().split(/\s+/)[0] || 'Usuario';
+  const identity = resolveVisibleIdentity(profile, user, mode === 'demo');
+  const greeting = identity.isDemo ? (language === 'en' ? 'Demo workspace' : 'Modo demostración') : identity.firstName ? (language === 'en' ? 'Hello, ' : '¡Hola, ') + identity.firstName + '!' : (language === 'en' ? 'Hello!' : '¡Hola!');
   const money = (value: number) => profile.currency + ' ' + value.toLocaleString(locale, { maximumFractionDigits: 2 });
   const expenses = transactions.filter(isConsumptionExpenseTransaction);
 
@@ -91,7 +97,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="app-page mx-auto w-full max-w-none pb-6 animate-in fade-in duration-200">
-      <PageHeader eyebrow={(locale.startsWith('en') ? 'Hello' : 'Hola') + ' ' + firstName} title={t('moneyOverview')} period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExport} />} />
+      <PageHeader eyebrow={greeting} title={t('moneyOverview')} period={<PeriodSelector year={year} month={month} onMonthChange={onMonthChange} />} actions={<ExportButton onClick={onOpenExport} />} />
 
       {(!monthConfig || !monthConfig.isConfigured) && (
         <button onClick={onOpenMonthSetup} className='flex w-full items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft p-3 text-left text-sm text-primary dark:border-primary/30 dark:bg-primary-soft dark:text-primary'>

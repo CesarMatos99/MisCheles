@@ -48,8 +48,8 @@ describe('responsive visual contract', () => {
     for (const { value } of ACCENT_COLORS) expect(contrastRatio(value, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
     expect(normalizeAccentColor('#047857')).toBe('#047857');
     expect(normalizeAccentColor('#002991')).toBe(DEFAULT_ACCENT_COLOR);
-    expect(app).toContain("localStorage.setItem('mischeles_accent_v2', accentColor)");
-    expect(app).toContain('normalizeAccentColor(localStorage.getItem');
+    expect(app).toContain("setScopedPreference('mischeles_accent_v2', accentColor)");
+    expect(app).toContain("normalizeAccentColor(getScopedPreference('mischeles_accent_v2'))");
     expect(css).toContain('--app-focus: color-mix(in srgb, var(--app-primary) 58%, white)');
     expect(css).toContain(':root.dark');
   });
@@ -91,7 +91,8 @@ describe('responsive visual contract', () => {
     expect(floatingActions).toContain('Registrar gasto');
     expect(floatingActions).toContain('Registrar ingreso');
     expect(floatingActions).toContain('Registrar transferencia');
-    expect(dashboard).toContain("locale.startsWith('en') ? 'Hello' : 'Hola'");
+    expect(dashboard).toContain('resolveVisibleIdentity');
+    expect(dashboard).toContain('identity.firstName');
   });
 
   test('uses tertiary visual controls without changing the month or export button semantics', () => {
