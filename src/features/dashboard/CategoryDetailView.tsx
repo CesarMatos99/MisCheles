@@ -2,7 +2,7 @@ import { isConsumptionExpenseTransaction, normalizeFinancialCategory } from '../
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { unmatchedSavingsContributionAmount } from '../../domain/financialSummary';
 import React from 'react';
-import { ArrowLeft, CalendarDays, Pencil, Receipt, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import { CategoryBudget, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
@@ -18,11 +18,12 @@ interface CategoryDetailViewProps {
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (id: string) => void;
   onManageBudget: () => void;
+  onOpenSavingsModal: () => void;
 }
 
 const normalizeCategory = normalizeFinancialCategory;
 
-export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category, monthLabel, budget, transactions, savingsMovements, profile, onBack, onEditTransaction, onDeleteTransaction, onManageBudget }) => {
+export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category, monthLabel, budget, transactions, savingsMovements, profile, onBack, onEditTransaction, onDeleteTransaction, onManageBudget, onOpenSavingsModal }) => {
   const { language } = useLanguage();
   const displayCategory = localizeCategoryName(language, category);
   const money = (value: number) => profile.currency + ' ' + Math.abs(value).toLocaleString('es-DO', { maximumFractionDigits: 2 });
@@ -48,7 +49,8 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({ category
       </header>
 
       <section aria-label='Resumen de categoría' className='rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900'>
-        <div className='mb-3 flex justify-end'>
+        <div className={'mb-3 flex flex-wrap items-center gap-2 ' + (isSavings ? 'justify-between' : 'justify-end')}>
+          {isSavings && <button type='button' onClick={onOpenSavingsModal} className='inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 text-sm font-semibold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'><Plus className='h-4 w-4' aria-hidden='true' />Aportar dinero</button>}
           <button type='button' onClick={onManageBudget} className='inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-semibold text-primary transition hover:bg-primary-soft'>{budget ? 'Editar monto' : 'Asignar monto'}</button>
         </div>
         <div className='flex items-start justify-between gap-4'>

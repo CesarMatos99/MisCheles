@@ -8,7 +8,6 @@ import {
   Trash2,
   Calendar,
   Target,
-  SlidersHorizontal,
   Clock3,
   Check,
   AlertCircle,
@@ -145,7 +144,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
             <p className="type-display type-money mt-1 text-primary">{profile.currency} {summary.totalSavingsVault.toLocaleString()}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Saldo vigente del fondo.</p>
           </div>
-          <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month')} className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 text-sm"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" />Gestionar ahorro</button>
+          <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month')} className="btn-primary inline-flex shrink-0 items-center justify-center gap-2 text-sm"><Plus className="h-4 w-4" aria-hidden="true" />Aportar dinero</button>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800/80 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-slate-200/80 dark:sm:divide-slate-800/80">
           <div className="sm:pr-4"><p className="text-xs text-slate-500 dark:text-slate-400">Ahorro libre</p><p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{profile.currency} {totalFreeSavings.toLocaleString()}</p></div>

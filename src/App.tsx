@@ -275,6 +275,7 @@ export default function App() {
               onBack={() => setSelectedCategory(null)}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
+              onOpenSavingsModal={() => handleOpenSavingsModal('deposit_from_month')}
               onManageBudget={() => {
                 const hasBudget = categoryBudgets.some((budget) => budget.category.localeCompare(selectedCategory, 'es-DO', { sensitivity: 'base' }) === 0);
                 setEditingCategory(hasBudget ? selectedCategory : null);
