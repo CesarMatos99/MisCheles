@@ -31,13 +31,38 @@ test('demo identity never reads Firebase or a previously saved profile identity'
 
 test('custom profile name is the visible identity and Firebase account email stays separate', () => {
   const identity = resolveVisibleIdentity({
-    name: 'Nombre personalizado', email: 'contacto@example.com', photoUrl: '', currency: 'RD$',
+    name: 'Nombre personalizado', email: 'contacto@example.com', photoUrl: '/mischeles-photo.png', currency: 'RD$',
     biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0,
-  }, { displayName: 'Nombre de Google', email: 'cuenta@example.com' }, false);
+  }, { displayName: 'Nombre de Google', email: 'cuenta@example.com', photoURL: '/google-photo.png' }, false);
   assert.equal(identity.name, 'Nombre personalizado');
   assert.equal(identity.firstName, 'Nombre');
   assert.equal(identity.accountEmail, 'cuenta@example.com');
   assert.equal(identity.contactEmail, 'contacto@example.com');
+  assert.equal(identity.photoUrl, '/mischeles-photo.png');
+});
+
+test('Google identity supplies the initial display name, account email, and photo when no MisCheles overrides exist', () => {
+  const profile = {
+    name: '', email: '', photoUrl: '', currency: 'RD$',
+    biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0,
+  };
+  const google = { displayName: 'Ana Pérez', email: 'ana@example.com', photoURL: '/google-photo.png' };
+  const identity = resolveVisibleIdentity(profile, google, false);
+  assert.equal(identity.name, google.displayName);
+  assert.equal(identity.accountEmail, google.email);
+  assert.equal(identity.photoUrl, google.photoURL);
+});
+
+test('email and password registration name remains the initial identity until customized in MisCheles', () => {
+  const profile = {
+    name: '', email: '', photoUrl: '', currency: 'RD$',
+    biometricsEnabled: false, pinLockEnabled: false, monthlyTargetIncome: 0,
+  };
+  const registered = { displayName: 'Luis Ramos', email: 'luis@example.com', photoURL: null };
+  const identity = resolveVisibleIdentity(profile, registered, false);
+  assert.equal(identity.name, registered.displayName);
+  assert.equal(identity.accountEmail, registered.email);
+  assert.equal(identity.photoUrl, '');
 });
 
 test('an empty or generic profile name falls back to Firebase before the generic greeting', () => {

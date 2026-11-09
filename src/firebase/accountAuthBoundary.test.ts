@@ -69,11 +69,15 @@ test('welcome uses the original transparent MisCheles symbol and existing favico
   assert.match(index, /href="\/favicon\.png"/);
 });
 
-test('profile and financial forms use editable grouped decimal amount inputs', () => {
+test('financial amounts stay editable and monthly income remains configured from the existing dashboard flow', () => {
   const profile = source('../features/profile/ProfileView.tsx');
+  const dashboard = source('../features/dashboard/DashboardView.tsx');
+  const monthSetup = source('../components/modals/MonthSetupModal.tsx');
   const moneyField = source('../components/ui/MoneyField.tsx');
   const amountField = source('../components/ui/FormattedAmountInput.tsx');
-  assert.match(profile, /FormattedAmountInput/);
+  assert.doesNotMatch(profile, /Ingreso base mensual/);
+  assert.match(dashboard, /onOpenMonthSetup/);
+  assert.match(monthSetup, /profile\.monthlyTargetIncome/);
   assert.match(moneyField, /FormattedAmountInput/);
   assert.match(amountField, /type="text"/);
   assert.match(amountField, /normalizeMoneyInput/);
@@ -88,7 +92,7 @@ test('sign-out hides the current workspace before Firebase completes and does no
   assert.match(adapter, /await signOut\(requireAuth\(auth\)\)/);
 });
 
-test('profile shares the active identity and exposes sign-out only in the header menu', () => {
+test('profile combines personal identity and account access under My account', () => {
   const profile = source('../features/profile/ProfileView.tsx');
   const header = source('../components/layout/Header.tsx');
   const dashboard = source('../features/dashboard/DashboardView.tsx');
@@ -96,16 +100,23 @@ test('profile shares the active identity and exposes sign-out only in the header
   const adapter = source('./firebaseAuthAdapter.ts');
   assert.match(profile, /useAccountAuth\(\)/);
   assert.match(profile, /resolveVisibleIdentity/);
-  assert.match(profile, /Correo de contacto/);
-  assert.match(profile, /AccountSettingsSection identity=\{identity\}/);
+  assert.match(profile, /'Mi cuenta'/);
+  assert.match(profile, /AccountSettingsSection\s*\/>/);
   assert.match(profile, /identityPhoto/);
+  assert.match(profile, /identity\.accountEmail/);
+  assert.match(profile, /user\.emailVerified/);
+  assert.match(profile, /saveVisibleName/);
+  assert.match(profile, /updateCurrency/);
   assert.match(profile, /financeApplication\.saveProfile\(updated\)/);
   assert.match(profile, /onProfileUpdated\(updated\)/);
+  assert.doesNotMatch(profile, /updateProfile\(|updateDisplayName\(/);
+  assert.doesNotMatch(profile, /Datos personales|section === 'profile'|setSection\('profile'\)/);
+  assert.doesNotMatch(profile, /Ingreso base mensual/);
   assert.match(profile, /max-w-5xl/);
   assert.doesNotMatch(profile, /handleSignOut|LogOut|<LogOut/);
-  const homeSection = profile.match(/\{section === 'home' && \([\s\S]*?\{section === 'profile'/)?.[0] || '';
+  const homeSection = profile.match(/\{section === 'home' && \([\s\S]*?\{section === 'appearance'/)?.[0] || '';
   assert.doesNotMatch(homeSection, /onLockApp|signOut|Cerrar sesión/);
-  for (const section of ['profile', 'account', 'appearance', 'security']) assert.match(profile, new RegExp(`setSection\\('${section}'\\)`));
+  for (const section of ['account', 'appearance', 'security']) assert.match(profile, new RegExp(`setSection\\('${section}'\\)`));
   assert.match(profile, /onOpenInstall/);
   assert.match(header, /aria-haspopup="menu"/);
   assert.match(header, /role="menu"/);
@@ -116,9 +127,7 @@ test('profile shares the active identity and exposes sign-out only in the header
   assert.match(header, /onOpenSettings/);
   assert.doesNotMatch(header, /Nuevo registro|New record/);
   assert.match(dashboard, /resolveVisibleIdentity/);
-  assert.match(account, /identity: VisibleIdentity/);
-  assert.match(account, /identity\.photoUrl/);
-  assert.match(account, /identity\.name/);
+  assert.doesNotMatch(account, /VisibleIdentity|identity\.photoUrl|identity\.name/);
   assert.doesNotMatch(account, /rounded-2xl border border-slate-200 bg-white/);
   assert.doesNotMatch(account, /user\.displayName/);
   assert.doesNotMatch(account, /submitAuth|signInWithGoogle|createAccount/);
@@ -147,4 +156,15 @@ test('welcome and sign-in keep one compact hierarchy with sign-in as the primary
   assert.match(onboarding, /¿Todavía no tienes cuenta\?/);
   assert.match(onboarding, /copy\.demo/);
   assert.doesNotMatch(onboarding, /<Cloud/);
+});
+
+test('public welcome and auth forms share a centered 500px responsive card with vertical overflow', () => {
+  const onboarding = source('../onboarding/WebModeGate.tsx');
+  assert.match(onboarding, /min-h-\[100svh\].*overflow-y-auto/);
+  assert.match(onboarding, /max-w-\[500px\]/);
+  assert.match(onboarding, /place-items-center/);
+  assert.match(onboarding, /p-5.*sm:p-8/);
+  assert.match(onboarding, /min-h-\[3\.25rem\] w-full/);
+  assert.match(onboarding, /h-12 w-12.*sm:h-14 sm:w-14/);
+  assert.equal((onboarding.match(/max-w-\[500px\]/g) || []).length, 1);
 });

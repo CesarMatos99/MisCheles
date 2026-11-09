@@ -7,7 +7,6 @@ import {
   Lock,
   Moon,
   Palette,
-  Shield,
   Smartphone,
   Sun,
   UserRound,
@@ -24,9 +23,8 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { ACCENT_COLORS } from '../../constants/accentColors';
 import { resolveVisibleIdentity } from '../../domain/visibleIdentity';
 import { useWebAccess } from '../../onboarding/WebAccessContext';
-import { FormattedAmountInput } from '../../components/ui/FormattedAmountInput';
 
-type ProfileSection = 'home' | 'profile' | 'appearance' | 'security' | 'account';
+type ProfileSection = 'home' | 'appearance' | 'security' | 'account';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -60,7 +58,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [section, setSection] = useState<ProfileSection>('home');
   const [draft, setDraft] = useState<UserProfile>(profile);
   const [editingName, setEditingName] = useState(false);
-  const [monthlyTargetIncomeText, setMonthlyTargetIncomeText] = useState(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
   const [savedMessage, setSavedMessage] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -93,7 +90,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   useEffect(() => {
     setDraft(profile);
     setEditingName(false);
-    setMonthlyTargetIncomeText(profile.monthlyTargetIncome > 0 ? String(profile.monthlyTargetIncome) : '');
   }, [profile]);
 
   useEffect(() => {
@@ -145,12 +141,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
     const updated: UserProfile = {
       ...draft,
-      name: isDemo ? identityName : draft.name.trim(),
-      email: isDemo ? '' : draft.email.trim(),
-      photoUrl: isDemo ? '' : draft.photoUrl,
-      currency: isDemo ? 'RD$' : draft.currency,
+      name: profile.name,
+      email: profile.email,
+      photoUrl: profile.photoUrl,
+      currency: profile.currency,
       biometricsEnabled: false,
-      monthlyTargetIncome: Number(monthlyTargetIncomeText) || 0,
+      monthlyTargetIncome: profile.monthlyTargetIncome,
     };
     financeApplication.saveProfile(updated);
     onProfileUpdated(updated);
@@ -159,6 +155,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setNewPin('');
     setSavedMessage('Cambios guardados');
     window.setTimeout(() => setSavedMessage(''), 2200);
+  };
+
+  const saveVisibleName = (event: React.FormEvent) => {
+    event.preventDefault();
+    const updated = { ...profile, name: draft.name.trim() };
+    financeApplication.saveProfile(updated);
+    onProfileUpdated(updated);
+    setDraft(updated);
+    setEditingName(false);
+    setSavedMessage(isSpanish ? 'Nombre actualizado' : 'Name updated');
+    window.setTimeout(() => setSavedMessage(''), 2200);
+  };
+
+  const updateCurrency = (currency: string) => {
+    const updated = { ...profile, currency };
+    financeApplication.saveProfile(updated);
+    onProfileUpdated(updated);
+    setDraft(updated);
   };
 
   const handlePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,15 +189,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     event.target.value = '';
   };
 
-  const accountAccessLabel = isSpanish ? 'Cuenta y acceso' : 'Account & access';
-  const title = section === 'profile'
-    ? t('profileData')
-    : section === 'appearance'
+  const accountLabel = isSpanish ? 'Mi cuenta' : 'My account';
+  const title = section === 'appearance'
     ? t('appearance')
     : section === 'security'
     ? t('security')
     : section === 'account'
-    ? accountAccessLabel
+    ? accountLabel
     : t('profile');
 
   const fieldClass = 'app-field';
@@ -213,16 +225,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {user && <p className={'text-xs font-semibold ' + (user.emailVerified ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-300')}>
               {user.emailVerified ? (isSpanish ? 'Correo verificado' : 'Email verified') : (isSpanish ? 'Verificación pendiente' : 'Verification pending')}
             </p>}
-            <button type="button" disabled={isDemo} onClick={() => photoInput.current?.click()} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-primary transition hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-70">
-              <Camera className="h-4 w-4" aria-hidden="true" />{isSpanish ? 'Cambiar foto' : 'Change photo'}
-            </button>
           </section>
           <nav className="divide-y divide-slate-200 dark:divide-slate-800" aria-label={isSpanish ? 'Opciones de perfil' : 'Profile settings'}>
-            <button type="button" onClick={() => setSection('profile')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <UserRound className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('profileData')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Nombre, foto y preferencias personales' : 'Name, photo, and personal preferences'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
-            </button>
             <button type="button" onClick={() => setSection('account')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <Shield className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{accountAccessLabel}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Correo, proveedores y contraseña' : 'Email, providers, and password'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
+              <UserRound className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{accountLabel}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Identidad y métodos de acceso' : 'Identity and sign-in methods'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
             <button type="button" onClick={() => setSection('appearance')} className="flex min-h-16 w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
               <Palette className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{t('appearance')}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Idioma, tema y color' : 'Language, theme, and color'}</span></span><ChevronRight className="h-4 w-4 text-slate-400" />
@@ -235,42 +241,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </button>
           </nav>
         </>
-      )}
-
-      {section === 'profile' && (
-        <form onSubmit={saveProfile} className="space-y-5 py-5">
-          <section className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-2xl font-bold text-white">
-              {isDemo ? <UserRound className="h-6 w-6" aria-hidden="true" /> : identityPhoto ? <img src={identityPhoto} alt="" className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0"><p className="truncate font-semibold text-slate-900 dark:text-white">{identityName}</p><p className="text-xs text-slate-500 dark:text-slate-400">{isSpanish ? 'Identidad compartida en MisCheles' : 'Shared MisCheles identity'}</p></div>
-          </section>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nombre</span>
-            <input disabled={isDemo} value={isDemo ? identityName : editingName ? draft.name : (draft.name.trim() && draft.name.trim().toLocaleLowerCase('es') !== 'usuario' ? draft.name : identityName)} onFocus={() => {
-              if (!editingName) setDraft((current) => ({ ...current, name: current.name.trim() && current.name.trim().toLocaleLowerCase('es') !== 'usuario' ? current.name : identityName }));
-              setEditingName(true);
-            }} onChange={(e) => { setEditingName(true); setDraft({ ...draft, name: e.target.value }); }} className={fieldClass} />
-          </label>
-          {!isDemo && <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Correo de contacto</span>
-            <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} className={fieldClass} />
-            <span className="text-xs text-slate-500">Es independiente del correo usado para iniciar sesión.</span>
-          </label>}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block space-y-1.5">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Moneda</span>
-              <select disabled={isDemo} value={draft.currency} onChange={(e) => setDraft({ ...draft, currency: e.target.value })} className={fieldClass}>
-                {CURRENCY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Ingreso base mensual</span>
-              <FormattedAmountInput value={monthlyTargetIncomeText} onValueChange={setMonthlyTargetIncomeText} min="0" placeholder="" className={fieldClass} />
-            </label>
-          </div>
-          <SaveActions savedMessage={savedMessage} />
-        </form>
       )}
 
       {section === 'appearance' && (
@@ -309,10 +279,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               })}
             </div>
           </section>
+          <section className="border-t border-slate-200 pt-5 dark:border-slate-800">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{isSpanish ? 'Moneda predeterminada' : 'Default currency'}</h2>
+            <label className="mt-3 block max-w-sm">
+              <span className="sr-only">{isSpanish ? 'Moneda predeterminada' : 'Default currency'}</span>
+              <select disabled={isDemo} value={draft.currency} onChange={(event) => updateCurrency(event.target.value)} className={fieldClass}>
+                {CURRENCY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+          </section>
         </div>
       )}
 
-      {section === 'account' && <AccountSettingsSection identity={identity} />}
+      {section === 'account' && <div className="space-y-6 py-5">
+        <form onSubmit={saveVisibleName} className="space-y-4">
+          <section className="flex flex-wrap items-center gap-4">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-2xl font-bold text-primary">
+              {identityPhoto ? <img src={identityPhoto} alt="" className="h-full w-full object-cover" /> : identityName.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-slate-900 dark:text-white">{identityName}</p>
+              {identity.accountEmail && <p className="truncate text-sm text-slate-600 dark:text-slate-300">{identity.accountEmail}</p>}
+              <button type="button" disabled={isDemo} onClick={() => photoInput.current?.click()} className="mt-1 inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium text-primary transition hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-60">
+                <Camera className="h-4 w-4" aria-hidden="true" />{isSpanish ? 'Cambiar foto' : 'Change photo'}
+              </button>
+            </div>
+          </section>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{isSpanish ? 'Nombre visible' : 'Display name'}</span>
+            <input disabled={isDemo} autoComplete="name" maxLength={80} value={editingName ? draft.name : (profile.name.trim() && profile.name.trim().toLocaleLowerCase('es') !== 'usuario' ? profile.name : identityName)} onFocus={() => {
+              if (!editingName) setDraft((current) => ({ ...current, name: profile.name.trim() && profile.name.trim().toLocaleLowerCase('es') !== 'usuario' ? profile.name : identity.name }));
+              setEditingName(true);
+            }} onChange={(event) => { setEditingName(true); setDraft({ ...draft, name: event.target.value }); }} className={fieldClass} />
+          </label>
+          {editingName && <SaveActions savedMessage={savedMessage} label={isSpanish ? 'Guardar nombre' : 'Save name'} />}
+        </form>
+        <div className="border-t border-slate-200 pt-5 dark:border-slate-800">
+          <AccountSettingsSection />
+        </div>
+      </div>}
 
       {section === 'security' && (
         <form onSubmit={saveProfile} className="space-y-6 py-5">

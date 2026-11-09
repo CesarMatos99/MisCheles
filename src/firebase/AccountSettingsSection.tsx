@@ -3,12 +3,11 @@ import { Eye, EyeOff, Link2, MailCheck, RefreshCw } from 'lucide-react';
 import { useAccountAuth } from './AccountAuthProvider';
 import { accountAuthMessage } from './accountAuthErrors';
 import { useLanguage } from '../i18n/LanguageContext';
-import type { VisibleIdentity } from '../domain/visibleIdentity';
 
 const inputClass = 'min-h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 dark:border-slate-700';
 const buttonClass = 'btn-primary min-h-11 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50';
 
-export const AccountSettingsSection: React.FC<{ identity: VisibleIdentity }> = ({ identity }) => {
+export const AccountSettingsSection: React.FC = () => {
   const {
     configured, ready, user, error: authError,
     changePassword, deleteAccount, linkPassword, linkGoogle,
@@ -114,31 +113,15 @@ export const AccountSettingsSection: React.FC<{ identity: VisibleIdentity }> = (
 
   const hasPasswordProvider = Boolean(user?.providerData.some(({ providerId }) => providerId === 'password'));
   const hasGoogleProvider = Boolean(user?.providerData.some(({ providerId }) => providerId === 'google.com'));
-  const providerNames = user?.providerData.map(({ providerId }) => {
-    if (providerId === 'password') return isSpanish ? 'Correo y contraseña' : 'Email and password';
-    if (providerId === 'google.com') return 'Google';
-    return providerId;
-  }).filter(Boolean).join(', ');
   const accountError = authError ? accountAuthMessage(authError, language) : '';
 
   return <section className='space-y-6' aria-labelledby='account-settings-title'>
-    <h2 id='account-settings-title' className='sr-only'>{isSpanish ? 'Cuenta y acceso' : 'Account and access'}</h2>
+    <h2 id='account-settings-title' className='sr-only'>{isSpanish ? 'Mi cuenta' : 'My account'}</h2>
     <p className='text-sm leading-6 text-slate-500 dark:text-slate-400'>{isSpanish
       ? 'Tu cuenta mantiene separado su espacio local. Los movimientos permanecen en este navegador, no están cifrados por la aplicación y no se sincronizan.'
       : 'Your account keeps its local workspace separate. Financial records stay in this browser, are not encrypted by the app, and are not synced.'}</p>
 
     {!ready ? <p role='status' className='text-sm text-slate-500'>{t('loadingAccount')}</p> : user ? <div className='space-y-5'>
-      <div className='flex min-w-0 items-center gap-3'>
-        <span className='grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary'>
-          {identity.photoUrl ? <img src={identity.photoUrl} alt='' className='h-full w-full object-cover' /> : <span aria-hidden='true' className='text-lg font-bold'>{identity.name.charAt(0).toUpperCase()}</span>}
-        </span>
-        <div className='min-w-0 flex-1'>
-          <p className='truncate font-semibold text-slate-900 dark:text-white'>{identity.name}</p>
-          {user.email && <p className='truncate text-sm text-slate-600 dark:text-slate-300'>{user.email}</p>}
-          <p className='mt-1 text-xs text-slate-500 dark:text-slate-400'>{isSpanish ? 'Acceso mediante' : 'Signed in with'}: {providerNames || (isSpanish ? 'proveedor de cuenta' : 'account provider')}</p>
-        </div>
-      </div>
-
       {user.email && <div className='flex flex-col gap-3 border-y border-slate-200 py-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between'>
         <div className='flex items-center gap-2 text-sm'>
           <MailCheck size={18} className={verified ? 'text-emerald-600' : 'text-amber-600'} aria-hidden='true' />
