@@ -112,7 +112,7 @@ test('profile combines personal identity and account access under My account', (
   assert.doesNotMatch(profile, /updateProfile\(|updateDisplayName\(/);
   assert.doesNotMatch(profile, /Datos personales|section === 'profile'|setSection\('profile'\)/);
   assert.doesNotMatch(profile, /Ingreso base mensual/);
-  assert.match(profile, /max-w-5xl/);
+  assert.match(profile, /app-profile mx-auto w-full max-w-none/);
   assert.doesNotMatch(profile, /handleSignOut|LogOut|<LogOut/);
   const homeSection = profile.match(/\{section === 'home' && \([\s\S]*?\{section === 'appearance'/)?.[0] || '';
   assert.doesNotMatch(homeSection, /onLockApp|signOut|Cerrar sesión/);

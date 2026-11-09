@@ -5,6 +5,7 @@ import { Plus, Save, Trash2, X } from 'lucide-react';
 import { CategoryBudget } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { localizeCategoryName } from '../../i18n/categoryLabels';
+import { MoneyField } from '../ui/MoneyField';
 
 interface CategoryBudgetModalProps {
   isOpen: boolean;
@@ -150,19 +151,7 @@ export const CategoryBudgetModal: React.FC<CategoryBudgetModalProps> = ({
                         />
                       )}
                     </label>
-                    <label className="min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                      Monto mensual ({currency})
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        inputMode="decimal"
-                        value={draft.amount}
-                        onChange={(event) => updateDraft(index, { amount: event.target.value })}
-                        placeholder="0"
-                        className="mt-1.5 block h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                      />
-                    </label>
+                    <MoneyField size="compact" label="Monto mensual" currency={currency} value={draft.amount} onValueChange={(amount) => updateDraft(index, { amount })} min="0.01" className="min-w-0" />
                     <button type="button" onClick={() => setDrafts((current) => current.filter((_, i) => i !== index))} aria-label={'Quitar ' + (draft.category || draft.customCategory || 'categoría')} className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30">
                       <Trash2 className="h-4 w-4" />
                     </button>

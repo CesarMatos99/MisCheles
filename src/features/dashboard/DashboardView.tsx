@@ -2,7 +2,7 @@ import { isConsumptionExpenseTransaction, isSavingsContributionTransaction, norm
 import { isSavingsBudgetCategory } from '../../domain/transactionPresentation';
 import { spendingByCategory } from '../../domain/financialQueries';
 import React, { useMemo } from 'react';
-import { ArrowRight, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
+import { ArrowRight, PiggyBank, Plus, SlidersHorizontal, Sparkles, Tags } from 'lucide-react';
 import { CategoryBudget, FinancialSummary, MonthConfig, SavingsMovement, Transaction, UserProfile } from '../../types';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -34,6 +34,7 @@ interface DashboardViewProps {
   onOpenExport: () => void;
   onManageBudgets: () => void;
   onAddCategory: () => void;
+  onOpenSavingsModal: () => void;
   onOpenCategory: (category: string) => void;
   onOpenTransactions: () => void;
 }
@@ -57,6 +58,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenExport,
   onManageBudgets,
   onAddCategory,
+  onOpenSavingsModal,
   onOpenCategory,
   onOpenTransactions,
 }) => {
@@ -148,6 +150,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>{t('edit')}</span>
             </button>
           </div>
+        </div>
+
+        <div className="flex justify-end border-b border-slate-100 py-2 dark:border-slate-800">
+          <button type="button" onClick={onOpenSavingsModal} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-primary transition hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Aportar dinero al ahorro">
+            <PiggyBank className="h-4 w-4" aria-hidden="true" />Aportar dinero
+          </button>
         </div>
 
         {categoryBudgets.length === 0 ? (

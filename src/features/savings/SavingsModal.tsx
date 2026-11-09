@@ -14,7 +14,7 @@ import {
   SlidersHorizontal,
   Target,
 } from 'lucide-react';
-import { SavingsMovementType, UserProfile, FinancialSummary, SavingsGoal } from '../../types';
+import { SavingsDestinationType, SavingsMovementType, UserProfile, FinancialSummary, SavingsGoal } from '../../types';
 import { financeApplication } from '../../application/financeApplication';
 import { EXPENSE_CATEGORIES } from '../../constants/categories';
 
@@ -28,6 +28,7 @@ interface SavingsModalProps {
   summary: FinancialSummary;
   onSaved: () => void;
   initialMode?: SavingsMovementType;
+  initialDestinationType?: SavingsDestinationType;
   initialGoalId?: string;
   initialDraft?: { amount: string; description: string; date: string };
 }
@@ -40,6 +41,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
   summary,
   onSaved,
   initialMode = 'deposit_from_month',
+  initialDestinationType = 'general',
   initialGoalId,
   initialDraft,
 }) => {
@@ -59,7 +61,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
       setMode(initialMode);
       setAmount(initialDraft?.amount || '');
       setDescription(initialDraft?.description || '');
-      setDestinationType(initialGoalId ? 'goal' : 'general');
+      setDestinationType(initialGoalId ? 'goal' : initialDestinationType);
       setErrorMsg('');
       setDate(initialDraft?.date || new Date().toISOString().split('T')[0]);
       const gList = financeApplication.getSavingsGoals();
@@ -70,7 +72,7 @@ export const SavingsModal: React.FC<SavingsModalProps> = ({
         setSelectedGoalId('');
       }
     }
-  }, [isOpen, initialMode, initialGoalId, initialDraft]);
+  }, [isOpen, initialMode, initialDestinationType, initialGoalId, initialDraft]);
 
   if (!isOpen) return null;
 

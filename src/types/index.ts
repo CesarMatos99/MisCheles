@@ -21,6 +21,7 @@ export interface Transaction {
 }
 
 export type SavingsMovementType = 'deposit_from_month' | 'withdraw_to_month' | 'direct_expense' | 'goal_to_general';
+export type SavingsDestinationType = 'general' | 'goal';
 
 export interface SavingsMovement {
   id: string;
@@ -31,7 +32,7 @@ export interface SavingsMovement {
   category?: string;
   date: string;
   createdAt: number;
-  destinationType?: 'general' | 'goal';
+  destinationType?: SavingsDestinationType;
   goalId?: string;
   goalTitle?: string;
   /** Historical entry retained after goal closure without changing active balances. */

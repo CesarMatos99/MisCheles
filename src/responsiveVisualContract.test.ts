@@ -38,6 +38,14 @@ describe('responsive visual contract', () => {
     }
   });
 
+  test('Profile shares the application content width and goal form fields stay responsive', () => {
+    const profile = readFileSync('src/features/profile/ProfileView.tsx', 'utf8');
+    const savings = readFileSync('src/features/savings/SavingsView.tsx', 'utf8');
+    expect(profile).toContain('app-profile mx-auto w-full max-w-none');
+    expect(profile).not.toContain('max-w-5xl');
+    expect(savings).toContain('sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]');
+  });
+
   test('offers persistent accent choices independently of light and dark themes', () => {
     const app = readFileSync('src/App.tsx', 'utf8');
     const css = readFileSync('src/index.css', 'utf8');

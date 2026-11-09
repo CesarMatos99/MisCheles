@@ -201,7 +201,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const fieldClass = 'app-field';
 
   return (
-    <div className="app-profile mx-auto w-full max-w-5xl animate-in fade-in duration-200">
+    <div className="app-profile mx-auto w-full max-w-none animate-in fade-in duration-200">
       <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" disabled={isDemo} aria-label="Seleccionar foto de perfil" />
       <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
         {section !== 'home' && (

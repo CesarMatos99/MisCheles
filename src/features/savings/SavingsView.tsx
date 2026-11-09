@@ -12,7 +12,7 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
-import { FinancialSummary, SavingsGoal, SavingsMovement, SavingsMovementType, UserProfile } from '../../types';
+import { FinancialSummary, SavingsDestinationType, SavingsGoal, SavingsMovement, SavingsMovementType, UserProfile } from '../../types';
 import { financeApplication } from '../../application/financeApplication';
 import { PeriodSelector } from '../../components/layout/PeriodSelector';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -30,7 +30,7 @@ interface SavingsViewProps {
   year: number;
   month: number;
   onMonthChange: (year: number, month: number) => void;
-  onOpenSavingsModal: (mode: SavingsMovementType, goalId?: string) => void;
+  onOpenSavingsModal: (mode: SavingsMovementType, goalId?: string, destinationType?: SavingsDestinationType) => void;
   onRefresh: () => void;
   onOpenExport: () => void;
 }
@@ -157,17 +157,20 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         {!selectedGoal ? <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><h2 id="savings-goals-title" className="text-base font-bold text-slate-900 dark:text-white">Metas de ahorro</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Organiza tu ahorro por objetivos.</p></div>
-            <button type="button" onClick={() => { setIsAddingGoal(!isAddingGoal); setGoalError(''); }} aria-label={isAddingGoal ? 'Cancelar nueva meta' : 'Crear nueva meta'} aria-expanded={isAddingGoal} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-primary/30 px-3.5 text-sm font-semibold text-primary transition hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus className="h-4 w-4" aria-hidden="true" /><span>Nueva meta</span></button>
+            <div className="flex flex-wrap items-center gap-2">
+              {goals.length > 0 && <button type="button" onClick={() => onOpenSavingsModal('deposit_from_month', undefined, 'goal')} aria-label="Aportar a una meta existente" className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus className="h-4 w-4" aria-hidden="true" /><span>Aportar a meta</span></button>}
+              <button type="button" onClick={() => { setIsAddingGoal(!isAddingGoal); setGoalError(''); }} aria-label={isAddingGoal ? 'Cancelar nueva meta' : 'Crear nueva meta'} aria-expanded={isAddingGoal} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-primary/30 px-3.5 text-sm font-semibold text-primary transition hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus className="h-4 w-4" aria-hidden="true" /><span>Nueva meta</span></button>
+            </div>
           </div>
-          {isAddingGoal && <form onSubmit={handleCreateGoal} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          {isAddingGoal && <form onSubmit={handleCreateGoal} className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Crear una meta</h3>
             {goalError && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{goalError}</p>}
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Nombre<input type="text" required placeholder="Ej. Vacaciones" value={newGoalTitle} onChange={(e) => setNewGoalTitle(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-app-background px-3 py-2.5 text-sm text-app-foreground focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700" /></label>
+            <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <label className="block min-w-0 space-y-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><span>Nombre</span><input type="text" required placeholder="Ej. Vacaciones" value={newGoalTitle} onChange={(e) => setNewGoalTitle(e.target.value)} className="h-14 w-full rounded-xl border border-slate-200 bg-app-background px-3 text-sm text-app-foreground focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700" /></label>
               <MoneyField label="Monto objetivo" currency={profile.currency} value={newGoalTarget} onValueChange={setNewGoalTarget} min="1" />
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Fecha objetivo<input type="date" value={newGoalDate} onChange={(e) => setNewGoalDate(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-app-background px-3 py-2.5 text-sm text-app-foreground focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700" /></label>
+              <label className="block min-w-0 space-y-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><span>Fecha objetivo</span><input type="date" value={newGoalDate} onChange={(e) => setNewGoalDate(e.target.value)} className="h-14 w-full min-w-0 rounded-xl border border-slate-200 bg-app-background px-3 text-sm text-app-foreground focus:outline-none focus:ring-2 focus:ring-primary dark:border-slate-700" /></label>
+              <div className="flex min-h-14 items-center justify-end gap-2 sm:col-span-2 xl:col-span-1"><button type="button" onClick={() => setIsAddingGoal(false)} className="min-h-11 rounded-xl px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button><button type="submit" className="btn-primary min-h-11 text-sm">Guardar meta</button></div>
             </div>
-            <div className="flex justify-end gap-2"><button type="button" onClick={() => setIsAddingGoal(false)} className="min-h-10 rounded-xl px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button><button type="submit" className="btn-primary text-sm">Guardar meta</button></div>
           </form>}
           {goals.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-10 text-center dark:border-slate-700"><Target className="mx-auto h-6 w-6 text-slate-400" aria-hidden="true" /><p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Aún no tienes metas de ahorro</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Crea una meta para organizar el dinero que quieres reservar.</p></div> : <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {goals.map((goal) => {

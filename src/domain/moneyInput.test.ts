@@ -19,6 +19,10 @@ test('money input normalizes pasted grouping and decimal separators', () => {
 test('blur formatting uses grouped thousands and two minimum decimal places', () => {
   assert.equal(formatMoneyInput('1000'), '1,000.00');
   assert.equal(formatMoneyInput('10000.5'), '10,000.50');
+  assert.equal(formatMoneyInput('100000'), '100,000.00');
+  assert.equal(formatMoneyInput('1250000.50'), '1,250,000.50');
+  assert.equal(formatMoneyInput('00012.5'), '12.50');
+  assert.equal(normalizeMoneyInput('1,250,000.50'), '1250000.50');
   assert.equal(formatMoneyInput('12345.67890123456789'), '12,345.67890123456789');
   assert.equal(formatMoneyInput(''), '');
 });

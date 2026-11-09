@@ -16,6 +16,7 @@ import {
 import { UserProfile } from '../../types';
 import { financeApplication } from '../../application/financeApplication';
 import { CURRENCY_OPTIONS } from '../../constants/categories';
+import { MoneyField } from '../../components/ui/MoneyField';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -195,18 +196,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                Cobro Base Mes
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={monthlyTargetIncome}
-                onChange={(e) => setMonthlyTargetIncome(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+            <MoneyField size="compact" label="Cobro Base Mes" currency={currency} value={monthlyTargetIncome} onValueChange={setMonthlyTargetIncome} min="0" />
           </div>
 
           <section className="py-1">

@@ -18,6 +18,7 @@ import { MONTH_NAMES_ES } from '../../constants/categories';
 import { getPrevMonthKey } from '../../services/storage';
 import { financeApplication } from '../../application/financeApplication';
 import { normalizeRolloverAction, resolveStartingBudget, type EffectiveRolloverAction } from '../../domain/monthRollover';
+import { MoneyField } from '../ui/MoneyField';
 
 interface MonthSetupModalProps {
   isOpen: boolean;
@@ -156,24 +157,7 @@ export const MonthSetupModal: React.FC<MonthSetupModalProps> = ({
         <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Initial Income */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Monto inicial de este mes ({profile.currency})
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-lg">
-                {profile.currency}
-              </span>
-              <input
-                type="number"
-                step="any"
-                required
-                min="0"
-                value={initialIncome}
-                onChange={(e) => setInitialIncome(e.target.value)}
-                placeholder="Ej. 65000"
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+            <MoneyField label="Monto inicial de este mes" currency={profile.currency} value={initialIncome} onValueChange={setInitialIncome} min="0" />
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Tu cobro mensual, salario o fondo asignado para arrancar {monthName}.
             </p>

@@ -74,6 +74,7 @@ export default function App() {
   const { isMonthSetupOpen, setIsMonthSetupOpen, isCategoryBudgetModalOpen, setIsCategoryBudgetModalOpen, editingCategory, setEditingCategory,
     isTransactionModalOpen, setIsTransactionModalOpen, transactionModalType, setTransactionModalType, transactionToEdit, setTransactionToEdit,
     isTransferModalOpen, setIsTransferModalOpen, isSavingsModalOpen, setIsSavingsModalOpen, savingsModalMode, setSavingsModalMode,
+    savingsModalDestinationType, setSavingsModalDestinationType,
     savingsDraft, setSavingsDraft, savingsModalGoalId, setSavingsModalGoalId, analyticsReport, setAnalyticsReport,
     isExportModalOpen, setIsExportModalOpen, isInstallModalOpen, setIsInstallModalOpen, closeModuleModals } = useAppModals();
   const [movementError, setMovementError] = useState('');
@@ -217,10 +218,11 @@ export default function App() {
     }
   };
 
-  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month', goalId?: string) => {
+  const handleOpenSavingsModal = (mode: SavingsMovementType = 'deposit_from_month', goalId?: string, destinationType: 'general' | 'goal' = 'general') => {
     setSavingsDraft(undefined);
     setSavingsModalMode(mode);
     setSavingsModalGoalId(goalId);
+    setSavingsModalDestinationType(destinationType);
     setIsSavingsModalOpen(true);
   };
 
@@ -299,6 +301,7 @@ export default function App() {
               onOpenMonthSetup={() => setIsMonthSetupOpen(true)}
               onOpenExport={() => setIsExportModalOpen(true)}
               onAddCategory={() => { setEditingCategory(null); setStartWithNewCategory(true); setIsCategoryBudgetModalOpen(true); }}
+              onOpenSavingsModal={() => handleOpenSavingsModal('deposit_from_month')}
               onManageBudgets={() => {
                 setStartWithNewCategory(false);
                 setEditingCategory(null);
@@ -444,6 +447,7 @@ export default function App() {
           setSavingsDraft(draft);
           setSavingsModalGoalId(undefined);
           setSavingsModalMode('deposit_from_month');
+          setSavingsModalDestinationType('general');
           setIsSavingsModalOpen(true);
         }}
         initialCategory={selectedCategory || undefined}
@@ -469,6 +473,7 @@ export default function App() {
         summary={summary}
         initialDraft={savingsDraft}
         initialMode={savingsModalMode}
+        initialDestinationType={savingsModalDestinationType}
         initialGoalId={savingsModalGoalId}
         onSaved={() => refreshMonthData()}
       />

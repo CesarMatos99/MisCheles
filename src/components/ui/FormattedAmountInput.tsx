@@ -14,6 +14,13 @@ interface FormattedAmountInputProps {
   placeholder?: string;
 }
 
+export function getUnformattedCaretPosition(display: string, selectionStart: number): number {
+  const prefix = display.slice(0, Math.max(0, Math.min(selectionStart, display.length)));
+  const digits = prefix.match(/\d/g)?.length || 0;
+  const decimal = prefix.includes('.') ? 1 : 0;
+  return Math.min(digits + decimal, normalizeMoneyInput(display).length);
+}
+
 export function FormattedAmountInput({ id, value, onValueChange, required = false, min, max, step, autoFocus, className = '', placeholder = '0.00' }: FormattedAmountInputProps) {
   const [editing, setEditing] = useState(false);
   const [display, setDisplay] = useState(() => formatMoneyInput(value));
@@ -42,7 +49,14 @@ export function FormattedAmountInput({ id, value, onValueChange, required = fals
     required={required}
     value={display}
     placeholder={placeholder}
-    onFocus={() => { setEditing(true); setDisplay(normalizeMoneyInput(String(value))); }}
+    onFocus={(event) => {
+      const input = event.currentTarget;
+      const raw = normalizeMoneyInput(String(value));
+      const caret = getUnformattedCaretPosition(input.value, input.selectionStart ?? input.value.length);
+      setEditing(true);
+      setDisplay(raw);
+      requestAnimationFrame(() => input.setSelectionRange(Math.min(caret, raw.length), Math.min(caret, raw.length)));
+    }}
     onChange={(event) => {
       const raw = normalizeMoneyInput(event.target.value);
       setDisplay(event.target.value);
